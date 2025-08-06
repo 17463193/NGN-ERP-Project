@@ -170,6 +170,18 @@ export const routes: Routes = [
         redirectTo: 'job-management/job-grade',
         pathMatch: 'full'
       },
+       {
+        path: 'emp-training',
+        loadComponent: () => import('./demo/emp-training/emp-training.component').then((c) => c.EmpTrainingComponent)
+      },
+      {
+        path: 'emp-transfer',
+        loadComponent: () => import('./demo/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
+      },
+      {
+        path: 'emp-separation',
+        loadComponent: () => import('./demo/emp-separation/emp-separation.component').then((c) => c.EmpSeparationComponent)
+      }
 
     ]
   },

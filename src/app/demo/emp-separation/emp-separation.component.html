@@ -1,0 +1,391 @@
+<div class="transfer-container">
+  <!-- Header Section -->
+  <div class="header">
+    <div class="title">
+      <h2>Separation Management</h2>
+      <p>Manage and track employee separations within the organization.</p>
+    </div>
+    <div class="controls">
+      <button class="add-btn" (click)="openAddModal()">
+        <i class="ti ti-plus"></i>
+        <span>New Separation</span>
+      </button>
+      <button class="add-btn" (click)="exportSeparations()">
+        <i class="bi bi-download me-2"></i>
+        <span>Export</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Search and Filter Row -->
+  <div class="search-filter-row">
+    <div class="d-flex justify-content-end w-100">
+      <div class="search-filter-content">
+        <div class="search-input-wrapper">
+          <i class="bi bi-search"></i>
+          <input 
+            type="text" 
+            placeholder="Search..."
+            [(ngModel)]="searchQuery"
+            (input)="applySearch()">
+        </div>
+
+        <div class="filter-container">
+          <button class="filter-icon">
+            <i class="bi bi-funnel"></i>
+            <span>Filters</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Separation List -->
+  <div class="transfer-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Separation Date</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Clearance</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let separation of paginatedSeparations">
+          <td class="fw-medium">{{ separation.employeeName }}<br><small class="text-muted">{{ separation.employeeId }}</small></td>
+          <td>{{ separation.department }}</td>
+          <td>{{ separation.position }}</td>
+          <td>{{ separation.separationDate | date:'mediumDate' }}</td>
+          <td>{{ separation.separationType }}</td>
+          <td>
+            <span class="badge" [ngClass]="getStatusBadgeClass(separation.status)">
+              {{ separation.status }}
+            </span>
+          </td>
+          <td>
+            <span class="badge" [ngClass]="getClearanceStatusBadgeClass(separation.clearanceStatus || 'Pending')">
+              {{ separation.clearanceStatus || 'Pending' }}
+            </span>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="view-btn" (click)="openViewModal(separation)" title="View">
+                <i class="bi bi-eye"></i>
+              </button>
+              <button class="edit-btn" (click)="openEditModal(separation)" title="Edit" [disabled]="separation.status === 'Completed'">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="delete-btn" (click)="confirmDelete(separation.id!)" title="Delete" [disabled]="separation.status === 'Completed'">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="filteredSeparations.length === 0">
+          <td colspan="8" class="text-center">
+            <div class="text-muted">
+              <i class="bi bi-inbox"></i>
+              <p>No separation records found</p>
+              <button class="btn btn-sm btn-outline-primary" (click)="openAddModal()">
+                <i class="bi bi-plus-lg me-1"></i> Add New Separation
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="simple-pagination" *ngIf="filteredSeparations.length > 0">
+    <button 
+      (click)="onPageChange(currentPage - 1)" 
+      [disabled]="currentPage === 1">
+      <i class="bi bi-chevron-left"></i> Previous
+    </button>
+    
+    <div class="page-info">
+      Page {{ currentPage }} of {{ totalPages }}
+    </div>
+    
+    <button 
+      (click)="onPageChange(currentPage + 1)" 
+      [disabled]="currentPage === totalPages">
+      Next <i class="bi bi-chevron-right"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Add/Edit Separation Modal -->
+<ng-template #separationModal let-modal>
+  <form [formGroup]="form" (ngSubmit)="saveSeparation()">
+    <div class="modal-header bg-primary text-white">
+      <h5 class="modal-title fw-bold">{{ isEditMode ? 'Edit' : 'Add New' }} Separation</h5>
+      <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="employeeName" class="form-label">Employee Name *</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="employeeName"
+            formControlName="employeeName"
+            [class.is-invalid]="form.get('employeeName')?.invalid && form.get('employeeName')?.touched">
+          <div 
+            *ngIf="form.get('employeeName')?.invalid && form.get('employeeName')?.touched" 
+            class="invalid-feedback">
+            Employee name is required
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="employeeId" class="form-label">Employee ID *</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="employeeId"
+            formControlName="employeeId"
+            [class.is-invalid]="form.get('employeeId')?.invalid && form.get('employeeId')?.touched">
+          <div 
+            *ngIf="form.get('employeeId')?.invalid && form.get('employeeId')?.touched" 
+            class="invalid-feedback">
+            Employee ID is required
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="department" class="form-label">Department *</label>
+          <select 
+            class="form-select" 
+            id="department"
+            formControlName="department"
+            [class.is-invalid]="form.get('department')?.invalid && form.get('department')?.touched">
+            <option value="">Select Department</option>
+            <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
+          </select>
+          <div 
+            *ngIf="form.get('department')?.invalid && form.get('department')?.touched" 
+            class="invalid-feedback">
+            Department is required
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="position" class="form-label">Position *</label>
+          <select 
+            class="form-select" 
+            id="position"
+            formControlName="position"
+            [class.is-invalid]="form.get('position')?.invalid && form.get('position')?.touched">
+            <option value="">Select Position</option>
+            <option *ngFor="let pos of positions" [value]="pos">{{ pos }}</option>
+          </select>
+          <div 
+            *ngIf="form.get('position')?.invalid && form.get('position')?.touched" 
+            class="invalid-feedback">
+            Position is required
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="separationDate" class="form-label">Separation Date *</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="separationDate"
+            formControlName="separationDate"
+            [class.is-invalid]="form.get('separationDate')?.invalid && form.get('separationDate')?.touched">
+          <div 
+            *ngIf="form.get('separationDate')?.invalid && form.get('separationDate')?.touched" 
+            class="invalid-feedback">
+            Separation date is required
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="lastWorkingDate" class="form-label">Last Working Date *</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="lastWorkingDate"
+            formControlName="lastWorkingDate"
+            [class.is-invalid]="form.get('lastWorkingDate')?.invalid && form.get('lastWorkingDate')?.touched">
+          <div 
+            *ngIf="form.get('lastWorkingDate')?.invalid && form.get('lastWorkingDate')?.touched" 
+            class="invalid-feedback">
+            Last working date is required
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="separationType" class="form-label">Separation Type *</label>
+          <select 
+            class="form-select" 
+            id="separationType"
+            formControlName="separationType"
+            [class.is-invalid]="form.get('separationType')?.invalid && form.get('separationType')?.touched">
+            <option value="">Select Type</option>
+            <option value="Voluntary">Voluntary</option>
+            <option value="Involuntary">Involuntary</option>
+            <option value="Retirement">Retirement</option>
+            <option value="Resignation">Resignation</option>
+            <option value="Termination">Termination</option>
+          </select>
+          <div 
+            *ngIf="form.get('separationType')?.invalid && form.get('separationType')?.touched" 
+            class="invalid-feedback">
+            Separation type is required
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="status" class="form-label">Status *</label>
+          <select 
+            class="form-select" 
+            id="status"
+            formControlName="status"
+            [class.is-invalid]="form.get('status')?.invalid && form.get('status')?.touched">
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="exitInterviewDate" class="form-label">Exit Interview Date</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="exitInterviewDate"
+            formControlName="exitInterviewDate">
+        </div>
+        
+        <div class="col-md-6">
+          <label for="clearanceStatus" class="form-label">Clearance Status</label>
+          <select 
+            class="form-select" 
+            id="clearanceStatus"
+            formControlName="clearanceStatus">
+            <option value="Pending">Pending</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+        
+        <div class="col-12">
+          <label for="reason" class="form-label">Reason for Separation</label>
+          <textarea 
+            class="form-control" 
+            id="reason" 
+            rows="3"
+            formControlName="reason"
+            placeholder="Enter the reason for separation"></textarea>
+        </div>
+        
+        <div class="col-12">
+          <label for="notes" class="form-label">Additional Notes</label>
+          <textarea 
+            class="form-control" 
+            id="notes" 
+            rows="2"
+            formControlName="notes"
+            placeholder="Any additional notes or comments"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Cancel</button>
+      <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
+        {{ isEditMode ? 'Update' : 'Save' }}
+      </button>
+    </div>
+  </form>
+</ng-template>
+
+<!-- View Separation Details Modal -->
+<ng-template #viewSeparationModal let-modal>
+  <div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold">Separation Details</h5>
+    <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
+  </div>
+  <div class="modal-body" *ngIf="currentSeparation">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <h6 class="text-muted mb-1">Employee</h6>
+        <p class="mb-3">{{ currentSeparation.employeeName }} ({{ currentSeparation.employeeId }})</p>
+      </div>
+      <div class="col-md-6">
+        <h6 class="text-muted mb-1">Department / Position</h6>
+        <p class="mb-3">{{ currentSeparation.department }}<br>
+        <small class="text-muted">{{ currentSeparation.position }}</small></p>
+      </div>
+      
+      <div class="col-md-6">
+        <h6 class="text-muted mb-1">Separation Date</h6>
+        <p class="mb-3">{{ currentSeparation.separationDate | date:'mediumDate' }}</p>
+      </div>
+      <div class="col-md-6">
+        <h6 class="text-muted mb-1">Last Working Date</h6>
+        <p class="mb-3">{{ currentSeparation.lastWorkingDate | date:'mediumDate' }}</p>
+      </div>
+      
+      <div class="col-md-6">
+        <h6 class="text-muted mb-1">Separation Type</h6>
+        <p class="mb-3">{{ currentSeparation.separationType }}</p>
+      </div>
+      <div class="col-md-6">
+        <h6 class="text-muted mb-1">Status</h6>
+        <p class="mb-3">
+          <span class="badge" [ngClass]="getStatusBadgeClass(currentSeparation.status)">
+            {{ currentSeparation.status }}
+          </span>
+        </p>
+      </div>
+      
+      <div class="col-md-6" *ngIf="currentSeparation.exitInterviewDate">
+        <h6 class="text-muted mb-1">Exit Interview Date</h6>
+        <p class="mb-3">{{ currentSeparation.exitInterviewDate | date:'mediumDate' }}</p>
+      </div>
+      
+      <div class="col-md-6">
+        <h6 class="text-muted mb-1">Clearance Status</h6>
+        <p class="mb-3">
+          <span class="badge" [ngClass]="getClearanceStatusBadgeClass(currentSeparation.clearanceStatus || 'Pending')">
+            {{ currentSeparation.clearanceStatus || 'Pending' }}
+          </span>
+        </p>
+      </div>
+      
+      <div class="col-12" *ngIf="currentSeparation.reason">
+        <h6 class="text-muted mb-1">Reason for Separation</h6>
+        <p class="mb-3">{{ currentSeparation.reason || 'N/A' }}</p>
+      </div>
+      
+      <div class="col-12" *ngIf="currentSeparation.notes">
+        <h6 class="text-muted mb-1">Additional Notes</h6>
+        <p class="mb-0">{{ currentSeparation.notes || 'N/A' }}</p>
+      </div>
+      
+      <div class="col-md-6" *ngIf="currentSeparation.approvedBy">
+        <h6 class="text-muted mb-1">Approved By</h6>
+        <p class="mb-3">{{ currentSeparation.approvedBy }}</p>
+      </div>
+      
+      <div class="col-md-6" *ngIf="currentSeparation.approvedDate">
+        <h6 class="text-muted mb-1">Approval Date</h6>
+        <p class="mb-3">{{ currentSeparation.approvedDate | date:'mediumDate' }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Close</button>
+  </div>
+</ng-template>

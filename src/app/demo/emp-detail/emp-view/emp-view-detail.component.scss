@@ -1,584 +1,653 @@
-/* ERP System Base Styles */
-.erp-container {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #2d3748;
-  line-height: 1.5;
-  padding: 1rem;
+// employee-profile.component.css
+/* Container Styles */
+.erp-container.employee-details {
+  background-color: #f5f5f5;
+  min-height: 100vh;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-/* Loading State */
-.erp-loading-state {
+/* Loading and Error States */
+.erp-loading-state, .erp-error-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem 0;
-  text-align: center;
+  height: 400px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 .erp-spinner {
-  width: 3rem;
-  height: 3rem;
-  border: 0.25rem solid rgba(59, 130, 246, 0.2);
-  border-top-color: #3b82f6;
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f0f0f0;
+  border-top: 3px solid #007bff;
   border-radius: 50%;
-  animation: erp-spin 1s linear infinite;
-  margin-bottom: 1rem;
+  animation: spin 1s linear infinite;
 }
 
-.erp-spinner-sm {
-  width: 1rem;
-  height: 1rem;
-  border-width: 0.15rem;
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f0f0f0;
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
   display: inline-block;
-  vertical-align: middle;
 }
 
-@keyframes erp-spin {
+@keyframes spin {
+  0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-/* Error State */
-.erp-error-state {
-  background-color: #fee2e2;
-  color: #b91c1c;
-  padding: 1rem;
-  border-radius: 0.375rem;
-  display: flex;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.erp-icon-warning {
-  margin-right: 0.75rem;
-  font-size: 1.25rem;
-}
-
-/* Employee Card */
-.erp-employee-card {
-  background: #ffffff;
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-}
-
-/* Header Section */
-.erp-employee-header {
-  background: linear-gradient(135deg, #23a9d2 0%, #015b9d 100%);
-  color: white;
-  padding: 2rem;
-}
-
-.erp-header-content {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-  margin: 0 auto;
-}
-
-.erp-profile-image-container {
-  flex-shrink: 0;
-}
-
-.erp-profile-image-wrapper {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  overflow: hidden;
-  position: relative;
-  border: 4px solid rgba(255, 255, 255, 0.2);
-  background-color: #f0f4f8;
-}
-
-.erp-profile-image-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #e2e8f0;
-}
-
-.erp-icon-user {
-  font-size: 3rem;
-  color: #64748b;
-}
-
-.erp-profile-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-}
-
-.erp-header-info {
-  flex-grow: 1;
-}
-
-.erp-employee-name {
-  font-weight: 700;
-  font-size: 1.875rem;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.2;
-}
-
-.erp-employee-meta {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.5rem;
-}
-
-.erp-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.75rem;
+/* Page Title */
+.profile-title {
+  font-size: 28px;
   font-weight: 600;
-  padding: 0.35em 0.75em;
-  border-radius: 9999px;
-  white-space: nowrap;
-}
-
-.erp-badge-code {
-  background-color: rgba(255, 255, 255, 0.15);
-  color: white;
-}
-
-.erp-badge-position {
-  background-color: rgba(255, 255, 255, 0.15);
-  color: white;
-}
-
-.erp-badge-status {
-  background-color: #ffffff;
-  color: white;
-}
-
-.erp-header-actions {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.erp-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  border: 1px solid transparent;
-}
-
-.erp-btn-sm {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.8125rem;
-}
-
-.erp-btn-secondary {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.erp-btn-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.erp-btn-success {
-  background-color: #10b981;
-  color: white;
-}
-
-.erp-btn-success:hover {
-  background-color: #059669;
-}
-
-/* Quick Info Cards */
-.erp-quick-info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1.5rem;
-  padding: 1.5rem 2rem;
-  background-color: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.erp-info-card {
-  background: white;
-  border-radius: 0.5rem;
-  padding: 1.15rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-.erp-icon-download {
-  &:before {
-    content: '\f019'; // FontAwesome download icon
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
-    margin-right: 5px;
-  }
-}
-// export to PDF
-.erp-btn-primary {
-  background-color: #2c3e50;
-  color: white;
-  border: none;
-  padding: 7px 15px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  
-  &:hover {
-    background-color: #1a252f;
-  }
-  
-  &:disabled {
-    background-color: #95a5a6;
-    cursor: not-allowed;
-  }
-}
-.erp-info-card-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  background-color: #eff6ff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #3b82f6;
-  font-size: 1.25rem;
-}
-
-.erp-info-card-content h3 {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: #64748b;
-  margin: 0 0 0.25rem 0;
-}
-
-.erp-info-card-content p {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0;
+  color: #333;
+  margin: 0 0 20px 0;
 }
 
 /* Tab Navigation */
-.erp-tab-container {
-  padding: 0 2rem 2rem;
+.tab-navigation {
+  margin-bottom: 20px;
 }
 
-.erp-tab-nav {
-  border-bottom: 1px solid #e2e8f0;
-  margin-bottom: 1.5rem;
-}
-
-.erp-tab-list {
+.tab-list {
   display: flex;
   list-style: none;
   padding: 0;
   margin: 0;
-  gap: 0.5rem;
+  // background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  overflow: hidden;
+  width: auto; /* Change from 100% to auto */
+  justify-content: flex-start; /* Align tabs to the left */
 }
 
-.erp-tab-item {
-  margin-bottom: -1px;
+.tab-item {
+  margin: 0;
+  flex: 0 0 auto; /* Don't grow or shrink - use natural width */
 }
 
-.erp-tab-link {
+.tab-link {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #64748b;
+  justify-content: flex-start; /* Left-align tab content */
+  padding: 16px 24px; /* More padding on sides */
   text-decoration: none;
-  border-radius: 0.375rem 0.375rem 0 0;
-  border: 1px solid transparent;
-  transition: all 0.15s ease;
-  gap: 0.5rem;
-}
-
-.erp-tab-link:hover {
-  color: #3b82f6;
-  background-color: #f8fafc;
-}
-
-.erp-tab-link.active {
-  color: #3b82f6;
-  background-color: white;
-  border-color: #e2e8f0;
-  border-bottom-color: white;
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  border-bottom: 3px solid transparent;
+  border-right: 1px solid #f0f0f0; /* Add separator between tabs */
+  transition: all 0.3s ease;
+  cursor: pointer;
+  width: auto; /* Natural width */
   position: relative;
 }
 
-.erp-tab-link.active::after {
-  content: '';
+/* Remove right border from last tab */
+.tab-item:last-child .tab-link {
+  border-right: none;
+}
+
+.tab-link:hover {
+  color: #495057;
+  background: rgba(0,123,255,0.05);
+}
+
+.tab-link.active {
+  color: #007bff;
+  background: rgba(0,123,255,0.1);
+  border-bottom-color: #007bff;
+}
+
+.tab-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+/* Cards Container - UPDATED FOR SAME HEIGHT */
+.cards-container {
+  height: 550px;
+  display: flex;
+  gap: 20px;
+  align-items: stretch; /* Changed from flex-start to stretch */
+}
+
+/* Overview Card (Left) - UPDATED FOR SAME HEIGHT */
+.overview-card {
+  background: white;
+  border-radius: 10px;
+  padding: 30px 25px;
+  width: 350px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Removed fixed min-height, let it stretch naturally */
+}
+
+/* Details Card (Right) - UPDATED FOR SAME HEIGHT */
+.details-card {
+  background: white;
+  border-radius: 10px;
+  padding: 30px;
+  flex: 1;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  min-height: 550px;
+  display: flex; /* Added flex */
+  flex-direction: column; /* Stack content vertically */
+}
+
+/* Profile Image Section */
+/* Profile Image Section - Enhanced */
+.profile-image-section {
+  text-align: center;
+  position: relative;
+}
+
+.profile-image-wrapper {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 20px;
+  transition: all 0.3s ease;
+}
+
+.profile-image, .profile-image-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 5px solid white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.profile-image-placeholder {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: #9fa8b2;
+}
+
+.profile-image-wrapper:hover .profile-image {
+  transform: scale(0.03);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+}
+
+.camera-icon-overlay {
   position: absolute;
-  bottom: -1px;
+  bottom: 20px;
+  right: 30px;
+  background: linear-gradient(to right, #007bff, #00a1ff);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0, 123, 255, 0.4);
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.camera-icon-overlay:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.5);
+}
+
+.camera-icon {
+  color: white;
+  font-size: 16px;
+}
+
+.save-photo-btn {
+  background: linear-gradient(to right, #28a745, #34ce57);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 15px;
+  box-shadow: 0 2px 10px rgba(40, 167, 69, 0.3);
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.save-photo-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+}
+
+.save-photo-btn:disabled {
+  background: #adb5bd;
+  transform: none;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Status indicator */
+.profile-status {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #28a745;
+  border: 3px solid white;
+  z-index: 2;
+}
+
+/* Upload progress indicator */
+.upload-progress {
+  position: absolute;
+  bottom: -5px;
   left: 0;
   right: 0;
-  height: 2px;
-  background-color: #3b82f6;
+  height: 4px;
+  background: #e9ecef;
+  border-radius: 2px;
+  overflow: hidden;
 }
 
-/* Tab Content */
-.erp-tab-content-container {
-  background: white;
-  border-radius: 0.375rem;
-  padding: 1.5rem;
+.upload-progress-bar {
+  height: 100%;
+  background: linear-gradient(to right, #007bff, #00a1ff);
+  transition: width 0.3s ease;
 }
 
-.erp-section-title {
-  font-size: 1.125rem;
+/* Status Section */
+.profile-header-container {
+  position: relative;
+  width: 100%;
+  margin-bottom:3px;
+}
+
+/* Status badge styles */
+.status-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  // background: #d4edda;
+  color: #6c757d;
+}
+
+/* Status indicator dot (::before pseudo-element) */
+.status-badge::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #28a745;
+  margin-right: 5px;
+  display: inline-block;
+}
+
+/* Different status colors (example) */
+.status-badge.active {
+  background: #d4edda;
+  color: #155724;
+}
+.status-badge.active::before {
+  background: #28a745;
+}
+
+.status-badge.inactive {
+  background: #fff3cd;
+  color: #856404;
+}
+.status-badge.inactive::before {
+  background: #ffc107;
+}
+
+.status-badge.terminated {
+  background: #f8d7da;
+  color: #721c24;
+}
+.status-badge.terminated::before {
+  background: #dc3545;
+}
+
+/* Employee Name Section */
+.employee-name-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.employee-name {
+  font-size: 24px;
   font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 1.25rem 0;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #e2e8f0;
+  color: #333;
+  margin: 0 0 8px 0;
 }
 
-.erp-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-
-.erp-detail-item {
-  margin-bottom: 0.5rem;
-}
-
-.erp-detail-item label {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: #64748b;
-  margin-bottom: 0.25rem;
-}
-
-.erp-detail-item p {
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: #1e293b;
+.employee-position {
+  font-size: 16px;
+  color: #666;
   margin: 0;
 }
 
-/* Data Tables */
-.erp-table-responsive {
-  overflow-x: auto;
-  margin-bottom: 1.5rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-}
-
-.erp-data-table {
+/* Quick Info Section */
+.quick-info-section {
   width: 100%;
-  border-collapse: collapse;
-  background-color: white;
-  min-width: 600px;
 }
 
-.erp-data-table thead {
-  background-color: #f8fafc;
+.info-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.erp-data-table th {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.erp-data-table td {
-  padding: 1rem;
-  font-size: 0.875rem;
-  color: #334155;
-  border-bottom: 1px solid #e2e8f0;
-  vertical-align: top;
-}
-
-.erp-data-table tbody tr:last-child td {
+.info-item:last-child {
   border-bottom: none;
 }
 
-.erp-data-table tbody tr:hover {
-  background-color: #f8fafc;
+.info-icon {
+  width: 20px;
+  color: #6c757d;
+  margin-right: 16px;
+  flex-shrink: 0;
 }
 
-/* Badge Variations */
-.erp-badge-success {
-  background-color: #dcfce7;
-  color: #166534;
+.info-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
-.erp-badge-warning {
-  background-color: #fef9c3;
-  color: #854d0e;
+.info-label {
+  font-size: 12px;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  font-weight: 600;
 }
 
-.erp-badge-neutral {
-  background-color: #f1f5f9;
-  color: #334155;
+.info-value {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
 }
 
-.erp-badge-danger {
-  background-color: #fee2e2;
-  color: #991b1b;
+/* Content Header */
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  // padding-bottom: 60px;
+  padding:0px 0 40px 25px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-/* Empty States */
-.erp-empty-state {
+.content-badges {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.content-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 8px;
+}
+
+.badge-blue {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.badge-purple {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.export-btn {
+  background: #ff8c00;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1.5rem;
-  background-color: #f8fafc;
-  border-radius: 0.375rem;
-  color: #64748b;
-  margin-bottom: 1.5rem;
+  gap: 8px;
+  transition: background 0.3s ease;
 }
 
-.erp-icon-info {
-  font-size: 1.25rem;
-  color: #94a3b8;
+.export-btn:hover {
+  background: #e07b00;
 }
 
-/* Grade Code */
-.erp-grade-code {
-  color: #6b7280;
-  font-size: 0.9em;
-  margin-left: 0.25rem;
+/* Tab Content - UPDATED FOR SAME HEIGHT */
+.tab-content {
+  flex: 1; /* Take up remaining space */
+  display: flex;
+  flex-direction: column;
 }
 
-/* Icons (using classes for demonstration - in real app use actual icon library) */
-[class^="erp-icon-"] {
-  font-style: normal;
-  font-weight: normal;
-  font-variant: normal;
-  text-transform: none;
-  line-height: 1;
-  -webkit-font-smoothing: antialiased;
+.tab-panel {
+  display: block;
+  flex: 1; /* Make tab panels fill available space */
 }
 
-/* Responsive Adjustments */
-@media (max-width: 1024px) {
-  .erp-header-content {
+.content-section {
+  margin-bottom: 40px;
+}
+
+.content-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 20px 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+/* Detail Grid */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-item label {
+  font-size: 12px;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.detail-item p {
+  font-size: 14px;
+  color: #333;
+  margin: 0;
+  font-weight: 500;
+}
+
+.grade-code {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+/* Table Styles */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table th {
+  background: #f8f9fa;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.data-table td {
+  padding: 16px;
+  border-bottom: 1px solid #dee2e6;
+  color: #333;
+}
+
+.data-table tr:hover {
+  background: #f8f9fa;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-neutral {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6c757d;
+}
+
+.empty-state i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Responsive Design - UPDATED */
+@media (max-width: 1200px) {
+  .cards-container {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 1.5rem;
+    align-items: stretch; /* Keep stretch alignment */
   }
   
-  .erp-profile-image-wrapper {
-    width: 100px;
-    height: 100px;
+  .overview-card {
+    width: 100%;
   }
   
-  .erp-employee-name {
-    font-size: 1.5rem;
+  /* Reset heights for mobile */
+  .overview-card,
+  .details-card {
+    height: auto;
+    min-height: auto;
   }
 }
 
 @media (max-width: 768px) {
-  .erp-employee-header {
-    padding: 1.5rem;
+  .erp-container.employee-details {
+    padding: 10px;
   }
   
-  .erp-quick-info-grid {
-    grid-template-columns: 1fr 1fr;
+  .tab-list {
+    flex-wrap: wrap;
   }
   
-  .erp-tab-container {
-    padding: 0 1rem 1rem;
+  .tab-link {
+    padding: 12px 16px;
+    font-size: 13px;
   }
   
-  .erp-data-table {
-    min-width: 100%;
+  .detail-grid {
+    grid-template-columns: 1fr;
   }
   
-  .erp-data-table th,
-  .erp-data-table td {
-    padding: 0.75rem;
+  .content-badges {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .content-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .overview-card, .details-card {
+    padding: 20px;
   }
 }
 
-@media (max-width: 576px) {
-  .erp-quick-info-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .erp-tab-list {
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
-    scrollbar-width: none;
-  }
-  
-  .erp-tab-list::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .erp-tab-link {
-    white-space: nowrap;
-  }
-  
-  .erp-detail-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  /* Responsive table styles */
-  .erp-data-table {
-    display: block;
-  }
-  
-  .erp-data-table thead {
-    display: none;
-  }
-  
-  .erp-data-table tbody, 
-  .erp-data-table tr, 
-  .erp-data-table td {
-    display: block;
-    width: 100%;
-  }
-  
-  .erp-data-table tr {
-    margin-bottom: 1rem;
-    border-radius: 0.5rem;
-    overflow: hidden;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-  }
-  
-  .erp-data-table td {
-    padding: 0.75rem;
-    text-align: right;
-    position: relative;
-    border-bottom: 1px solid #e2e8f0;
-  }
-  
-  .erp-data-table td::before {
-    content: attr(data-label);
-    position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #64748b;
-    text-transform: uppercase;
-  }
-  
-  .erp-data-table td:last-child {
-    border-bottom: none;
-  }
+/* Alternative Fixed Height Approach - Uncomment if needed */
+/*
+.overview-card,
+.details-card {
+  height: 700px;
 }
+
+.overview-card {
+  justify-content: space-between;
+}
+*/

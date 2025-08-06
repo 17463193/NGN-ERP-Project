@@ -4,14 +4,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AttendanceSheetService } from '../../../services/attendance-sheet.service';
 import { Subscription } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 Chart.register(...registerables);
 
 interface AttendanceRecord {
   date: number;
   day: string;
-  shift: string; // Changed to string to handle '--' for Sundays
-  dayStatus: 'PP' | 'AA' | 'XX' | 'PA' | '--';
+  shift: string;
+  dayStatus: 'PP' | 'AA' | 'XX' | 'PA' | '--' | '';
   checkIn: string;
   checkOut: string;
   breakTime: string;
@@ -31,12 +32,17 @@ interface AttendanceRecord {
 export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('attendanceChart', { static: false }) chartRef!: ElementRef<HTMLCanvasElement>;
   private chart: Chart | null = null;
-  private subscription: Subscription | undefined;
+  private subscription: Subscription = new Subscription();
 
   // Configuration
-  currentDepartment = '';
+  currentDepartment = 'All Departments';
   currentYear = new Date().getFullYear();
   currentMonth = new Date().toLocaleString('default', { month: 'long' });
+
+  // Loading states
+  isLoading = false;
+  hasError = false;
+  errorMessage = '';
 
   // Filter properties
   selectedDepartment = 'All';
@@ -46,7 +52,7 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
   // Available filter options
   availableYears: number[] = [];
   availableMonths: { value: number, name: string }[] = [];
-  departments: string[] = [];
+  departments: string[] = ['All'];
 
   // Statistics
   attendanceRatio = 0;
@@ -80,7 +86,7 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
 
   // Load available years and months from the API
   private loadAvailableDates(): void {
-    this.attendanceService.getAvailableDates().subscribe({
+    const sub = this.attendanceService.getAvailableDates().subscribe({
       next: (data) => {
         this.availableYears = data.years;
         this.availableMonths = data.months;
@@ -110,6 +116,7 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
         ];
       }
     });
+    this.subscription.add(sub);
   }
 
   // Initialize filters with default values
@@ -117,7 +124,7 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     const currentDate = new Date();
     this.selectedYear = currentDate.getFullYear();
     this.selectedMonth = currentDate.getMonth() + 1;
-    this.selectedDepartment = 'All'; // Default to showing all departments
+    this.selectedDepartment = 'All';
     this.currentYear = this.selectedYear;
 
     // Find the current month in availableMonths or fallback to current month name
@@ -151,14 +158,25 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   ngAfterViewInit() {
-    this.initChart();
+    // Small delay to ensure DOM is ready
+    setTimeout(() => {
+      this.initChart();
+    }, 100);
   }
 
   initChart() {
     if (this.chart) {
       this.chart.destroy();
     }
+
+    if (!this.chartRef?.nativeElement) {
+      return;
+    }
+
     const ctx = this.chartRef.nativeElement.getContext('2d');
+    if (!ctx) {
+      return;
+    }
 
     const horizontalGridPlugin = {
       id: 'horizontalGrid',
@@ -246,12 +264,9 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   private loadAttendanceData(): void {
-    // The service expects year and month as numbers
-    const year = Number(this.selectedYear);
-    const month = Number(this.selectedMonth);
-
-    // Always load all data first, we'll filter client-side
-    const department = undefined;
+    this.isLoading = true;
+    this.hasError = false;
+    this.errorMessage = '';
 
     // Reset data before loading new data
     this.employees = [];
@@ -265,19 +280,45 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     this.currentYear = this.selectedYear;
 
     // Generate headers first to ensure we have the correct number of days
-    this.generateMonthHeaders(month, year);
+    this.generateMonthHeaders(this.selectedMonth, this.selectedYear);
 
-    // Call the service with the selected filters
-    this.attendanceService.getAttendanceData(year, month, department).subscribe({
+    // Use getAllAttendanceData to fetch all pages
+    const sub = this.attendanceService.getAllAttendanceData(
+      this.selectedYear, 
+      this.selectedMonth, 
+      this.selectedDepartment === 'All' ? undefined : this.selectedDepartment
+    ).subscribe({
       next: (data) => {
-        this.processAttendanceData(data);
-        this.updateChartData();
+        this.isLoading = false;
+        if (data && data.length > 0) {
+          this.processAttendanceData(data);
+          this.updateChartData();
+          this.hasError = false;
+          this.errorMessage = '';
+        } else {
+          // No data available for the selected month
+          this.employees = [];
+          this.summary = {};
+          this.dynamicDateHeaders = [];
+          this.dynamicWeekHeaders = [];
+          this.hasError = true;
+          this.errorMessage = 'No attendance data available for the selected month.';
+        }
       },
       error: (error) => {
-        console.error('Error loading attendance data:', error);
-        // Handle error (e.g., show error message)
+        this.isLoading = false;
+        this.hasError = true;
+        this.errorMessage = 'Failed to load attendance data. Please try again.';
+        if (!environment.production) {
+          console.warn('Error loading attendance data:', error);
+        }
+        
+        // Process empty data to still show the structure
+        this.processAttendanceData([]);
+        this.updateChartData();
       }
     });
+    this.subscription.add(sub);
   }
 
   private processAttendanceData(data: any[]) {
@@ -317,6 +358,9 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
           }
         }
       });
+    } else {
+      // If no data, still populate departments with 'All'
+      this.departments = ['All'];
     }
 
     this.updateSummary();
@@ -433,26 +477,24 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
                 dayStatus = 'AA';
               }
             }
-          } else if (attendance.actualCheckInTime || attendance.actualCheckOutTime) {
-            // dayStatus = 'XX'; // Irregular punch
           }
 
           // Use overTime and earlyTime directly from the API
-          const extraHours = attendance.overTime || '00:00';
-          const earlyTime = attendance.earlyTime || '00:00';
+          const extraHours = attendance.overTime || '00:00:00';
+          const earlyTime = attendance.earlyTime || '00:00:00';
 
           employee.records[dayOfMonth] = {
             date: dayOfMonth + 1,
             day: dayOfWeek,
             shift: '1', // Set shift to '1' for all non-Sunday days
             dayStatus: dayStatus as 'PP' | 'AA' | 'XX' | 'PA' | '--',
-            checkIn: this.formatTime(attendance.actualCheckInTime || '00:00'),
-            checkOut: this.formatTime(attendance.actualCheckOutTime || '00:00'),
+            checkIn: this.formatTime(attendance.actualCheckInTime || '00:00:00'),
+            checkOut: this.formatTime(attendance.actualCheckOutTime || '00:00:00'),
             breakTime: '00:00',
-            workingHours: this.formatTime(attendance.totalDuration || '00:00'),
-            extraHours: extraHours,
-            lateTime: this.formatTime(attendance.lateCheckInTime || '00:00'),
-            earlyTime: earlyTime
+            workingHours: this.formatTime(attendance.totalDuration || '00:00:00'),
+            extraHours: this.formatTime(extraHours),
+            lateTime: this.formatTime(attendance.lateCheckInTime || '00:00:00'),
+            earlyTime: this.formatTime(earlyTime)
           };
 
           this.updateEmployeeTotals(employee, dayOfMonth, dayOfWeek);
@@ -463,23 +505,15 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     this.employees.push(employee);
   }
 
-  private isAfter1PM(timeString: string): boolean {
-    if (!timeString) return false;
-    const [hours, minutes] = timeString.split(':').map(Number);
-    return hours >= 13; // 1PM or later
-  }
-
   private parseTimeToMinutes(timeString: string): number {
     if (!timeString) return 0;
-    const [hours, minutes] = timeString.split(':').map(Number);
-    return hours * 60 + minutes;
-  }
-
-  // Helper method to format minutes to time (HH:MM)
-  private formatMinutesToTime(minutes: number): string {
-    const hrs = Math.floor(minutes / 60);
-    const mins = Math.floor(minutes % 60);
-    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+    const parts = timeString.split(':');
+    if (parts.length >= 2) {
+      const hours = parseInt(parts[0]) || 0;
+      const minutes = parseInt(parts[1]) || 0;
+      return hours * 60 + minutes;
+    }
+    return 0;
   }
 
   // Format time display to show hours or minutes
@@ -529,36 +563,32 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
       case 'AA':
         employee.totals.absentDay++;
         break;
-
-      // case 'XX':
-      //   // Irregular days are not counted in any totals
-      //   break;
     }
 
     // Update late days and penalty
     if (record.lateTime && record.lateTime !== '00:00' && record.lateTime !== '--') {
       employee.totals.lateDays++;
-      const [hours, minutes] = record.lateTime.split(':').map(Number);
-      employee.totals.latePenalty += hours * 60 + minutes;
+      const lateMinutes = this.parseTimeToMinutes(record.lateTime);
+      employee.totals.latePenalty += lateMinutes;
     }
 
     // Update early days and penalty
     if (record.earlyTime && record.earlyTime !== '00:00' && record.earlyTime !== '--') {
       employee.totals.earlyDays++;
-      const [hours, minutes] = record.earlyTime.split(':').map(Number);
-      employee.totals.latePenalty += hours * 60 + minutes;
+      const earlyMinutes = this.parseTimeToMinutes(record.earlyTime);
+      employee.totals.latePenalty += earlyMinutes;
     }
 
     // Update total work hours
     if (record.workingHours && record.workingHours !== '00:00' && record.workingHours !== '--') {
-      const [hours, minutes] = record.workingHours.split(':').map(Number);
-      employee.totals.totalWorkHours += hours + minutes / 60;
+      const workMinutes = this.parseTimeToMinutes(record.workingHours);
+      employee.totals.totalWorkHours += workMinutes / 60;
     }
 
-    // Update overTime (previously extraHours)
+    // Update overTime (extra hours)
     if (record.extraHours && record.extraHours !== '00:00' && record.extraHours !== '--') {
-      const [hours, minutes] = record.extraHours.split(':').map(Number);
-      employee.totals.extraHours = hours + minutes / 60; // Use direct value from API
+      const extraMinutes = this.parseTimeToMinutes(record.extraHours);
+      employee.totals.extraHours += extraMinutes / 60;
     }
   }
 
@@ -580,12 +610,18 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
 
     // Calculate attendance ratio
     // Total working days = Total days in month - weekends - holidays
-    const totalWorkingDays = this.calculateWorkingDays(this.selectedMonth, this.selectedYear) - this.summary.holidays;
+    const totalWorkingDays = this.calculateWorkingDays(this.selectedMonth, this.selectedYear);
     const presentDays = this.summary.presentDays;
+    const totalPossibleDays = totalWorkingDays * Math.max(1, this.employees.length);
 
-    // Calculate ratio and ensure it doesn't exceed 100%
-    const ratio = totalWorkingDays > 0 ? (presentDays / totalWorkingDays) * 100 : 0;
-    this.attendanceRatio = Math.min(Math.round(ratio), 100); // Cap at 100%
+    // Calculate ratio, handle division by zero and NaN cases
+    let ratio = 0;
+    if (totalPossibleDays > 0 && !isNaN(presentDays)) {
+      ratio = (presentDays / totalPossibleDays) * 100;
+    }
+    
+    // Ensure ratio is a valid number between 0 and 100
+    this.attendanceRatio = isNaN(ratio) ? 0 : Math.min(Math.max(0, Math.round(ratio)), 100);
   }
 
   // Helper method to calculate number of working days (excluding weekends) in a month
@@ -632,10 +668,24 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
   private updateChartData() {
     this.dailyAttendanceData = [];
 
+    // Calculate actual daily attendance based on employee data
     for (let i = 0; i < this.daysInMonth; i++) {
-      const baseAttendance = 8;
-      const variation = Math.floor(Math.random() * 3) - 1;
-      this.dailyAttendanceData.push(Math.max(6, Math.min(10, baseAttendance + variation)));
+      let dailyCount = 0;
+      this.employees.forEach(employee => {
+        if (employee.records[i] && employee.records[i].dayStatus === 'PP') {
+          dailyCount++;
+        }
+      });
+      this.dailyAttendanceData.push(dailyCount);
+    }
+
+    // If no real data, use dummy data for visualization
+    if (this.employees.length === 0) {
+      for (let i = 0; i < this.daysInMonth; i++) {
+        const baseAttendance = 8;
+        const variation = Math.floor(Math.random() * 3) - 1;
+        this.dailyAttendanceData.push(Math.max(6, Math.min(10, baseAttendance + variation)));
+      }
     }
 
     if (this.chart) {
