@@ -523,15 +523,13 @@ return matchesSearch && matchesDepartment && matchesDate;
     this.router.navigate(['/leave-form']);
   }
 
-  closeLeaveForm(): void {
+  closeLeaveForm() {
     this.showLeaveForm = false;
-    document.body.style.overflow = 'auto'; // Re-enable scrolling
+    document.body.style.overflow = 'auto';
   }
 
-  onLeaveSubmitted(success: boolean): void {
+  onLeaveSubmitted(success: boolean) {
     if (success) {
-      // Refresh leave requests after successful submission
-      this.loadLeaveRequests();
       // Show success message
       Swal.fire({
         title: 'Success!',
@@ -539,7 +537,12 @@ return matchesSearch && matchesDepartment && matchesDate;
         icon: 'success',
         confirmButtonText: 'OK'
       });
+      
+      // Refresh the leave requests list
+      this.loadLeaveRequests();
     }
+    
+    // Always close the form
     this.closeLeaveForm();
   }
 

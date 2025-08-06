@@ -183,19 +183,26 @@ export const routes: Routes = [
       }
     ]
   },
+  {
+    path: '',
+    component: AdminComponent,
+    canActivate: [AuthGuard],
+    children: [
       {
         path: 'balanceleave',
-        loadComponent: () => import('./demo/balanceleave/balanceleave.component').then((c)=>c.BalanceleaveComponent)
+        loadComponent: () => import('./demo/balanceleave/balanceleave.component').then((c) => c.BalanceleaveComponent)
       },
       {
         path: 'leave-form',
-        loadChildren: () => import('./demo/Leave/leave-form/leave-form.component').then((m) => m.LeaveFormComponent)
+        loadComponent: () => import('./demo/Leave/leave-form/leave-form.component').then((c) => c.LeaveFormComponent)
       },
       {
         path: 'balanceleave/:id',
-        loadComponent: () => import('./demo/balanceleave/balanceleave.component').then((c) => c.BalanceleaveComponent),
-      },
-      
+        loadComponent: () => import('./demo/balanceleave/balanceleave.component').then((c) => c.BalanceleaveComponent)
+      }
+    ]
+  },
+  
 ];
 
 @NgModule({

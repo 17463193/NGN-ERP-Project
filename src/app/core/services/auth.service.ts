@@ -16,17 +16,19 @@ export interface Permission {
 }
 
 export interface User {
-  userId: string;
-  empId: string;
+  userId: string;          // Universal user ID (for authentication)
+  empId?: string;          // Employee ID (for employees)
+  ctoId?: string;          // CTO-specific ID (for CTOs)
   username: string;
   email: string;
   accountStatus: string;
   roleId: string;
-  roleName: string; // Added roleName
+  roleName: string;
   mustChangePassword: boolean;
   accessToken: string;
   refreshToken: string;
   permissions?: Permission[];
+  getRoleBasedId: () => string;  // Method to get role-based ID
 }
 
 @Injectable({
@@ -52,8 +54,27 @@ export class AuthService {
   }
 
   // Synchronous access to userId
-  get userId(): string | null {
+  public get userId(): string | null {
     return this.currentUserValue?.userId ?? null;
+  }
+
+  /**
+   * Gets the role-based ID for the current user
+   * Returns the CTO ID for CTOs, Employee ID for Employees, or null if no user is logged in
+   */
+  public get roleBasedId(): string | null {
+    const user = this.currentUserValue;
+    if (!user) return null;
+    
+    // Use the user's getRoleBasedId method if it exists
+    if (typeof user.getRoleBasedId === 'function') {
+      return user.getRoleBasedId();
+    }
+    
+    // Fallback implementation if getRoleBasedId is not available
+    return user.roleName === 'CTO'
+      ? (user.ctoId || user.userId)
+      : (user.empId || user.userId);
   }
 
   // Define role constants
@@ -88,7 +109,8 @@ export class AuthService {
   }
 
    login(username: string, password: string): Observable<boolean> {
-    const url = `${environment.apiUrl}/api/auth/login`;
+    // Remove the leading /api from the endpoint since it's already in the base URL
+    const url = `${environment.apiUrl}/auth/login`;
     return this.http.post<any>(url, { username, password }).pipe(
       switchMap(loginResponse => {
         if (!loginResponse.success) {
@@ -96,21 +118,30 @@ export class AuthService {
         }
 
         const userData = loginResponse.data.user;
+        // Create the base user object with role-based ID handling
         const baseUser: User = {
           userId: userData.userId,
-          empId: userData.empId,
+          empId: userData.roleName === 'Employee' ? userData.empId : undefined,
+          ctoId: userData.roleName === 'CTO' ? (userData.ctoId || userData.userId) : undefined,
           username: userData.username,
           email: userData.email,
           accountStatus: userData.accountStatus,
           roleId: userData.roleId,
-          roleName: userData.roleName, // Added roleName
+          roleName: userData.roleName,
           mustChangePassword: userData.mustChangePassword,
           accessToken: loginResponse.data.accessToken,
-          refreshToken: loginResponse.data.refreshToken
+          refreshToken: loginResponse.data.refreshToken,
+          // Implement the getRoleBasedId method
+          getRoleBasedId: function() {
+            return this.roleName === 'CTO' 
+              ? (this.ctoId || this.userId) 
+              : (this.empId || this.userId);
+          }
         };
 
+        // Remove the leading /api from the endpoint since it's already in the base URL
         return this.http.get<Permission[]>(
-          `${environment.apiUrl}/api/v1/role-permissions/role/${userData.roleId}/permissions`
+          `${environment.apiUrl}/v1/role-permissions/role/${userData.roleId}/permissions`
         ).pipe(
           tap(permissions => {
             const completeUser = {
@@ -138,7 +169,8 @@ export class AuthService {
       return throwError(() => new Error('No refresh token'));
     }
 
-    return this.http.post<any>(`${environment.apiUrl}/api/auth/refresh-token`, {
+    // Remove the leading /api from the endpoint since it's already in the base URL
+    return this.http.post<any>(`${environment.apiUrl}/auth/refresh-token`, {
       refreshToken: user.refreshToken
     }).pipe(
       tap(response => {

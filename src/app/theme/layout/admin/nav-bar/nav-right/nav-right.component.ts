@@ -23,7 +23,6 @@ export class NavRightComponent {
     private router: Router
   ) {}
   onLogout() {
-    console.log('Logout button clicked in NavRightComponent');
     this.authService.logout();
   }
   

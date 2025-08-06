@@ -97,24 +97,15 @@ export class JobGradeService {
    */
   getSalaryStructure(gradeId: string): Observable<Grade> {
     const endpoint = `${this.baseUrl}/${gradeId}/with-salary-structure`;
-    console.log('API Endpoint:', endpoint);
-    console.log('Fetching salary structure for grade ID:', gradeId);
 
     return this.http.get<any>(endpoint).pipe(
       tap({
         next: (response) => {
-          console.log(`API Response from ${endpoint}:`, response);
           if (response?.data) {
-            console.log('Response data:', response.data);
             if (response.data.salaryComponents) {
-              console.log(`Found ${response.data.salaryComponents.length} salary components in response.data.salaryComponents`);
-              console.log('Salary components:', response.data.salaryComponents);
             } else {
-              console.log('No salary components found in response.data');
             }
           } else if (response?.salaryComponents) {
-            console.log(`Found ${response.salaryComponents.length} salary components in response.salaryComponents`);
-            console.log('Salary components:', response.salaryComponents);
           } else {
             console.log('No salary components found in the response object');
             console.log('Available response keys:', Object.keys(response || {}));

@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { environment } from 'src/environments/environment';
 import { BehaviorSubject, of, Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { map, tap, catchError } from 'rxjs/operators';
@@ -35,7 +36,7 @@ export class CalendarDataService {
   private organizationsLoaded = false;
 
   // Base URL for API endpoints
-  private readonly baseUrl = 'http://localhost:8085/api/leave';
+    private readonly baseUrl = environment.leaveApiUrl;
 
   constructor(private http: HttpClient) {}
 

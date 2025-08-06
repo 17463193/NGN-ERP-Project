@@ -64,16 +64,11 @@ export class LeaveFormComponent {
       handoverDetails: this.leaveForm.value.handoverDetails
     };
 
-    console.log('Submitting leave request with data:', formData);
-
     try {
       const result = await this.leaveService.requestLeave(formData)
         .pipe(finalize(() => this.isLoading = false))
         .toPromise();
 
-      console.log('Leave request successful:', result);
-      
-      // Show success message
       await Swal.fire({
         title: 'Success!',
         text: 'Your leave request has been submitted successfully.',
@@ -88,14 +83,6 @@ export class LeaveFormComponent {
       this.submitted.emit(true);
       this.closeForm();
     } catch (error: any) {
-      console.error('Error submitting leave request:', {
-        status: error.status,
-        statusText: error.statusText,
-        error: error.error,
-        message: error.message,
-        url: error.url
-      });
-      
       let errorMessage = 'Failed to submit leave request. Please try again.';
       
       if (error.status === 0) {
@@ -114,7 +101,6 @@ export class LeaveFormComponent {
       
       this.errorMessage = errorMessage;
       
-      // Show error message
       await Swal.fire({
         title: 'Error!',
         text: errorMessage,
@@ -151,39 +137,36 @@ export class LeaveFormComponent {
       )
       .subscribe({
         next: (response) => {
-          this.leaveTypes = response;
-          if (this.leaveTypes.length > 0) {
+          if (response && Array.isArray(response) && response.length > 0) {
+            this.leaveTypes = response;
             const defaultLeave = this.leaveTypes[0];
             this.leaveForm.patchValue({
               leaveTypeId: defaultLeave.id,
               leaveName: defaultLeave.name
             });
+          } else {
+            this.leaveTypes = [];
+            this.errorMessage = 'No leave types available. Please contact support.';
           }
         },
         error: (error) => {
-          console.error('Error fetching leave types:', error);
-          // Fallback to default leave types if API call fails
-          this.leaveTypes = [
-            { id: '1', name: 'Annual Leave' },
-            { id: '2', name: 'Sick Leave' },
-            { id: '3', name: 'Casual Leave' },
-            { id: '4', name: 'Maternity Leave' },
-            { id: '5', name: 'Paternity Leave' }
-          ];
-          
-          if (this.leaveTypes.length > 0) {
-            const defaultLeave = this.leaveTypes[0];
-            this.leaveForm.patchValue({
-              leaveTypeId: defaultLeave.id,
-              leaveName: defaultLeave.name
-            });
-          }
+          this.errorMessage = 'Failed to load leave types. Please try again later.';
+          this.leaveTypes = [];
         }
       });
   }
 
   navigateBack() {
-    this.router.navigate(['/elmr']);
+    document.body.style.overflow = 'auto';
+    
+    if (this.close.observers.length > 0) {
+      this.close.emit();
+    } else {
+      this.router.navigate(['/elmr']).then(() => {
+        window.scrollTo(0, 0);
+      }).catch(error => {
+      });
+    }
   }
 
   private formatDate(dateString: string): string {

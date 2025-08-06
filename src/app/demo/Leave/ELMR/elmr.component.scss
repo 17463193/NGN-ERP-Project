@@ -74,7 +74,7 @@
             align-items: center;
             gap: 8px;
             padding: 8px 16px;
-            background-color: #4CAF50;
+            background-color:  #015b9d ;
             color: white;
             border: none;
             border-radius: 4px;
@@ -164,7 +164,7 @@
           align-items: center;
           gap: 8px;
           padding: 8px 16px;
-          background-color: #f39c12;
+          background-color:  #23a9d2 ;
           color: white;
           border: none;
           border-radius: 4px;
@@ -231,9 +231,9 @@
           transition: all 0.2s;
 
           &.active {
-            background-color: #f39c12;
+            background-color: #23a9d2;
             color: white;
-            border-color: #e67e22;
+            border-color: #015b9d ;
           }
 
           &:hover:not(.active) {

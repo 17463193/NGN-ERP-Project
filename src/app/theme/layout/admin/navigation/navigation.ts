@@ -95,6 +95,15 @@ export const NavigationItems: NavigationItem[] = [
           url: '/balanceleave',
           breadcrumbs: false,
           hidden: true
+        },
+        {
+          id: 'leave-form',
+          title: 'Leave Form',
+          type: 'item',
+          url: '/leave-form',
+          icon: 'ti ti-file-text',
+          breadcrumbs: false,
+          hidden: false
         }
       ]
     },
