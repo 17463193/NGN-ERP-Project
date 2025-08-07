@@ -80,18 +80,26 @@ export class LeaveService {
     private router: Router
   ) { }
 
-  getLeaveAllocations(empCode: string): Observable<LeaveAllocation[]> {
+  /**
+   * Get leave allocations for a specific employee
+   * @param empId The employee ID to get allocations for
+   * @returns Observable of LeaveAllocation array
+   */
+  getLeaveAllocations(empId: string): Observable<LeaveAllocation[]> {
     const token = this.authService.getToken();
     if (!token) {
       this.router.navigate(['/auth/login']);
       return throwError(() => new Error('No authentication token found'));
     }
 
-    return this.http.get<LeaveAllocation[]>(`${this.leaveApiUrl}/leave-allocations/employee/${empCode}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    }).pipe(
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const endpoint = `${this.leaveApiUrl}/getAllocationByEmpId/${empId}`;
+    
+    return this.http.get<LeaveAllocation[]>(endpoint, { headers }).pipe(
       catchError(error => {
-        return throwError(() => error);
+        console.error('Error fetching leave allocations:', error);
+        // Return empty array on error to prevent breaking the UI
+        return of([]);
       })
     );
   }
@@ -173,10 +181,44 @@ export class LeaveService {
   }
 
   // Get all employees
-  getAllEmployees(): Observable<Employee[]> {
-    const endpoint = `${this.apiUrl}/leave/applications/recent/{mode}`;
+  getAllEmployees(mode: string = 'all'): Observable<Employee[]> {
+    const endpoint = `${this.apiUrl}/leave/applications/recent/${mode}`;
     
-    return this.http.get<Employee[]>(endpoint).pipe(
+    // Get the auth token from your auth service
+    const token = this.authService.getToken();
+    
+    // Set up headers with authorization
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+    
+    return this.http.get<Employee[]>(endpoint, { headers }).pipe(
+      map((response: any) => {
+        // Transform the response to match the Employee interface
+        if (Array.isArray(response)) {
+          return response.map((emp: any) => ({
+            empId: emp.empId || emp.id || '',
+            empCode: emp.empCode || emp.employeeCode || '',
+            firstName: emp.firstName || emp.name?.split(' ')[0] || '',
+            middleName: emp.middleName || null,
+            lastName: emp.lastName || emp.name?.split(' ').slice(1).join(' ') || emp.name || '',
+            dateOfBirth: emp.dateOfBirth || null,
+            gender: emp.gender || '',
+            maritalStatus: emp.maritalStatus || null,
+            bloodGroup: emp.bloodGroup || null,
+            nationality: emp.nationality || '',
+            socialSecurityNumber: emp.socialSecurityNumber || null,
+            cidNumber: emp.cidNumber || emp.cid || null,
+            hireDate: emp.hireDate || null,
+            employmentStatus: emp.employmentStatus || emp.status || '',
+            organizationName: emp.organizationName || emp.organization?.name || emp.department || '',
+            branchName: emp.branchName || emp.branch?.name || emp.division || '',
+            departmentName: emp.departmentName || emp.department?.name || emp.section || ''
+          }));
+        }
+        return [];
+      }),
       catchError(this.handleError)
     );
   }

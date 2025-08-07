@@ -1,0 +1,238 @@
+<div class="job-grade-container">
+    <!-- Header Section -->
+    <div class="training-container">
+      <div class="header">
+        <div class="title">
+          <h2>Training Categories</h2>
+          <p>Manage and organize training categories for your organization.</p>
+        </div>
+        <div class="controls">
+          <button class="add-btn" (click)="openAddModal()">
+            <i class="ti ti-plus"></i>
+            <span>Add Category</span>
+          </button>
+          <button class="add-btn">
+            <i class="bi bi-download me-2"></i>
+            <span>Export</span>
+          </button>
+        </div>
+      </div>
+  
+    <!-- Search and Filter Row -->
+    <div class="search-filter-row">
+      <div class="d-flex justify-content-end w-100">
+        <div class="search-filter-content">
+          <div class="search-input-wrapper">
+            <i class="bi bi-search"></i>
+            <input 
+              type="text" 
+              placeholder="Search..."
+              [(ngModel)]="searchQuery"
+              (input)="applySearch()">
+          </div>
+  
+          <div class="filter-container">
+            <button class="filter-icon">
+              <i class="bi bi-funnel"></i>
+              <span>Filters</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Categories List -->
+    <div class="attendance-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Category Name</th>
+            <th>Code</th>
+            <th>Status</th>
+            <th>Created Date</th>
+            <th>Modified Date</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let category of paginatedCategories">
+            <td class="fw-medium">
+              {{ category.categoryName }}
+              <div *ngIf="category.description" class="text-muted small">
+                {{ category.description }}
+              </div>
+            </td>
+            <td>{{ category.categoryCode }}</td>
+            <td>
+              <span class="badge" [ngClass]="getStatusBadgeClass(category.isActive)">
+                {{ getStatusText(category.isActive) }}
+              </span>
+            </td>
+            <td>{{ formatDate(category.createdDate) }}</td>
+            <td>{{ formatDate(category.modifiedDate) }}</td>
+            <td class="text-end">
+              <div class="action-buttons">
+                <button class="view-btn" (click)="openViewModal(category)" title="View">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="edit-btn" (click)="openEditModal(category)" title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="delete-btn" (click)="confirmDelete(category.id)" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredCategories.length === 0">
+            <td colspan="6" class="text-center py-4">
+              <div class="text-muted">
+                <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                <p>No training categories found</p>
+                <button class="btn btn-sm btn-outline-primary" (click)="openAddModal()">
+                  <i class="ti ti-plus me-1"></i> Add New Category
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <!-- Pagination -->
+    <div class="simple-pagination" *ngIf="filteredCategories.length > 0">
+      <button 
+        (click)="onPageChange(currentPage - 1)" 
+        [disabled]="currentPage === 1">
+        <i class="bi bi-chevron-left"></i> Previous
+      </button>
+      
+      <div class="page-info">
+        Page {{ currentPage }} of {{ totalPages }}
+      </div>
+      
+      <button 
+        (click)="onPageChange(currentPage + 1)" 
+        [disabled]="currentPage === totalPages">
+        Next <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+  
+  <!-- Add/Edit Category Modal -->
+  <ng-template #trainingModal let-modal>
+    <form [formGroup]="form" (ngSubmit)="saveCategory()">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold">{{ isEditMode ? 'Edit' : 'Add New' }} Category</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="categoryName" class="form-label">Category Name *</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="categoryName"
+              formControlName="categoryName"
+              [class.is-invalid]="form.get('categoryName')?.invalid && form.get('categoryName')?.touched">
+            <div 
+              *ngIf="form.get('categoryName')?.invalid && form.get('categoryName')?.touched" 
+              class="invalid-feedback">
+              Category name is required
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="categoryCode" class="form-label">Category Code *</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="categoryCode"
+              formControlName="categoryCode"
+              [class.is-invalid]="form.get('categoryCode')?.invalid && form.get('categoryCode')?.touched">
+            <div 
+              *ngIf="form.get('categoryCode')?.invalid && form.get('categoryCode')?.touched" 
+              class="invalid-feedback">
+              Category code is required
+            </div>
+          </div>
+          
+          <div class="col-12">
+            <label for="description" class="form-label">Description</label>
+            <textarea 
+              class="form-control" 
+              id="description" 
+              rows="3"
+              formControlName="description"
+              placeholder="Optional description for the category"></textarea>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="status" class="form-label">Status *</label>
+            <div class="form-check form-check-inline">
+              <label class="form-check-label" for="statusActive">
+                <input class="form-check-input" type="radio" formControlName="status" id="statusActive" value="true" [checked]="isEditMode ? currentCategory?.isActive : true">
+                Active
+              </label>
+            </div>
+            <div class="form-check form-check-inline">
+              <label class="form-check-label" for="statusInactive">
+                <input class="form-check-input" type="radio" formControlName="status" id="statusInactive" value="false" [checked]="isEditMode && !currentCategory?.isActive">
+                Inactive
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
+          {{ isEditMode ? 'Update' : 'Save' }}
+        </button>
+      </div>
+    </form>
+  </ng-template>
+  
+  <!-- View Category Modal -->
+  <ng-template #viewModal let-modal>
+    <div class="modal-header bg-primary text-white">
+      <h5 class="modal-title fw-bold">Category Details</h5>
+      <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <h6 class="mb-1 text-muted">Category Name</h6>
+          <p class="mb-3">{{ currentCategory?.categoryName || 'N/A' }}</p>
+        </div>
+        <div class="col-md-6">
+          <h6 class="mb-1 text-muted">Category Code</h6>
+          <p class="mb-3">{{ currentCategory?.categoryCode || 'N/A' }}</p>
+        </div>
+        <div class="col-md-6">
+          <h6 class="mb-1 text-muted">Status</h6>
+          <p class="mb-3">
+            <span class="badge" [ngClass]="getStatusBadgeClass(currentCategory?.isActive)">
+              {{ getStatusText(currentCategory?.isActive) || 'N/A' }}
+            </span>
+          </p>
+        </div>
+        <div class="col-md-6">
+          <h6 class="mb-1 text-muted">Created Date</h6>
+          <p class="mb-3">{{ formatDate(currentCategory?.createdDate) || 'N/A' }}</p>
+        </div>
+        <div class="col-md-6">
+          <h6 class="mb-1 text-muted">Modified Date</h6>
+          <p class="mb-3">{{ formatDate(currentCategory?.modifiedDate) || 'N/A' }}</p>
+        </div>
+        <div class="col-12" *ngIf="currentCategory?.description">
+          <h6 class="mb-1 text-muted">Description</h6>
+          <p class="mb-0">{{ currentCategory.description }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Close</button>
+    </div>
+  </ng-template>

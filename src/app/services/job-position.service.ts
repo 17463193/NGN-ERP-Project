@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 import { environment } from 'src/environments/environment';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-const API_BASE_URL = 'http://192.168.123.223:8080';
+const API_BASE_URL = environment.apiUrl;
 
 export interface Organization {
   orgId: string;
@@ -57,12 +57,18 @@ export interface Position {
   providedIn: 'root'
 })
 export class JobPositionService {
-  private apiUrl = `${API_BASE_URL}/api/v1/job-positions`;
+  private apiUrl = `${API_BASE_URL}/v1/job-positions`;
 
   constructor(private http: HttpClient) { }
 
   getOrganizations(): Observable<Organization[]> {
-    return this.http.get<Organization[]>(`${API_BASE_URL}/api/v1/organizations`).pipe(
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+    
+    return this.http.get<Organization[]>(`${API_BASE_URL}/v1/organizations`, { headers }).pipe(
       catchError(error => this.handleError(error))
     );
   }
@@ -78,8 +84,14 @@ export class JobPositionService {
   }
 
   getGrades(orgId: string): Observable<Grade[]> {
-    const url = `${API_BASE_URL}/api/v1/job-grades/organization/${orgId}`;
-    return this.http.get<Grade[]>(url).pipe(
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+    
+    const url = `${API_BASE_URL}/v1/job-grades/organization/${orgId}`;
+    return this.http.get<Grade[]>(url, { headers }).pipe(
       map(response => Array.isArray(response) ? response : (response as any).data || []),
       catchError(error => this.handleError(error))
     );

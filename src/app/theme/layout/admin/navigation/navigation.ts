@@ -6,6 +6,7 @@ export interface NavigationItem {
   icon?: string;
   hidden?: boolean;
   url?: string;
+  routerLink?: string;
   classes?: string;
   external?: boolean;
   target?: boolean;
@@ -13,6 +14,7 @@ export interface NavigationItem {
   children?: NavigationItem[];
   role?: string[];
   isMainParent?: boolean;
+  active?: boolean;
 }
 
 export const NavigationItems: NavigationItem[] = [
@@ -128,22 +130,21 @@ export const NavigationItems: NavigationItem[] = [
       breadcrumbs: false,
     },
     {
-      id: 'job-management',
-      title: 'Job Management',
-      type: 'item',
-      url: '/job-management',
-      icon: 'ti ti-tool', // Changed to calendar with time for leave management
+      id: 'Organization',
+      title: 'Organization',
+      type: 'collapse',
+      icon: 'ti ti-certificate',
       classes: 'nav-item',
-      target: false,
-      breadcrumbs: false,
-      children : [
+      children: [
         {
           id: 'job-grade',
           title: 'Job Grade',
           type: 'item',
-          url: '/job-grade',
+          url: '/job-management/job-grade',
           breadcrumbs: false,
-          hidden: true
+          icon: 'ti ti-category',
+          classes: 'nav-item',
+          active: false
         },
         {
           id: 'job-position',
@@ -151,7 +152,19 @@ export const NavigationItems: NavigationItem[] = [
           type: 'item',
           url: '/job-position',
           breadcrumbs: false,
-          hidden: true
+          icon: 'ti ti-certificate',
+          classes: 'nav-item',
+          active: true
+        },
+        {
+          id: 'department',
+          title: 'Department',
+          type: 'item',
+          url: '/job-management/department',
+          breadcrumbs: false,
+          icon: 'ti ti-certificate',
+          classes: 'nav-item',
+          active: true
         }
       ]
     },
@@ -183,12 +196,41 @@ export const NavigationItems: NavigationItem[] = [
       icon: 'ti ti-archive' // Fixed icon - 'ti ti-document-archival' doesn't exist
     },
         {
-      id: 'emp-training',
-      title: 'Employee Training', // Fixed title casing
-      type: 'item',
-      classes: 'nav-item', // Fixed class name
-      url: '/emp-training',
-      icon: 'ti ti-book' 
+      id: 'training-management',
+      title: 'Training Management',
+      type: 'collapse',
+      icon: 'ti ti-certificate',
+      classes: 'nav-item',
+      children: [
+        {
+          id: 'training-programs',
+          title: 'Programs',
+          type: 'item',
+          url: '/emp-training',
+          breadcrumbs: false,
+          icon: 'ti ti-category',
+          classes: 'nav-item'
+        },
+        {
+          id: 'training-categories',
+          title: 'Categories',
+          type: 'item',
+          url: '/emp-categories',
+          breadcrumbs: false,
+          icon: 'ti ti-certificate',
+          classes: 'nav-item',
+          active: true
+        },
+        {
+          id: 'training-nominations',
+          title: 'Nominations',
+          type: 'item',
+          url: '/emp-nominations',
+          breadcrumbs: false,
+          icon: 'ti ti-list-check',
+          classes: 'nav-item'
+        }
+      ]
     },
     {
       id: 'emp-transfer',

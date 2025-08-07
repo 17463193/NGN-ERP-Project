@@ -2,8 +2,9 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
+import { environment } from 'src/environments/environment';
 
-const API_BASE_URL = 'http://192.168.123.223:8080';
+const API_BASE_URL = environment.apiUrl;
 
 export interface Grade {
   gradeId: string;
@@ -32,7 +33,7 @@ export interface Grade {
   providedIn: 'root'
 })
 export class JobGradeService {
-  private baseUrl = `${API_BASE_URL}/api/v1/job-grades`;
+  private baseUrl = `${API_BASE_URL}/v1/job-grades`;
 
   constructor(private http: HttpClient) { }
 

@@ -91,7 +91,7 @@ export class JobPositionComponent implements OnInit {
     this.isOrgLoading = true;
     this.jobPositionService.getOrganizations().subscribe({
       next: (orgs) => {
-        console.log('Organizations loaded:', orgs);
+
         this.organizations = Array.isArray(orgs) ? orgs : [];
         
         if (this.organizations.length > 0) {
@@ -103,10 +103,10 @@ export class JobPositionComponent implements OnInit {
           this.loadGrades();
         }
         
-        console.log('Organizations set:', this.organizations);
+
       },
       error: (error) => {
-        console.error('Error loading organizations:', error);
+
         this.organizations = [];
         this.isOrgLoading = false;
       },
@@ -150,24 +150,24 @@ export class JobPositionComponent implements OnInit {
 
   loadGrades(): void {
     if (!this.orgId) {
-      console.log('No orgId provided, clearing grades');
+
       this.grades = [];
       return;
     }
     
-    console.log('Loading grades for orgId:', this.orgId);
+
     this.jobPositionService.getGrades(this.orgId).subscribe({
       next: (grades: any) => {
-        console.log('Received grades:', grades);
+
         this.grades = Array.isArray(grades) ? grades : [];
-        console.log('Updated grades array:', this.grades);
+
       },
       error: (error) => {
-        console.error('Error loading grades:', error);
+
         this.grades = [];
       },
       complete: () => {
-        console.log('Grade loading completed');
+
       }
     });
   }
@@ -327,14 +327,14 @@ export class JobPositionComponent implements OnInit {
             this.positions = response.data;
           } else {
             this.positions = [];
-            console.warn('Received positions data in an unexpected format:', response);
+
           }
           
           // Apply any active filters to the new data
           this.applyFilters();
         },
         error: (error) => {
-          console.error('Error loading positions:', error);
+
           this.positions = [];
           this.filteredPositions = [];
         }
