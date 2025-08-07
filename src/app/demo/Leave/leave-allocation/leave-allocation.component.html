@@ -52,8 +52,9 @@
           <td>{{ getFullName(employee) }}</td>
           <td>
             <span class="badge" [ngClass]="{
-              'bg-success': employee.employmentStatus === 'Active',
-              'bg-secondary': employee.employmentStatus !== 'Active'
+              'bg-success': employee.employmentStatus === 'Approved',
+              'bg-secondary': employee.employmentStatus !== 'pending' && employee.employmentStatus !== 'Approved',
+              'bg-danger': employee.employmentStatus === 'Rejected',
             }">
               {{ employee.employmentStatus || 'N/A' }}
             </span>

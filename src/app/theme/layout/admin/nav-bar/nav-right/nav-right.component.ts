@@ -1,12 +1,7 @@
-// Angular import
 import { Component } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
-import { CommonModule } from '@angular/common';
-
-// Core services
 import { AuthService } from '../../../../../core/services/auth.service';
-
-// Third party imports
+import { CommonModule } from '@angular/common';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
 
 @Component({
@@ -14,8 +9,7 @@ import { SharedModule } from 'src/app/theme/shared/shared.module';
   standalone: true,
   imports: [CommonModule, RouterModule, SharedModule],
   templateUrl: './nav-right.component.html',
-  styleUrls: ['./nav-right.component.scss'],
-  providers: [AuthService]
+  styleUrls: ['./nav-right.component.scss']
 })
 export class NavRightComponent {
   constructor(
@@ -24,7 +18,22 @@ export class NavRightComponent {
   ) {}
   onLogout() {
     this.authService.logout();
-  }
-  
-}
 
+  }
+
+  async onForceLogout(userId: string) {
+    if (confirm('Are you sure you want to force logout this user?')) {
+      try {
+        const success = await this.authService.forceLogoutUser(userId).toPromise();
+        if (success) {
+          alert('User has been logged out successfully');
+        } else {
+          alert('Failed to force logout user');
+        }
+      } catch (error) {
+        console.error('Force logout error:', error);
+        alert('An error occurred while trying to force logout');
+      }
+    }
+  }
+}

@@ -64,7 +64,8 @@
             </div>
             <div class="modal-body qr-body">
               <div class="qr-placeholder">
-                <img [src]="qrCodeImage" alt="QR Code Placeholder" class="qr-image">
+                <qrcode [qrdata]="qrData" [width]="256" [errorCorrectionLevel]="'M'"></qrcode>
+                <!-- <img [src]="qrCodeImage" alt="QR Code Placeholder" class="qr-image"> -->
                 <p>Scan this QR code to view leave request details</p>
               </div>
             </div>

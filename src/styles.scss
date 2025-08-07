@@ -44,24 +44,3 @@ File: style.css
 
 
 
-/* Add to src/styles.css */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tibetan:wght@300;400;500;600;700&display=swap');
-
-/* Default font for Dzongkha */
-.dzongkha-font {
-  font-family: 'Noto Sans Tibetan', 'Tibetan Machine Uni', sans-serif;
-}
-
-.dzongkha-font * {
-  font-family: 'Noto Sans Tibetan', 'Tibetan Machine Uni', sans-serif !important;
-  line-height: 1.8;
-}
-
-/* Language-specific styling */
-[lang="dz"] {
-  font-family: 'Noto Sans Tibetan', 'Tibetan Machine Uni', sans-serif;
-}
-
-[lang="dz"] * {
-  font-family: 'Noto Sans Tibetan', 'Tibetan Machine Uni', sans-serif !important;
-}

@@ -75,7 +75,7 @@ export class PayRollComponent implements OnInit {
   }
 
   loadEmployees() {
-    const url = `${environment.apiUrl}/api/payRoll/getAllPayRoll`;
+    const url = `${environment.payrollApiUrl}/api/payRoll/getAllPayRoll`;
 
     const params = new HttpParams()
       .set('year', this.selectedYear)

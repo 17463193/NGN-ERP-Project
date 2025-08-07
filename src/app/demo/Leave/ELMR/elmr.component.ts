@@ -10,6 +10,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import Swal from 'sweetalert2';
 import { LeaveFormComponent } from '../leave-form/leave-form.component'
+import { QRCodeComponent } from 'angularx-qrcode';
 
 interface LeaveRequestUI {
   id: string;
@@ -36,7 +37,7 @@ interface LeaveRequestUI {
 @Component({
   selector: 'app-elmr',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, LeaveFormComponent],
+  imports: [CommonModule, FormsModule, RouterLink, LeaveFormComponent, QRCodeComponent],
   templateUrl: './elmr.component.html',
   styleUrls: ['./elmr.component.scss'],
   providers: [LeaveService]
@@ -44,6 +45,9 @@ interface LeaveRequestUI {
 export class ELMRComponent implements OnInit {
   @ViewChild('exportDiv', { static: false }) exportDiv!: ElementRef;
   @ViewChild('dateInput') dateInput!: ElementRef;
+
+  baseUrl = window.location.origin;
+  qrData = this.baseUrl + '/leave-form';
 
   // UI State
   isLoading = false;

@@ -111,6 +111,7 @@ export class AuthService {
    login(username: string, password: string): Observable<boolean> {
     // Remove the leading /api from the endpoint since it's already in the base URL
     const url = `${environment.apiUrl}/auth/login`;
+
     return this.http.post<any>(url, { username, password }).pipe(
       switchMap(loginResponse => {
         if (!loginResponse.success) {
@@ -191,7 +192,73 @@ export class AuthService {
     );
   }
 
-  logout(): void {
+/**
+   * Logout the current user
+   */
+  logout(): Observable<boolean> {
+    const token = this.getToken();
+    if (!token) {
+      this.clearLocalAuthData();
+      return of(true);
+    }
+
+    return this.http.post<any>(`${environment.apiUrl}/api/auth/logout`, {}, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).pipe(
+      map(() => {
+        this.clearLocalAuthData();
+        return true;
+      }),
+      catchError(error => {
+        console.error('Logout error:', error);
+        this.clearLocalAuthData();
+        return of(true); // Still return true to proceed with local cleanup
+      })
+    );
+  }
+
+  /**
+   * Logout from all sessions
+   */
+  logoutAllSessions(): Observable<boolean> {
+    const token = this.getToken();
+    if (!token) {
+      this.clearLocalAuthData();
+      return of(true);
+    }
+
+    return this.http.post<any>(`${environment.apiUrl}/api/auth/logout-all`, {}, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).pipe(
+      map(() => {
+        this.clearLocalAuthData();
+        return true;
+      }),
+      catchError(error => {
+        console.error('Logout all error:', error);
+        this.clearLocalAuthData();
+        return of(true);
+      })
+    );
+  }
+
+  /**
+   * Admin force logout a specific user
+   */
+  forceLogoutUser(userId: string): Observable<boolean> {
+    return this.http.post<any>(`${environment.apiUrl}/api/auth/admin/force-logout/${userId}`, {}).pipe(
+      map(() => true),
+      catchError(error => {
+        console.error('Force logout error:', error);
+        return of(false);
+      })
+    );
+  }
+
+  /**
+   * Clear local auth data and redirect to login
+   */
+  private clearLocalAuthData(): void {
     localStorage.removeItem('currentUser');
     this.currentUserSubject.next(null);
     this.permissionsSubject.next([]);

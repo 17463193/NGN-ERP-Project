@@ -86,7 +86,7 @@ export const routes: Routes = [
         loadComponent: () => import('./demo/pay-roll/pay-roll.component').then((c) => c.PayRollComponent)
       },
       {
-        path: 'pay-slip',
+        path: 'pay-slip/:empId',
         loadComponent: () => import('./demo/pay-roll/pay-slip/pay-slip.component').then((c) => c.PaySlipComponent)
       },
       {
