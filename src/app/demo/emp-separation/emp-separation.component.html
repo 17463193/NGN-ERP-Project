@@ -57,7 +57,7 @@
       </thead>
       <tbody>
         <tr *ngFor="let separation of paginatedSeparations">
-          <td class="fw-medium">{{ separation.employeeName }}<br><small class="text-muted">{{ separation.employeeId }}</small></td>
+          <td class="fw-medium">{{ separation.employeeName }}</td>
           <td>{{ separation.separationType }}</td>
           <td>{{ separation.separationDate | date:'mediumDate' }}</td>
           <td>{{ separation.lastWorkingDate | date:'mediumDate' }}</td>
@@ -123,93 +123,119 @@
 
 <!-- Add/Edit Separation Modal -->
 <ng-template #separationModal let-modal>
-  <form [formGroup]="form" (ngSubmit)="saveSeparation()">
+  <form [formGroup]="form" (ngSubmit)="saveSeparation()" class="needs-validation" novalidate>
     <div class="modal-header bg-primary text-white">
       <h5 class="modal-title fw-bold">{{ isEditMode ? 'Edit' : 'Add New' }} Separation</h5>
       <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
     </div>
     <div class="modal-body">
-      <div class="row g-3">
-        <div class="col-md-6">
+      <h6 class="mb-4">Employee Details</h6>
+      <div class="row g-3 mb-4">
+        <div class="col-12">
           <label for="employeeName" class="form-label">Employee Name *</label>
           <input 
             type="text" 
             class="form-control" 
             id="employeeName"
             formControlName="employeeName"
-            [class.is-invalid]="form.get('employeeName')?.invalid && form.get('employeeName')?.touched">
-          <div 
-            *ngIf="form.get('employeeName')?.invalid && form.get('employeeName')?.touched" 
-            class="invalid-feedback">
-            Employee name is required
+            [class.is-invalid]="form.get('employeeName')?.invalid && form.get('employeeName')?.touched"
+            placeholder="Enter full name">
+          <div class="invalid-feedback">
+            Please provide a valid employee name
           </div>
         </div>
-        
-        <!-- <div class="col-md-6">
-          <label for="employeeId" class="form-label">Employee ID *</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            id="employeeId"
-            formControlName="employeeId"
-            [class.is-invalid]="form.get('employeeId')?.invalid && form.get('employeeId')?.touched">
-          <div 
-            *ngIf="form.get('employeeId')?.invalid && form.get('employeeId')?.touched" 
-            class="invalid-feedback">
-            Employee ID is required
-          </div>
-        </div> -->
-        
+      </div>
+
+      <h6 class="mb-4 mt-4">Separation Details</h6>
+      <div class="row g-3 mb-4">
         <div class="col-md-6">
-          <label for="department" class="form-label">Department *</label>
+          <label for="separationType" class="form-label">Separation Type *</label>
           <select 
             class="form-select" 
-            id="department"
-            formControlName="department"
-            [class.is-invalid]="form.get('department')?.invalid && form.get('department')?.touched">
-            <option value="">Select Department</option>
-            <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
+            id="separationType"
+            formControlName="separationType"
+            [class.is-invalid]="form.get('separationType')?.invalid && form.get('separationType')?.touched">
+            <option value="" disabled selected>Select Type</option>
+            <option value="Resignation">Resignation</option>
+            <option value="Termination">Termination</option>
+            <option value="Retirement">Retirement</option>
+            <option value="Contract End">Contract End</option>
           </select>
-          <div 
-            *ngIf="form.get('department')?.invalid && form.get('department')?.touched" 
-            class="invalid-feedback">
-            Department is required
+          <div class="invalid-feedback">
+            Please select a separation type
           </div>
         </div>
         
         <div class="col-md-6">
-          <label for="position" class="form-label">Position *</label>
-          <select 
-            class="form-select" 
-            id="position"
-            formControlName="position"
-            [class.is-invalid]="form.get('position')?.invalid && form.get('position')?.touched">
-            <option value="">Select Position</option>
-            <option *ngFor="let pos of positions" [value]="pos">{{ pos }}</option>
-          </select>
-          <div 
-            *ngIf="form.get('position')?.invalid && form.get('position')?.touched" 
-            class="invalid-feedback">
-            Position is required
-          </div>
-        </div>
-        
-        <div class="col-md-6">
-          <label for="separationDate" class="form-label">Separation Date *</label>
+          <label for="separationDate" class="form-label">Initiation Date *</label>
           <input 
             type="date" 
             class="form-control" 
             id="separationDate"
             formControlName="separationDate"
-            [class.is-invalid]="form.get('separationDate')?.invalid && form.get('separationDate')?.touched">
-          <div 
-            *ngIf="form.get('separationDate')?.invalid && form.get('separationDate')?.touched" 
-            class="invalid-feedback">
-            Separation date is required
+            [class.is-invalid]="form.get('separationDate')?.invalid && form.get('separationDate')?.touched"
+            [min]="today">
+          <div class="invalid-feedback">
+            Please select a valid date
           </div>
         </div>
         
         <div class="col-md-6">
+          <label for="lastWorkingDate" class="form-label">Last Working Date *</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="lastWorkingDate"
+            formControlName="lastWorkingDate"
+            [class.is-invalid]="form.get('lastWorkingDate')?.invalid && form.get('lastWorkingDate')?.touched"
+            [min]="form.get('separationDate')?.value || today">
+          <div class="invalid-feedback">
+            Please select the last working date
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label for="status" class="form-label">Status *</label>
+          <select 
+            class="form-select" 
+            id="status"
+            formControlName="status"
+            [class.is-invalid]="form.get('status')?.invalid && form.get('status')?.touched">
+            <option value="Pending" selected>Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+          <div class="invalid-feedback">
+            Please select a status
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Notice Period Served *</label>
+          <div class="form-check">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="noticePeriodServed"
+              formControlName="noticePeriodServed">
+            <label class="form-check-label" for="noticePeriodServed">
+              Notice Period Served
+            </label>
+          </div>
+        </div>
+        
+        <div class="col-12">
+          <label for="notes" class="form-label">Reason *</label>
+          <textarea 
+            class="form-control" 
+            id="notes" 
+            rows="3"
+            formControlName="notes"
+            [class.is-invalid]="form.get('notes')?.invalid && form.get('notes')?.touched"
+            placeholder="Enter the reason for separation"></textarea>
+          <div class="invalid-feedback">
+            Please provide a reason
+          </div>
+        </div>
+        <!-- <div class="col-md-6">
           <label for="separationType" class="form-label">Separation Type *</label>
           <select 
             class="form-select" 
@@ -222,24 +248,7 @@
           <div 
             *ngIf="form.get('separationType')?.invalid && form.get('separationType')?.touched" 
             class="invalid-feedback">
-            Separation type is required
-          </div>
-        </div>
-        
-        <div class="col-md-6">
-          <label for="separationReason" class="form-label">Separation Reason *</label>
-          <select 
-            class="form-select" 
-            id="separationReason"
-            formControlName="separationReason"
-            [class.is-invalid]="form.get('separationReason')?.invalid && form.get('separationReason')?.touched">
-            <option value="">Select Reason</option>
-            <option *ngFor="let reason of separationReasons" [value]="reason">{{ reason }}</option>
-          </select>
-          <div 
-            *ngIf="form.get('separationReason')?.invalid && form.get('separationReason')?.touched" 
-            class="invalid-feedback">
-            Separation reason is required
+            Please select a separation type
           </div>
         </div>
         
@@ -292,9 +301,9 @@
             class="invalid-feedback">
             Separation type is required
           </div>
-        </div>
+        </div> -->
         
-        <div class="col-md-6">
+        <!-- <div class="col-md-6">
           <label for="status" class="form-label">Status *</label>
           <select 
             class="form-select" 
@@ -306,7 +315,7 @@
             <option value="Rejected">Rejected</option>
             <option value="Completed">Completed</option>
           </select>
-        </div>
+        </div> -->
         
         <!-- <div class="col-md-6">
           <label for="exitInterviewDate" class="form-label">Exit Interview Date</label>
@@ -329,16 +338,21 @@
           </select>
         </div> -->
         
-        <div class="col-12">
-          <label for="reason" class="form-label">Reason for Separation</label>
+        <!-- <div class="col-12">
+          <label for="notes" class="form-label">Reason for Separation</label>
           <textarea 
             class="form-control" 
-            id="reason" 
+            id="notes" 
             rows="3"
-            formControlName="reason"
-            placeholder=""></textarea>
+            formControlName="notes"
+            [class.is-invalid]="form.get('notes')?.invalid && form.get('notes')?.touched"
+            placeholder="Enter the reason for separation">
+          </textarea>
+          <div class="invalid-feedback" *ngIf="form.get('notes')?.invalid && form.get('notes')?.touched">
+            Please provide a reason for separation
+          </div>
         </div>
-        
+         -->
         <!-- <div class="col-12">
           <label for="notes" class="form-label">Additional Notes</label>
           <textarea 

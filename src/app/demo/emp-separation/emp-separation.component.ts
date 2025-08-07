@@ -55,6 +55,7 @@ export class EmpSeparationComponent implements OnInit {
   currentPage = 1;
   itemsPerPage = 10;
   totalPages = 1;
+  totalItems = 0;
   
   // UI State
   isLoading = false;
@@ -64,7 +65,7 @@ export class EmpSeparationComponent implements OnInit {
   departments = [
     'Human Resources',
     'Finance',
-    'Information Technology',
+    'E-centric',
     'Marketing',
     'Operations',
     'Sales',
@@ -79,36 +80,11 @@ export class EmpSeparationComponent implements OnInit {
     'Senior Developer',
     'Developer',
     'HR Executive',
-    'Accountant',
-    'Marketing Executive',
-    'Sales Executive',
-    'Support Executive'
   ];
 
-  separationTypes = [
-    'Voluntary',
-    'Involuntary',
-    'Retirement',
-    'Resignation',
-    'Termination',
-    'End of Contract',
-    'Dismissal',
-    'Mutual Separation'
-  ];
-
-  separationReasons = [
-    'Better Opportunity',
-    'Career Change',
-    'Personal Reasons',
-    'Health Issues',
-    'Relocation',
-    'Performance Issues',
-    'Behavioral Issues',
-    'Company Restructuring',
-    'End of Contract',
-    'Retirement',
-    'Other'
-  ];
+  separationTypes: string[] = ['Resignation', 'Termination', 'Retirement', 'Contract End'];
+  statuses: string[] = ['Pending', 'Approved', 'Rejected'];
+  today = new Date().toISOString().split('T')[0];
   
   // Template Refs
   @ViewChild('separationModal') private separationModalRef!: TemplateRef<any>;
@@ -119,28 +95,23 @@ export class EmpSeparationComponent implements OnInit {
     private fb: FormBuilder,
     private modalService: NgbModal
   ) {
-    this.form = this.fb.group({
-      employeeName: ['', Validators.required],
-      employeeId: ['', Validators.required],
-      department: ['', Validators.required],
-      position: ['', Validators.required],
-      separationDate: ['', Validators.required],
-      separationType: ['', Validators.required],
-      separationReason: ['', Validators.required],
-      reason: [''], // Added missing control
-      lastWorkingDate: ['', Validators.required],
-      noticePeriodServed: [false],
-      status: ['Pending'],
-      notes: [''],
-      exitInterviewDate: [''],
-      clearanceStatus: ['Pending'],
-      approvedBy: [''],
-      approvedDate: ['']
-    });
+    this.initForm();
   }
 
   ngOnInit(): void {
     this.loadSeparations();
+  }
+
+  private initForm(): void {
+    this.form = this.fb.group({
+      employeeName: ['', Validators.required],
+      separationDate: ['', Validators.required],
+      separationType: ['', Validators.required],
+      lastWorkingDate: ['', Validators.required],
+      noticePeriodServed: [false],
+      status: ['Pending'],
+      notes: ['']
+    });
   }
 
   loadSeparations(): void {
@@ -150,7 +121,7 @@ export class EmpSeparationComponent implements OnInit {
         id: '1',
         employeeName: 'Sonam Dorji',
         employeeId: 'EMP-001',
-        department: 'Information Technology',
+        department: 'E-centric',
         position: 'Senior Developer',
         separationDate: '2025-08-15',
         separationType: 'Resignation',
@@ -167,7 +138,7 @@ export class EmpSeparationComponent implements OnInit {
         id: '2',
         employeeName: 'Kencho',
         employeeId: 'EMP-002',
-        department: 'Information Technology',
+        department: 'E-centric',
         position: 'Senior Developer',
         separationDate: '2025-08-15',
         separationType: 'Resignation',
@@ -264,6 +235,19 @@ export class EmpSeparationComponent implements OnInit {
   openViewModal(separation: Separation): void {
     this.currentSeparation = separation;
     this.modalRef = this.modalService.open(this.viewSeparationModalRef, { size: 'lg' });
+  }
+
+  // Handle separation date change to update last working date min value
+  onSeparationDateChange(event: any): void {
+    const separationDate = event.target.value;
+    const lastWorkingDate = this.form.get('lastWorkingDate');
+    
+    if (separationDate && lastWorkingDate?.value) {
+      // If last working date is before the new separation date, reset it
+      if (new Date(lastWorkingDate.value) < new Date(separationDate)) {
+        lastWorkingDate.setValue('');
+      }
+    }
   }
 
   saveSeparation(): void {
