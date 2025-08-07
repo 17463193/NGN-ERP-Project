@@ -1,0 +1,315 @@
+<div class="job-grade-container">
+  <!-- Header Section -->
+  <div class="training-container">
+    <div class="header">
+      <div class="title">
+        <h2>Training Management</h2>
+        <p>Manage and organize training programs for your organization.</p>
+      </div>
+      <div class="controls">
+        <button class="add-btn" (click)="openAddModal()">
+          <i class="ti ti-plus"></i>
+          <span>Training</span>
+        </button>
+        <button class="add-btn" (click)="openAddModal()">
+            <i class="bi bi-download me-2"></i>
+            <span>Export</span>
+          </button>
+      </div>
+    </div>
+
+  <!-- Search and Filter Row -->
+  <div class="search-filter-row">
+    <div class="d-flex justify-content-end w-100">
+      <div class="search-filter-content">
+        <div class="search-input-wrapper">
+          <i class="bi bi-search"></i>
+          <input 
+            type="text" 
+            placeholder="Search..."
+            [(ngModel)]="searchQuery"
+            (input)="applySearch()">
+        </div>
+
+        <div class="filter-container">
+          <button class="filter-icon">
+            <i class="bi bi-funnel"></i>
+            <span>Filters</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Training List -->
+  <div class="attendance-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Training Name</th>
+          <th>Code</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Status</th>
+          <th>Location</th>
+          <th>Trainer</th>
+          <th>Participants</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let training of paginatedTrainings">
+          <td class="fw-medium">{{ training.trainingName }}</td>
+          <td>{{ training.trainingCode }}</td>
+          <td>{{ training.startDate | date:'mediumDate' }}</td>
+          <td>{{ training.endDate | date:'mediumDate' }}</td>
+          <td>
+            <span class="badge" [ngClass]="getStatusBadgeClass(training.status)">
+              {{ training.status }}
+            </span>
+          </td>
+          <td>{{ training.location }}</td>
+          <td>{{ training.trainerName }}</td>
+          <td>
+            <span *ngIf="training.participants?.length > 0">
+              {{ training.participants.length }} / {{ training.maxParticipants }}
+            </span>
+            <span *ngIf="!training.participants?.length">0 / {{ training.maxParticipants }}</span>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="view-btn" (click)="openViewModal(training)" title="View">
+                <i class="bi bi-eye"></i>
+              </button>
+              <button class="edit-btn" (click)="openEditModal(training)" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="delete-btn" (click)="confirmDelete(training.id)" title="Delete">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="filteredTrainings.length === 0">
+          <td colspan="9" class="text-center">
+            <div class="text-muted">
+              <i class="bi bi-inbox"></i>
+              <p>No training records found</p>
+              <button class="btn btn-sm btn-outline-primary" (click)="openAddModal()">
+                <i class="bi bi-plus-lg me-1"></i> Add New Training
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="simple-pagination" *ngIf="filteredTrainings.length > 0">
+    <button 
+      (click)="onPageChange(currentPage - 1)" 
+      [disabled]="currentPage === 1">
+      <i class="bi bi-chevron-left"></i> Previous
+    </button>
+    
+    <div class="page-info">
+      Page {{ currentPage }} of {{ totalPages }}
+    </div>
+    
+    <button 
+      (click)="onPageChange(currentPage + 1)" 
+      [disabled]="currentPage === totalPages">
+      Next <i class="bi bi-chevron-right"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Add/Edit Training Modal -->
+<ng-template #trainingModal let-modal>
+  <form [formGroup]="form" (ngSubmit)="saveTraining()">
+    <div class="modal-header bg-primary text-white">
+      <h5 class="modal-title fw-bold">{{ isEditMode ? 'Edit' : 'Add New' }} Training</h5>
+      <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="trainingName" class="form-label">Training Name *</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="trainingName"
+            formControlName="trainingName"
+            [class.is-invalid]="form.get('trainingName')?.invalid && form.get('trainingName')?.touched">
+          <div 
+            *ngIf="form.get('trainingName')?.invalid && form.get('trainingName')?.touched" 
+            class="invalid-feedback">
+            Training name is required
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="trainingCode" class="form-label">Training Code *</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="trainingCode"
+            formControlName="trainingCode"
+            [class.is-invalid]="form.get('trainingCode')?.invalid && form.get('trainingCode')?.touched">
+          <div 
+            *ngIf="form.get('trainingCode')?.invalid && form.get('trainingCode')?.touched" 
+            class="invalid-feedback">
+            Training code is required
+          </div>
+        </div>
+        
+        <div class="col-12">
+          <label for="description" class="form-label">Description</label>
+          <textarea 
+            class="form-control" 
+            id="description" 
+            rows="3"
+            formControlName="description"></textarea>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="startDate" class="form-label">Start Date *</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="startDate"
+            formControlName="startDate"
+            [class.is-invalid]="form.get('startDate')?.invalid && form.get('startDate')?.touched">
+          <div 
+            *ngIf="form.get('startDate')?.invalid && form.get('startDate')?.touched" 
+            class="invalid-feedback">
+            Start date is required
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="endDate" class="form-label">End Date *</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="endDate"
+            formControlName="endDate"
+            [class.is-invalid]="form.get('endDate')?.invalid && form.get('endDate')?.touched">
+          <div 
+            *ngIf="form.get('endDate')?.invalid && form.get('endDate')?.touched" 
+            class="invalid-feedback">
+            End date is required and must be after start date
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="status" class="form-label">Status *</label>
+          <select 
+            class="form-select" 
+            id="status"
+            formControlName="status">
+            <option *ngFor="let status of ['Planned', 'In Progress', 'Completed', 'Cancelled']" 
+                    [value]="status">
+              {{status}}
+            </option>
+          </select>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="trainerName" class="form-label">Trainer Name *</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="trainerName"
+            formControlName="trainerName"
+            [class.is-invalid]="form.get('trainerName')?.invalid && form.get('trainerName')?.touched">
+          <div 
+            *ngIf="form.get('trainerName')?.invalid && form.get('trainerName')?.touched" 
+            class="invalid-feedback">
+            Trainer name is required
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="location" class="form-label">Location *</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="location"
+            formControlName="location"
+            [class.is-invalid]="form.get('location')?.invalid && form.get('location')?.touched">
+          <div 
+            *ngIf="form.get('location')?.invalid && form.get('location')?.touched" 
+            class="invalid-feedback">
+            Location is required
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <label for="maxParticipants" class="form-label">Max Participants *</label>
+          <input 
+            type="number" 
+            class="form-control" 
+            id="maxParticipants"
+            min="1"
+            formControlName="maxParticipants"
+            [class.is-invalid]="form.get('maxParticipants')?.invalid && form.get('maxParticipants')?.touched">
+          <div 
+            *ngIf="form.get('maxParticipants')?.invalid && form.get('maxParticipants')?.touched" 
+            class="invalid-feedback">
+            Please enter a valid number of participants
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Cancel</button>
+      <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
+        {{ isEditMode ? 'Update' : 'Save' }}
+      </button>
+    </div>
+  </form>
+</ng-template>
+
+<!-- View Training Details Modal -->
+<ng-template #viewTrainingModal let-modal>
+  <div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold">Training Details</h5>
+    <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
+  </div>
+  <div class="modal-body" *ngIf="currentTraining">
+    <h4>{{currentTraining.trainingName}} ({{currentTraining.trainingCode}})</h4>
+    <p class="text-muted">{{currentTraining.description || 'No description provided'}}</p>
+    
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <h6>Details</h6>
+        <p class="mb-2">
+          <strong>Status:</strong>
+          <span class="badge ms-2" [ngClass]="{
+            'bg-info': currentTraining.status === 'Planned',
+            'bg-warning': currentTraining.status === 'In Progress',
+            'bg-success': currentTraining.status === 'Completed',
+            'bg-danger': currentTraining.status === 'Cancelled'
+          }">
+            {{currentTraining.status}}
+          </span>
+        </p>
+        <p class="mb-2"><strong>Trainer:</strong> {{currentTraining.trainerName}}</p>
+        <p class="mb-2"><strong>Location:</strong> {{currentTraining.location}}</p>
+      </div>
+      
+      <div class="col-md-6">
+        <h6>Schedule</h6>
+        <p class="mb-2"><strong>Start Date:</strong> {{currentTraining.startDate | date:'mediumDate'}}</p>
+        <p class="mb-2"><strong>End Date:</strong> {{currentTraining.endDate | date:'mediumDate'}}</p>
+        <p class="mb-2"><strong>Max Participants:</strong> {{currentTraining.maxParticipants}}</p>
+        <p class="mb-2"><strong>Registered:</strong> {{currentTraining.participants.length}} participants</p>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.close()">Close</button>
+  </div>
+</ng-template>

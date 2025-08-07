@@ -146,18 +146,25 @@
           </div>
           <div class="leave-dates">{{ leave.date }}</div>
           <div class="leave-duration">{{ leave.duration }}</div>
-          <div class="status-actions" *ngIf="leave.status?.toLowerCase() === 'pending'; else statusDisplay">
-            <button class="approve" (click)="$event.stopPropagation(); updateStatus(leave, 'Approved')" title="Approve Leave">
-              <i class="fas fa-check"></i> Approve
-            </button>
-            <button class="reject" (click)="$event.stopPropagation(); updateStatus(leave, 'Rejected')" title="Reject Leave">
-              <i class="fas fa-times"></i> Reject
-            </button>
-          </div>
-          <ng-template #statusDisplay>
-            <div class="leave-status">
+          <div class="status-actions" *ngIf="isCTO; else employeeStatus">
+            <ng-container *ngIf="!leave.status || leave.status === 'Pending' || leave.status === 'pending'">
+              <button class="approve" (click)="$event.stopPropagation(); updateStatus(leave, 'Approved')" title="Approve Leave">
+                <i class="fas fa-check"></i> Approve
+              </button>
+              <button class="reject" (click)="$event.stopPropagation(); updateStatus(leave, 'Rejected')" title="Reject Leave">
+                <i class="fas fa-times"></i> Reject
+              </button>
+            </ng-container>
+            <div class="leave-status" *ngIf="leave.status && leave.status !== 'Pending' && leave.status !== 'pending'">
               <span [class]="'status-label ' + leave.status.toLowerCase()">
                 {{ leave.status }}
+              </span>
+            </div>
+          </div>
+          <ng-template #employeeStatus>
+            <div class="leave-status">
+              <span [class]="'status-label ' + (leave.status ? leave.status.toLowerCase() : 'pending')">
+                {{ leave.status || 'Pending' }}
               </span>
             </div>
           </ng-template>
@@ -195,18 +202,25 @@
           </div>
           <div class="leave-dates">{{ leave.date }}</div>
           <div class="leave-duration">{{ leave.duration }}</div>
-          <div class="status-actions" *ngIf="leave.status?.toLowerCase() === 'pending'; else statusDisplay">
-            <button class="approve" (click)="$event.stopPropagation(); updateStatus(leave, 'Approved')" title="Approve Leave">
-              <i class="fas fa-check"></i> Approve
-            </button>
-            <button class="reject" (click)="$event.stopPropagation(); updateStatus(leave, 'Rejected')" title="Reject Leave">
-              <i class="fas fa-times"></i> Reject
-            </button>
-          </div>
-          <ng-template #statusDisplay>
-            <div class="leave-status">
+          <div class="status-actions" *ngIf="isCTO; else employeeStatus">
+            <ng-container *ngIf="!leave.status || leave.status === 'Pending' || leave.status === 'pending'">
+              <button class="approve" (click)="$event.stopPropagation(); updateStatus(leave, 'Approved')" title="Approve Leave">
+                <i class="fas fa-check"></i> Approve
+              </button>
+              <button class="reject" (click)="$event.stopPropagation(); updateStatus(leave, 'Rejected')" title="Reject Leave">
+                <i class="fas fa-times"></i> Reject
+              </button>
+            </ng-container>
+            <div class="leave-status" *ngIf="leave.status && leave.status !== 'Pending' && leave.status !== 'pending'">
               <span [class]="'status-label ' + leave.status.toLowerCase()">
                 {{ leave.status }}
+              </span>
+            </div>
+          </div>
+          <ng-template #employeeStatus>
+            <div class="leave-status">
+              <span [class]="'status-label ' + (leave.status ? leave.status.toLowerCase() : 'pending')">
+                {{ leave.status || 'Pending' }}
               </span>
             </div>
           </ng-template>

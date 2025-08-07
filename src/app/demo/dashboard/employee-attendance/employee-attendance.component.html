@@ -163,7 +163,7 @@
               <td class="py-3">
                 <span>{{ emp.actualCheckOutTime || '--' }}</span>
               </td>
-              <td class="py-3" [class.fw-bold text-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00'">
+              <td class="py-3" [ngClass]="{'fw-bold text-danger': emp.lateCheckInTime && emp.lateCheckInTime !== '00:00'}">
                 <span *ngIf="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00'">⚠ {{ emp.lateCheckInTime }}</span>
                 <span *ngIf="!emp.lateCheckInTime || emp.lateCheckInTime === '00:00'">--</span>
               </td>

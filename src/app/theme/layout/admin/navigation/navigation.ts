@@ -172,6 +172,30 @@ export const NavigationItems: NavigationItem[] = [
       classes: 'nav-item', // Fixed class name
       url: '/document-archival',
       icon: 'ti ti-archive' // Fixed icon - 'ti ti-document-archival' doesn't exist
+    },
+    {
+      id: 'emp-training',
+      title: 'Employee Training', // Fixed title casing
+      type: 'item',
+      classes: 'nav-item', // Fixed class name
+      url: '/emp-training',
+      icon: 'ti ti-book' 
+    },
+    {
+      id: 'emp-transfer',
+      title: 'Employee Transfer',
+      type: 'item',
+      classes: 'nav-item',
+      url: '/emp-transfer',
+      icon: 'ti ti-arrows-exchange' 
+    },
+    {
+      id: 'emp-separation',
+      title: 'Employee Separation',
+      type: 'item',
+      classes: 'nav-item',
+      url: '/emp-separation',
+      icon: 'ti ti-logout' 
     }
   ]
 }

@@ -21,7 +21,7 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        redirectTo: '/default',
+        redirectTo: '/guest/login',
         pathMatch: 'full'
       },
       {
@@ -173,6 +173,18 @@ export const routes: Routes = [
         pathMatch: 'full'
       },
 
+      {
+        path: 'emp-training',
+        loadComponent: () => import('./demo/emp-training/emp-training.component').then((c) => c.EmpTrainingComponent)
+      },
+      {
+        path: 'emp-transfer',
+        loadComponent: () => import('./demo/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
+      },
+      {
+        path: 'emp-separation',
+        loadComponent: () => import('./demo/emp-separation/emp-separation.component').then((c) => c.EmpSeparationComponent)
+      }
     ]
   },
   {
@@ -184,20 +196,7 @@ export const routes: Routes = [
         loadChildren: () => import('./demo/pages/authentication/authentication.module').then((m) => m.AuthenticationModule)
       }
     ]
-  },
-      {
-        path: 'balanceleave',
-        loadComponent: () => import('./demo/balanceleave/balanceleave.component').then((c)=>c.BalanceleaveComponent)
-      },
-      {
-        path: 'leave-form',
-        loadComponent: () => import('./demo/leave-form/leave-form.component').then((c) => c.LeaveFormComponent)
-      },
-      {
-        path: 'balanceleave/:id',
-        loadComponent: () => import('./demo/balanceleave/balanceleave.component').then((c) => c.BalanceleaveComponent),
-      },
-      
+  }
 ];
 
 @NgModule({

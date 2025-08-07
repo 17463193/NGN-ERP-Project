@@ -68,7 +68,7 @@ export type LeaveType = 'current' | 'all';
   providedIn: 'root'
 })
 export class LeaveService {
-  private apiUrl = environment.leaveApiUrl;
+  private apiUrl = environment.apiUrl;
   private refreshInterval = 3000; // 30 seconds
 
   constructor(private http: HttpClient) { }
@@ -187,6 +187,7 @@ export class LeaveService {
     id: string; 
     approved: boolean;
     reason?: string;
+    isCTO?: boolean;
   } | string, approved?: boolean, reason?: string): Observable<any> {
     console.log('Updating leave status with data:', updateData);
     let id: string;

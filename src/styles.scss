@@ -8,6 +8,9 @@ File: style.css
 =========================================================================
 =================================================================================== */
 
+// SweetAlert2 styles
+@import 'sweetalert2/src/sweetalert2.scss';
+
 // main framework
 @import 'node_modules/bootstrap/scss/functions';
 @import 'node_modules/bootstrap/scss/variables';

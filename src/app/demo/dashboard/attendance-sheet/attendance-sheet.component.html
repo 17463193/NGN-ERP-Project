@@ -224,6 +224,50 @@
           </ng-container>
         </tbody>
       </table>
+      
+      <!-- Pagination Controls -->
+      <div class="pagination-controls" *ngIf="totalItems > itemsPerPage">
+        <button 
+          class="page-button" 
+          [disabled]="currentPage === 1"
+          (click)="onPageChange(1)">
+          &laquo;
+        </button>
+        <button 
+          class="page-button" 
+          [disabled]="currentPage === 1"
+          (click)="onPageChange(currentPage - 1)">
+          &lsaquo;
+        </button>
+        
+        <ng-container *ngFor="let page of pageNumbers">
+          <button 
+            class="page-button" 
+            [class.active]="page === currentPage"
+            (click)="onPageChange(page)">
+            {{ page }}
+          </button>
+        </ng-container>
+        
+        <button 
+          class="page-button" 
+          [disabled]="currentPage === totalPages"
+          (click)="onPageChange(currentPage + 1)">
+          &rsaquo;
+        </button>
+        <button 
+          class="page-button" 
+          [disabled]="currentPage === totalPages"
+          (click)="onPageChange(totalPages)">
+          &raquo;
+        </button>
+        
+        <span class="page-info">
+          Showing {{ (currentPage - 1) * itemsPerPage + 1 }} - 
+          {{ currentPage * itemsPerPage > totalItems ? totalItems : currentPage * itemsPerPage }} 
+          of {{ totalItems }} entries
+        </span>
+      </div>
     </div>
 
     <!-- Summary Section -->
