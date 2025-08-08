@@ -8,8 +8,8 @@ import packageInfo from '../../package.json';
 export const environment = {
   appVersion: packageInfo.version,
   production: false,
-  apiUrl: 'http://192.168.137.173:8088',
-  leaveApiUrl: 'http://192.168.137.173:8085/api/leave',
+  apiUrl: 'http://192.168.124.223:8080',
+  leaveApiUrl: 'http://localhost:8085/api/leave',
   // separationApiUrl: 'http://192.168.123.118:8080'
 };
 

@@ -181,10 +181,10 @@ export const routes: Routes = [
         path: 'emp-transfer',
         loadComponent: () => import('./demo/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
       },
-      {
-        path: 'emp-separation',
-        loadComponent: () => import('./demo/emp-separation/emp-separation.component').then((c) => c.EmpSeparationComponent)
-      }
+      // {
+      //   path: 'emp-separation',
+      //   loadComponent: () => import('./demo/emp-separation/emp-separation.component').then((c) => c.EmpSeparationComponent)
+      // }
     ]
   },
   {
