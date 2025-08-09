@@ -25,7 +25,7 @@ interface ApiResponse {
   providedIn: 'root'
 })
 export class DepartmentService {
-  private apiUrl = `${environment.apiUrl}/v1/departments`;
+  private apiUrl = `${environment.apiUrl}/api/v1/departments`;
 
   constructor(private http: HttpClient) {}
 

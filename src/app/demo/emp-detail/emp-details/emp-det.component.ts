@@ -368,46 +368,46 @@ private loadOrganizations(): Promise<void> {
   /**
    * Load branches data
    */
-  private loadBranches(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Immediately set "All Branches" as default
-      this.branches = [{
-        branchId: '',
-        branchName: 'All Branches',
-        branchCode: '',
-        dzongkhag: '',
-        thromde: '',
-        operationalStatus: true,
-        organizationName: ''
-      }];
-      this.selectedBranchId = '';
+  // private loadBranches(): Promise<void> {
+  //   return new Promise((resolve, reject) => {
+  //     // Immediately set "All Branches" as default
+  //     this.branches = [{
+  //       branchId: '',
+  //       branchName: 'All Branches',
+  //       branchCode: '',
+  //       dzongkhag: '',
+  //       thromde: '',
+  //       operationalStatus: true,
+  //       organizationName: ''
+  //     }];
+  //     this.selectedBranchId = '';
       
-      this.http.get<Branch[]>(this.branchApiUrl, this.httpOptions)
-        .pipe(
-          catchError(() => {
-            resolve(); // Still resolve to continue flow
-            return of([]);
-          })
-        )
-        .subscribe({
-          next: (branches) => {
-            // Add loaded branches after the initial "All Branches"
-            this.branches = [...this.branches, ...branches];
+  //     this.http.get<Branch[]>(this.branchApiUrl, this.httpOptions)
+  //       .pipe(
+  //         catchError(() => {
+  //           resolve(); // Still resolve to continue flow
+  //           return of([]);
+  //         })
+  //       )
+  //       .subscribe({
+  //         next: (branches) => {
+  //           // Add loaded branches after the initial "All Branches"
+  //           this.branches = [...this.branches, ...branches];
             
-            // Build location map
-            this.locationMap = {};
-            branches.forEach(branch => {
-              this.locationMap[branch.branchId] = branch.branchName;
-            });
+  //           // Build location map
+  //           this.locationMap = {};
+  //           branches.forEach(branch => {
+  //             this.locationMap[branch.branchId] = branch.branchName;
+  //           });
             
-            resolve();
-          },
-          error: (error) => {
-            reject(error);
-          }
-        });
-    });
-  }
+  //           resolve();
+  //         },
+  //         error: (error) => {
+  //           reject(error);
+  //         }
+  //       });
+  //   });
+  // }
 
 private loadBranches(): Promise<void> {
   return new Promise((resolve, reject) => {

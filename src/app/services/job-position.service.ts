@@ -57,7 +57,7 @@ export interface Position {
   providedIn: 'root'
 })
 export class JobPositionService {
-  private apiUrl = `${API_BASE_URL}/v1/job-positions`;
+  private apiUrl = `${API_BASE_URL}/api/v1/job-positions`;
 
   constructor(private http: HttpClient) { }
 
@@ -68,7 +68,7 @@ export class JobPositionService {
       'Content-Type': 'application/json'
     });
     
-    return this.http.get<Organization[]>(`${API_BASE_URL}/v1/organizations`, { headers }).pipe(
+    return this.http.get<Organization[]>(`${API_BASE_URL}/api/v1/organizations`, { headers }).pipe(
       catchError(error => this.handleError(error))
     );
   }
@@ -90,7 +90,7 @@ export class JobPositionService {
       'Content-Type': 'application/json'
     });
     
-    const url = `${API_BASE_URL}/v1/job-grades/organization/${orgId}`;
+    const url = `${API_BASE_URL}api/v1/job-grades/organization/${orgId}`;
     return this.http.get<Grade[]>(url, { headers }).pipe(
       map(response => Array.isArray(response) ? response : (response as any).data || []),
       catchError(error => this.handleError(error))

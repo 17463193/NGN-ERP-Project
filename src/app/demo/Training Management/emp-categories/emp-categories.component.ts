@@ -37,7 +37,7 @@ export class EmpCategoriesComponent implements OnInit {
   categories: TrainingCategory[] = [];
   filteredCategories: TrainingCategory[] = [];
   currentCategory: TrainingCategory | null = null;
-  private apiUrl = environment.trainingApiUrl;
+  private apiUrl = environment.apiUrl;
   isLoading = false;
 
   // Search state
@@ -80,7 +80,7 @@ export class EmpCategoriesComponent implements OnInit {
 
   loadCategories(): void {
     this.isLoading = true;
-    this.http.get<TrainingCategory[]>(`${this.apiUrl}/training/categories`)
+    this.http.get<TrainingCategory[]>(`${this.apiUrl}/api/v1/training/categories`)
       .pipe(finalize(() => this.isLoading = false))
       .subscribe({
         next: (categories) => {
@@ -154,8 +154,8 @@ export class EmpCategoriesComponent implements OnInit {
     this.isLoading = true;
 
     const request = this.isEditMode && this.currentCategory?.id
-      ? this.http.put(`${this.apiUrl}/categories/${this.currentCategory.id}`, categoryData)
-      : this.http.post(`${this.apiUrl}/categories`, categoryData);
+      ? this.http.put(`${this.apiUrl}/api/v1/training/categories/${this.currentCategory.id}`, categoryData)
+      : this.http.post(`${this.apiUrl}/api/v1/training/categories`, categoryData);
 
     request.pipe(finalize(() => this.isLoading = false))
       .subscribe({
@@ -182,7 +182,7 @@ export class EmpCategoriesComponent implements OnInit {
     }).then((result) => {
       if (result.isConfirmed) {
         this.isLoading = true;
-        this.http.delete(`${this.apiUrl}/categories/${id}`)
+        this.http.delete(`${this.apiUrl}/api/v1/training/categories/${id}`)
           .pipe(finalize(() => this.isLoading = false))
           .subscribe({
             next: () => {

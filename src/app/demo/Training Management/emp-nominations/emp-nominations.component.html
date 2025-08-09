@@ -128,17 +128,21 @@
       <div class="modal-body">
         <div class="row g-3">
           <div class="col-md-6">
-            <label for="employeeName" class="form-label">Employee Name *</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              id="employeeName"
-              formControlName="employeeName"
-              [class.is-invalid]="form.get('employeeName')?.invalid && form.get('employeeName')?.touched">
+            <label for="employeeId" class="form-label">Select Employee *</label>
+            <select 
+              class="form-select"
+              id="employeeId"
+              formControlName="employeeId"
+              [class.is-invalid]="form.get('employeeId')?.invalid && form.get('employeeId')?.touched">
+              <option value="">Select an employee</option>
+              <option *ngFor="let emp of employees" [value]="emp.employeeId">
+                {{ emp.fullName }}
+              </option>
+            </select>
             <div 
-              *ngIf="form.get('employeeName')?.invalid && form.get('employeeName')?.touched" 
+              *ngIf="form.get('employeeId')?.invalid && form.get('employeeId')?.touched" 
               class="invalid-feedback">
-              Employee name is required
+              Please select an employee
             </div>
           </div>
           
@@ -158,6 +162,22 @@
               *ngIf="form.get('programId')?.invalid && form.get('programId')?.touched" 
               class="invalid-feedback">
               Please select a training program
+            </div>
+          </div>
+          
+          <div class="col-12">
+            <label for="justification" class="form-label">Justification *</label>
+            <textarea
+              class="form-control"
+              id="justification"
+              formControlName="justification"
+              rows="3"
+              [class.is-invalid]="form.get('justification')?.invalid && form.get('justification')?.touched">
+            </textarea>
+            <div 
+              *ngIf="form.get('justification')?.invalid && form.get('justification')?.touched" 
+              class="invalid-feedback">
+              Justification is required
             </div>
           </div>
           

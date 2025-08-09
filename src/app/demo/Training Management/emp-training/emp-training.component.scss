@@ -377,6 +377,11 @@ table {
   border-radius: 4px;
   letter-spacing: 0.5px;
   
+  &.bg-light {
+    background: none !important;
+    color: #0fb96a !important;
+  }
+  
   &.bg-info {
     background-color: #0dcaf0 !important;
   }

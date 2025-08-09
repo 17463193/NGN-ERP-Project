@@ -76,7 +76,7 @@ export class AuthInterceptor implements HttpInterceptor {
     // Add any public endpoints that don't require authentication
     const publicEndpoints = [
       '/api/public/',
-      '/training/programs' // Add training programs endpoint if it should be public
+      '/api/training/programs' // Add training programs endpoint if it should be public
     ];
     return publicEndpoints.some(endpoint => url.includes(endpoint));
   }

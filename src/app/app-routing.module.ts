@@ -118,18 +118,7 @@ export const routes: Routes = [
             title: 'Calendar Overview',
             loadComponent: () => import('./demo/Calendar/calendar-overview/calendar-overview.component').then((c) => c.CalendarOverviewComponent)
           },
-          // Add New Calendar
-          {
-            path: 'add',
-            title: 'Add New Calendar',
-            loadComponent: () => import('./demo/Calendar/add-calendar/add-calendar.component').then((c) => c.AddCalendarComponent)
-          },
-          // Edit Existing Calendar (with full parameters)
-          {
-            path: 'edit/:id/:org/:branch/:year',
-            title: 'Edit Calendar',
-            loadComponent: () => import('./demo/Calendar/edit-calendar/edit-calendar.component').then((c) => c.EditCalendarComponent)
-          },
+      
           // View Calendar Details (with full parameters)
           {
             path: 'details/:id/:branchId/:year',

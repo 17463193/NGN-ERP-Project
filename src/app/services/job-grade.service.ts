@@ -33,7 +33,7 @@ export interface Grade {
   providedIn: 'root'
 })
 export class JobGradeService {
-  private baseUrl = `${API_BASE_URL}/v1/job-grades`;
+  private baseUrl = `${API_BASE_URL}/api/v1/job-grades`;
 
   constructor(private http: HttpClient) { }
 

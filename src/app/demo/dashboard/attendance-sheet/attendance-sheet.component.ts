@@ -61,8 +61,15 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
   // Summary data
   summary: any = {};
 
+  // Pagination properties
+  currentPage: number = 1;
+  itemsPerPage: number = 4;
+  totalItems: number = 0;
+  pageSizeOptions: number[] = [4, 10, 25, 50];
+  
   // Employee data
   employees: any[] = [];
+  allEmployees: any[] = []; // Store all employees for client-side pagination
 
   // Calendar data
   daysInMonth = 31;
@@ -267,9 +274,11 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     this.isLoading = true;
     this.hasError = false;
     this.errorMessage = '';
+    this.currentPage = 1; // Reset to first page on new filter
 
     // Reset data before loading new data
     this.employees = [];
+    this.allEmployees = [];
     this.summary = {};
     this.dynamicDateHeaders = [];
     this.dynamicWeekHeaders = [];
@@ -292,6 +301,9 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
         this.isLoading = false;
         if (data && data.length > 0) {
           this.processAttendanceData(data);
+          this.allEmployees = [...this.employees]; // Store all employees
+          this.totalItems = this.employees.length;
+          this.updatePagedEmployees(); // Update the paged data
           this.updateChartData();
           this.hasError = false;
           this.errorMessage = '';
@@ -727,13 +739,105 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
   exportToExcel() {
     console.log('Exporting to Excel...');
   }
-
   exportToPDF() {
     console.log('Exporting to PDF...');
   }
 
   printReport() {
     window.print();
+  }
+
+  // Update the displayed employees based on current pagination
+  updatePagedEmployees(): void {
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    this.employees = this.allEmployees.slice(startIndex, endIndex);
+  }
+
+  // Handle page change event
+  onPageChange(page: number): void {
+    const totalPages = this.totalPages;
+    if (page < 1 || page > totalPages) return;
+    this.currentPage = page;
+    this.updatePagedEmployees();
+  }
+
+  // Handle page size change
+  onPageSizeChange(event: Event): void {
+    const newSize = Number((event.target as HTMLSelectElement).value);
+    if (newSize === this.itemsPerPage) return;
+    
+    // Calculate which item should be the first one on the new page
+    const firstItemIndex = (this.currentPage - 1) * this.itemsPerPage;
+    this.itemsPerPage = newSize;
+    
+    // Calculate new page number to keep the same item in view
+    this.currentPage = Math.floor(firstItemIndex / this.itemsPerPage) + 1;
+    this.updatePagedEmployees();
+  }
+
+  // Optional: Scroll to top of the table
+  // window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Calculate total pages for pagination
+  get totalPages(): number {
+    return this.totalItems > 0 ? Math.ceil(this.totalItems / this.itemsPerPage) : 1;
+  }
+
+  // Generate array of page numbers for pagination
+  getPages(): number[] {
+    const pages: number[] = [];
+    const total = this.totalPages;
+    const current = this.currentPage;
+    
+    // Always show first page
+    pages.push(1);
+    
+    // Add ellipsis if needed before current page
+    if (current > 3) {
+      pages.push(-1); // -1 represents ellipsis
+    }
+    
+    // Add pages around current page
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+      if (i > 1 && i < total) {
+        pages.push(i);
+      }
+    }
+    
+    // Add ellipsis if needed after current page
+    if (current < total - 2) {
+      pages.push(-1); // -1 represents ellipsis
+    }
+    
+    // Always show last page if there is more than one page
+    if (total > 1) {
+      pages.push(total);
+    }
+    
+    return pages;
+  }
+  
+  // Handle page size change
+  onItemsPerPageChange(): void {
+    this.currentPage = 1; // Reset to first page when changing page size
+    this.updatePagedEmployees();
+  }
+
+  // Generate page numbers for pagination controls
+  get pageNumbers(): number[] {
+    const pages: number[] = [];
+    const maxVisiblePages = 5; // Maximum number of page buttons to show
+    let startPage = Math.max(1, this.currentPage - Math.floor(maxVisiblePages / 2));
+    const endPage = Math.min(this.totalPages, startPage + maxVisiblePages - 1);
+    
+    // Adjust startPage if we're near the end
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
   }
 
   ngOnDestroy() {

@@ -16,9 +16,23 @@ export class NavRightComponent {
     public authService: AuthService,
     private router: Router
   ) {}
-  onLogout() {
-    this.authService.logout();
 
+  async onLogout() {
+    try {
+      await this.authService.logout().toPromise();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Navigation is handled in AuthService's logout method
+    }
+  }
+
+  async onLogoutAll() {
+    try {
+      await this.authService.logoutAllSessions().toPromise();
+    } catch (error) {
+      console.error('Logout all sessions error:', error);
+    }
   }
 
   async onForceLogout(userId: string) {

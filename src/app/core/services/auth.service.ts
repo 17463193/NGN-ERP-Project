@@ -110,7 +110,7 @@ export class AuthService {
 
    login(username: string, password: string): Observable<boolean> {
     // Remove the leading /api from the endpoint since it's already in the base URL
-    const url = `${environment.apiUrl}/auth/login`;
+    const url = `${environment.apiUrl}/api/auth/login`;
 
     return this.http.post<any>(url, { username, password }).pipe(
       switchMap(loginResponse => {
@@ -142,7 +142,7 @@ export class AuthService {
 
         // Remove the leading /api from the endpoint since it's already in the base URL
         return this.http.get<Permission[]>(
-          `${environment.apiUrl}/v1/role-permissions/role/${userData.roleId}/permissions`
+          `${environment.apiUrl}/api/v1/role-permissions/role/${userData.roleId}/permissions`
         ).pipe(
           tap(permissions => {
             const completeUser = {

@@ -53,8 +53,8 @@
   .info-item {
     display: flex;
     flex-direction: column;
-    min-width: 200px;
-    flex: 1;
+    min-width: 160px;
+    flex: 1 1 auto;
 
     .info-label {
       font-size: 0.85rem;
@@ -87,11 +87,13 @@
 /* Calendar legend */
 .calendar-legend {
   display: flex;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
   margin: 1.5rem 0;
   padding: 0.75rem 1rem;
   background-color: #f8f9fa;
   border-radius: 8px;
+  align-items: center;
 
   .legend-item {
     display: flex;
@@ -165,6 +167,7 @@
       gap: 0.25rem;
 
       .day {
+        position: relative;
         width: 30px;
         height: 30px;
         line-height: 30px;
@@ -172,9 +175,35 @@
         font-size: 0.85rem;
         border-radius: 50%;
         transition: all 0.2s ease;
+        user-select: none;
+        color: #2c3e50; /* Ensure text is visible */
+        background-color: #fff; /* Ensure background is white */
+        border: 1px solid transparent; /* Add subtle border */
 
         &:hover {
           background-color: #f1f3f5;
+        }
+
+        &.editable {
+          cursor: pointer;
+
+          &:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+          }
+
+          &.full, &.half {
+            &:hover {
+              transform: scale(1.1);
+              box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
+            }
+          }
+        }
+
+        /* Style for unmarked days */
+        &:not(.full):not(.half) {
+          color: #2c3e50;
+          background-color: #fff;
         }
 
         &.full {
@@ -191,6 +220,26 @@
           background-color: #e74c3c;
           color: white;
           font-weight: 500;
+          position: relative;
+          overflow: hidden;
+
+          &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+          }
+
+          .half-day-indicator {
+            position: relative;
+            z-index: 1;
+            font-size: 0.7em;
+            vertical-align: super;
+            line-height: 1;
+          }
 
           &:hover {
             background-color: #c0392b;

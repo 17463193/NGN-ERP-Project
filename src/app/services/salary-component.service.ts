@@ -25,7 +25,7 @@ export interface SalaryComponent {
   providedIn: 'root'
 })
 export class SalaryComponentService {
-  private baseUrl = `${API_BASE_URL}/v1/salary-components`;
+  private baseUrl = `${API_BASE_URL}/api/v1/salary-components`;
 
   constructor(private http: HttpClient) { }
 

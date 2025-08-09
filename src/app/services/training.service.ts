@@ -51,7 +51,7 @@ export interface TrainingNomination {
   providedIn: 'root'
 })
 export class TrainingService {
-  private apiUrl = environment.trainingApiUrl;
+  private apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) { }
 
@@ -60,7 +60,7 @@ export class TrainingService {
    * @returns Observable of TrainingCategory array
    */
   getTrainingCategories(): Observable<TrainingCategory[]> {
-    return this.http.get<TrainingCategory[]>(`${this.apiUrl}/training/categories`);
+    return this.http.get<TrainingCategory[]>(`${this.apiUrl}/api/v1/training/categories`);
   }
 
   /**
@@ -68,7 +68,7 @@ export class TrainingService {
    * @returns Observable of TrainingProgram array
    */
   getTrainingPrograms(): Observable<TrainingProgram[]> {
-    return this.http.get<TrainingProgram[]>(`${this.apiUrl}/training/programs`).pipe(
+    return this.http.get<TrainingProgram[]>(`${this.apiUrl}/api/v1/training/programs`).pipe(
       catchError(error => {
         console.error('Error fetching training programs:', error);
         // Return empty array if there's an error
@@ -84,7 +84,7 @@ export class TrainingService {
    */
   getNominationsByProgram(programId: string): Observable<TrainingNomination[]> {
     return this.http.get<TrainingNomination[]>(
-      `${this.apiUrl}/training/nominations/program/${programId}`
+      `${this.apiUrl}/api/v1/training/nominations/program/${programId}`
     );
   }
 
@@ -95,7 +95,7 @@ export class TrainingService {
    */
   createProgram(program: Omit<TrainingProgram, 'programId' | 'createdDate' | 'modifiedDate' | 'seatsBooked'>): Observable<TrainingProgram> {
     return this.http.post<TrainingProgram>(
-      `${this.apiUrl}/training/programs`,
+      `${this.apiUrl}/api/v1/training/programs`,
       program
     );
   }
@@ -111,7 +111,7 @@ export class TrainingService {
     }
     
     return this.http.put<TrainingProgram>(
-      `${this.apiUrl}/training/programs/${program.programId}`,
+      `${this.apiUrl}/api/v1/training/programs/${program.programId}`,
       program
     );
   }

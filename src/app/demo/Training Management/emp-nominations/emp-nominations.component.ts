@@ -52,6 +52,30 @@ interface TrainingNomination {
   trainerName?: string;
 }
 
+interface EmployeeResponse extends Array<{
+  employee: {
+    empId: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
+    empCode: string;
+    // Add other fields as needed
+  };
+  contacts: any[];
+  addresses: any[];
+  qualifications: any[];
+  bankDetails: any[];
+  history: any[];
+}> {}
+
+interface Employee {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  empCode: string;
+  fullName: string;
+}
+
 interface TrainingNominationWithProgram extends TrainingNomination {
   program?: TrainingProgram;
 }
@@ -73,9 +97,10 @@ export class EmpNominationsComponent implements OnInit {
   // Data
   nominations: TrainingNominationWithProgram[] = [];
   programs: TrainingProgram[] = [];
+  employees: Employee[] = [];
   filteredNominations: TrainingNominationWithProgram[] = [];
   currentNomination: TrainingNominationWithProgram | null = null;
-  private apiUrl = environment.trainingApiUrl;
+  private apiUrl = environment.apiUrl;
   
   // Search state
   searchQuery = '';
@@ -107,8 +132,9 @@ export class EmpNominationsComponent implements OnInit {
     private http: HttpClient
   ) {
     this.form = this.fb.group({
-      employeeName: ['', Validators.required],
+      employeeId: ['', Validators.required],
       programId: ['', Validators.required],
+      justification: ['', Validators.required],
       status: ['Pending', Validators.required],
       startDate: ['', Validators.required],
       endDate: ['', Validators.required],
@@ -118,12 +144,14 @@ export class EmpNominationsComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadNominations();
     this.loadPrograms();
+    this.loadEmployees();
   }
 
   loadPrograms(): void {
     this.isLoading = true;
-    const url = `${this.apiUrl}/training/programs`;
+    const url = `${this.apiUrl}/api/v1/training/programs`;
     console.log('Fetching programs from:', url); // Debug log
     
     this.http.get<TrainingProgram[]>(url, {
@@ -154,7 +182,7 @@ export class EmpNominationsComponent implements OnInit {
     this.isLoading = true;
     // First, get all programs to fetch their nominations
     const programIds = this.programs.map(p => p.programId);
-    console.log('Program IDs to fetch nominations for:', programIds); // Debug log
+    console.log('Program IDs to fetch nominations for:', programIds); 
     
     // If there are no programs, set empty nominations and return
     if (programIds.length === 0) {
@@ -165,7 +193,7 @@ export class EmpNominationsComponent implements OnInit {
     }
 
     const nominationPromises = programIds.map(programId => 
-      this.http.get<TrainingNomination[]>(`${this.apiUrl}/training/nominations/program/${programId}`, {
+      this.http.get<TrainingNomination[]>(`${this.apiUrl}/api/v1/training/nominations/program/${programId}`, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
@@ -175,7 +203,7 @@ export class EmpNominationsComponent implements OnInit {
 
     Promise.all(nominationPromises)
       .then(nominationArrays => {
-        console.log('Nominations response:', nominationArrays); // Debug log
+        console.log('Nominations response:', nominationArrays); 
         // Flatten the array of arrays and add program info
         this.nominations = [];
         nominationArrays.forEach((nominations, index) => {
@@ -206,6 +234,46 @@ export class EmpNominationsComponent implements OnInit {
       })
       .finally(() => {
         this.isLoading = false;
+      });
+  }
+
+  loadEmployees(): void {
+    this.isLoading = true;
+    console.log('Fetching employees from:', `${this.apiUrl}/api/v1/employees`);
+    
+    this.http.get<EmployeeResponse>(`${this.apiUrl}/api/v1/employees`)
+      .pipe(finalize(() => this.isLoading = false))
+      .subscribe({
+        next: (response) => {
+          console.log('API Response:', response);
+          
+          if (Array.isArray(response)) {
+            this.employees = response.map(item => {
+              if (!item.employee) return null;
+              
+              const emp = item.employee;
+              const middleName = emp.middleName ? ` ${emp.middleName}` : '';
+              const fullName = `${emp.firstName}${middleName} ${emp.lastName}`.trim();
+              
+              return {
+                employeeId: emp.empId,
+                firstName: emp.firstName,
+                lastName: emp.lastName,
+                empCode: emp.empCode,
+                fullName: fullName
+              };
+            }).filter(Boolean); // Remove any null entries
+            
+            console.log('Processed employees:', this.employees);
+          } else {
+            console.warn('No employee data found in response');
+            this.employees = [];
+          }
+        },
+        error: (error) => {
+          console.error('Error loading employees:', error);
+          Swal.fire('Error', 'Failed to load employees', 'error');
+        }
       });
   }
 
@@ -243,7 +311,10 @@ export class EmpNominationsComponent implements OnInit {
     this.currentNomination = null;
     this.form.reset({
       status: 'Pending',
-      programId: ''
+      programId: '',
+      employeeId: '',
+      employeeName: '',
+      justification: ''
     });
     this.modalRef = this.modalService.open(this.trainingModalRef, { size: 'lg' });
   }
@@ -252,13 +323,15 @@ export class EmpNominationsComponent implements OnInit {
     this.isEditMode = true;
     this.currentNomination = { ...nomination };
     this.form.patchValue({
-      employeeName: nomination.employeeName,
-      programId: nomination.programId,
-      status: nomination.status,
+      employeeId: nomination.employeeId || '',
+      employeeName: nomination.employeeName || '',
+      programId: nomination.programId || '',
+      justification: (nomination as any).justification || '',
+      status: nomination.status || 'Pending',
       startDate: nomination.startDate ? new Date(nomination.startDate).toISOString().substring(0, 10) : '',
       endDate: nomination.endDate ? new Date(nomination.endDate).toISOString().substring(0, 10) : '',
-      location: nomination.location,
-      trainerName: nomination.trainerName
+      location: nomination.location || '',
+      trainerName: nomination.trainerName || ''
     });
     this.modalRef = this.modalService.open(this.trainingModalRef, { size: 'lg' });
   }
@@ -276,24 +349,12 @@ export class EmpNominationsComponent implements OnInit {
     const formData = this.form.value;
     const apiUrl = environment.apiUrl;
     
-    // Find the selected program to get additional details
-    const selectedProgram = this.programs.find(p => p.programId === formData.programId);
-    
-    const nominationData: TrainingNomination = {
-      id: this.isEditMode && this.currentNomination?.id ? this.currentNomination.id : undefined,
-      employeeName: formData.employeeName,
+    // Prepare the request body according to the API specification
+    const nominationData = {
+      empId: formData.employeeId,
       programId: formData.programId,
-      programName: selectedProgram?.programName || '',
-      programCode: selectedProgram?.programCode || '',
-      status: formData.status,
-      startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
-      endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
-      location: formData.location,
-      trainerName: formData.trainerName,
-      createdDate: this.isEditMode && this.currentNomination?.createdDate 
-        ? this.currentNomination.createdDate 
-        : new Date().toISOString(),
-      modifiedDate: new Date().toISOString()
+      justification: formData.justification || '',
+      status: formData.status || 'Pending'
     };
 
     const request = this.isEditMode && this.currentNomination?.id
