@@ -249,6 +249,11 @@ export class CalendarDetailsComponent implements OnInit {
     this.modalMonth = this.months[this.modalMonthIndex];
     this.showEventModal = true;
   }
+
+  // Get marked days for the event modal
+  getMarkedDaysForModal() {
+    return this.markedDaysByMonth[this.modalMonthIndex] || {};
+  }
   
   onDayClick(monthIndex: number, day: number, event: MouseEvent) {
     event.preventDefault();

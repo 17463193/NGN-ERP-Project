@@ -27,6 +27,7 @@
     "@angular/router": "19.0.5",
     "@fortawesome/fontawesome-free": "^7.0.0",
     "@ng-bootstrap/ng-bootstrap": "18.0.0",
+    "@ng-select/ng-select": "^20.1.0",
     "@popperjs/core": "2.11.8",
     "@types/chart.js": "^2.9.41",
     "angularx-qrcode": "^20.0.0",

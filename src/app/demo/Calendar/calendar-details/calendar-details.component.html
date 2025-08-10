@@ -5,7 +5,7 @@
   [month]="modalMonth"
   [year]="modalYear"
   [initialDate]="selectedDate"
-  [markedDays]="{}"
+  [markedDays]="getMarkedDaysForModal()"
   [organizationName]="getSelectedOrgName()"
   [branchName]="selectedBranchName"
   (save)="onModalSave($event.events)"

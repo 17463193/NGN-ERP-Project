@@ -4,6 +4,10 @@
         <h2>Department Management</h2>
         <p>Manage and organize department for your organization.</p>
       </div>
+      <button class="add-button" (click)="openAddModal()">
+        <i class="ti ti-plus"></i>
+        <span>Add Department</span>
+      </button>
     </div>
   
     <div class="filter-row-container">
@@ -59,11 +63,6 @@
             </div>
           </div>
         </div>
-  
-        <button class="emp-att-add-btn">
-          <i class="bi bi-plus-lg me-1"></i>
-          <span>Add Department</span>
-        </button>
       </div>
     </div>
   
@@ -106,14 +105,15 @@
             <td>{{ dept.budget_allocation | currency:'BTN ':'symbol':'1.0-0' }}</td>
             <td>{{ dept.sub_departments_count }}</td>
             <td>
-              <span class="status-badge active">
-                Active
-              </span>
+              <div class="status-badge active" *ngIf="dept.status">Active</div>
+              <div class="status-badge inactive" *ngIf="!dept.status">Inactive</div>
             </td>
             <td>
               <div class="action-buttons">
                 <button class="view-btn" title="View"><i class="ti ti-eye"></i></button>
-                <button class="edit-btn" title="Edit"><i class="ti ti-edit"></i></button>
+                <button class="edit-btn" title="Edit" (click)="openEditModal(dept)">
+                  <i class="ti ti-edit"></i>
+                </button>
                 <button class="delete-btn" title="Delete">
                   <i class="ti ti-trash"></i>
                 </button>
@@ -138,4 +138,151 @@
         </button>
       </div>
     </div>
-  </div>
+
+  <!-- Add Department Modal -->
+  <ng-template #departmentModal let-modal>
+    <form [formGroup]="departmentForm" (ngSubmit)="onSubmit()">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold">{{ isEditMode ? 'Edit' : 'Add New' }} Department</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <!-- Basic Information -->
+          <div class="col-12">
+            <h6 class="border-bottom pb-2 mb-3">Department Information</h6>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="dept_name" class="form-label">Department Name <span class="text-danger">*</span></label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="dept_name" 
+              formControlName="dept_name"
+              [ngClass]="{ 'is-invalid': departmentForm.get('dept_name')?.invalid && departmentForm.get('dept_name')?.touched }"
+              placeholder="Enter department name">
+            <div *ngIf="departmentForm.get('dept_name')?.invalid && departmentForm.get('dept_name')?.touched" class="invalid-feedback">
+              <div *ngIf="departmentForm.get('dept_name')?.hasError('required')">Department name is required</div>
+              <div *ngIf="departmentForm.get('dept_name')?.hasError('minlength')">Department name must be at least 3 characters</div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="dept_code" class="form-label">Department Code <span class="text-danger">*</span></label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="dept_code" 
+              formControlName="dept_code"
+              [ngClass]="{ 'is-invalid': departmentForm.get('dept_code')?.invalid && departmentForm.get('dept_code')?.touched }"
+              placeholder="e.g., HR_001">
+            <div *ngIf="departmentForm.get('dept_code')?.invalid && departmentForm.get('dept_code')?.touched" class="invalid-feedback">
+              Department code is required
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="org_id" class="form-label">Organization <span class="text-danger">*</span></label>
+            <div *ngIf="isLoadingOrganizations" class="form-control">
+              <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              Loading organizations...
+            </div>
+            <select 
+              *ngIf="!isLoadingOrganizations"
+              class="form-select" 
+              id="org_id" 
+              formControlName="org_id"
+              [ngClass]="{ 'is-invalid': departmentForm.get('org_id')?.invalid && departmentForm.get('org_id')?.touched }">
+              <option value="" disabled selected>Select an organization</option>
+              <option *ngFor="let org of organizations" [value]="org.orgId">
+                {{ org.orgName }}
+              </option>
+            </select>
+            <div *ngIf="departmentForm.get('org_id')?.invalid && departmentForm.get('org_id')?.touched" class="invalid-feedback">
+              Please select an organization
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="branch_id" class="form-label">Branch <span class="text-danger">*</span></label>
+            <div *ngIf="isLoadingBranches" class="form-control">
+              <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              Loading branches...
+            </div>
+            <select 
+              *ngIf="!isLoadingBranches"
+              class="form-select" 
+              id="branch_id" 
+              formControlName="branch_id"
+              [ngClass]="{ 'is-invalid': departmentForm.get('branch_id')?.invalid && departmentForm.get('branch_id')?.touched }">
+              <option value="" disabled selected>Select a branch</option>
+              <option *ngFor="let branch of branches" [value]="branch.branchId">
+                {{ branch.branchName }}
+              </option>
+            </select>
+            <div *ngIf="departmentForm.get('branch_id')?.invalid && departmentForm.get('branch_id')?.touched" class="invalid-feedback">
+              Please select a branch
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="parent_dept_id" class="form-label">Parent Department ID</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="parent_dept_id" 
+              formControlName="parent_dept_id"
+              placeholder="Enter parent department ID">
+          </div>
+          
+          <div class="col-md-6">
+            <label for="dept_head_id" class="form-label">Department Head ID</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="dept_head_id" 
+              formControlName="dept_head_id"
+              placeholder="Enter department head ID">
+          </div>
+          
+          <div class="col-md-6">
+            <label for="budget_allocation" class="form-label">Budget Allocation</label>
+            <input 
+              type="number" 
+              class="form-control" 
+              id="budget_allocation" 
+              formControlName="budget_allocation"
+              min="0"
+              [ngClass]="{ 'is-invalid': departmentForm.get('budget_allocation')?.invalid && departmentForm.get('budget_allocation')?.touched }"
+              placeholder="Enter budget allocation">
+            <div *ngIf="departmentForm.get('budget_allocation')?.invalid && departmentForm.get('budget_allocation')?.touched" class="invalid-feedback">
+              Budget must be a positive number
+            </div>
+          </div>
+        </div>
+        
+        <!-- Error Message -->
+        <div *ngIf="error" class="alert alert-danger mt-3 mb-0">
+          <i class="ti ti-alert-circle me-2"></i> {{ error }}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()" [disabled]="isSubmitting">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="departmentForm.invalid || isSubmitting">
+          <span *ngIf="!isSubmitting">Save Department</span>
+          <span *ngIf="isSubmitting" class="d-flex align-items-center">
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            Saving...
+          </span>
+        </button>
+      </div>
+    </form>
+  </ng-template>
+</div>

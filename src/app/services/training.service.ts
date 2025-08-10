@@ -56,11 +56,48 @@ export class TrainingService {
   constructor(private http: HttpClient) { }
 
   /**
+   * Get all organizations
+   * @returns Observable of Organization array
+   */
+  getOrganizations(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/api/v1/organizations`).pipe(
+      catchError(error => {
+        console.error('Error fetching organizations:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
    * Get all training categories
    * @returns Observable of TrainingCategory array
    */
   getTrainingCategories(): Observable<TrainingCategory[]> {
-    return this.http.get<TrainingCategory[]>(`${this.apiUrl}/api/v1/training/categories`);
+    const url = `${this.apiUrl}/api/v1/training/categories`;
+    return this.http.get<TrainingCategory[]>(url).pipe(
+      catchError(error => {
+        console.error('Error in getTrainingCategories:', error);
+        // Return empty array if there's an error
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get training categories by organization ID
+   * @param orgId The organization ID to filter categories by
+   * @returns Observable of TrainingCategory array
+   */
+  getTrainingCategoriesByOrganization(orgId: string): Observable<TrainingCategory[]> {
+    return this.http.get<TrainingCategory[]>(
+      `${this.apiUrl}/api/v1/training/categories/organization/${orgId}`
+    ).pipe(
+      catchError(error => {
+        console.error('Error fetching categories by organization:', error);
+        // Return empty array if there's an error
+        return of([]);
+      })
+    );
   }
 
   /**
