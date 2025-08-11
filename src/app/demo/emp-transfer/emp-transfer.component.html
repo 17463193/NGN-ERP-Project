@@ -45,10 +45,10 @@
     <table>
       <thead>
         <tr>
-          <th>Employee</th>
-          <th>Current Department</th>
-          <th>New Department</th>
-          <th>Transfer Date</th>
+          <th>Employee Name</th>
+          <th>From Department</th>
+          <th>To Department</th>
+          <th>Effective Date</th>
           <th>Type</th>
           <th>Status</th>
           <th>Approved By</th>
@@ -57,26 +57,26 @@
       </thead>
       <tbody>
         <tr *ngFor="let transfer of paginatedTransfers">
-          <td class="fw-medium">{{ transfer.employeeName }}</td>
-          <td>{{ transfer.currentDepartment }}</td>
-          <td>{{ transfer.newDepartment }}</td>
-          <td>{{ transfer.transferDate | date:'mediumDate' }}</td>
-          <td>{{ transfer.transferType }}</td>
+          <td class="fw-medium">{{ getEmployeeName(transfer.empId) }}</td>
+          <td>{{ getDepartmentName(transfer.fromDeptId) }}</td>
+          <td>{{ getDepartmentName(transfer.toDeptId) }}</td>
+          <td>{{ transfer.effectiveDate | date:'mediumDate' }}</td>
+          <td>{{ getTransferTypeName(transfer.transferTypeId) }}</td>
           <td>
-            <span class="badge" [ngClass]="getStatusBadgeClass(transfer.status)">
-              {{ transfer.status }}
+            <span class="badge" [ngClass]="getStatusBadgeClass(transfer.transferStatus)">
+              {{ transfer.transferStatus }}
             </span>
           </td>
-          <td>{{ transfer.approvedBy || 'N/A' }}</td>
+          <td>{{ transfer.approvedBy ? getEmployeeName(transfer.approvedBy) : 'N/A' }}</td>
           <td>
             <div class="action-buttons">
               <button class="view-btn" (click)="openViewModal(transfer)" title="View">
                 <i class="bi bi-eye"></i>
               </button>
-              <button class="edit-btn" (click)="openEditModal(transfer)" title="Edit" [disabled]="transfer.status === 'Completed'">
+              <button class="edit-btn" (click)="openEditModal(transfer)" title="Edit" [disabled]="transfer.transferStatus === 'Completed'">
                 <i class="bi bi-pencil"></i>
               </button>
-              <button class="delete-btn" (click)="confirmDelete(transfer.id)" title="Delete" [disabled]="transfer.status === 'Completed'">
+              <button class="delete-btn" (click)="confirmDelete(transfer)" title="Delete" [disabled]="transfer.transferStatus === 'Completed'">
                 <i class="bi bi-trash"></i>
               </button>
             </div>
@@ -126,151 +126,348 @@
     </div>
     <div class="modal-body">
       <div class="row g-3">
+        <!-- Employee and Transfer Type -->
         <div class="col-md-6">
-          <label for="employeeName" class="form-label">Employee *</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            id="employeeName"
-            formControlName="employeeName"
-            [class.is-invalid]="form.get('employeeName')?.invalid && form.get('employeeName')?.touched">
-          <div 
-            *ngIf="form.get('employeeName')?.invalid && form.get('employeeName')?.touched" 
-            class="invalid-feedback">
-            Employee name is required
-          </div>
-        </div>
-        
-        <div class="col-md-6">
-          <label for="employeeId" class="form-label">Employee ID *</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            id="employeeId"
-            formControlName="employeeId"
-            [class.is-invalid]="form.get('employeeId')?.invalid && form.get('employeeId')?.touched">
-          <div 
-            *ngIf="form.get('employeeId')?.invalid && form.get('employeeId')?.touched" 
-            class="invalid-feedback">
-            Employee ID is required
-          </div>
-        </div>
-        
-        <div class="col-md-6">
-          <label for="currentDepartment" class="form-label">Current Department *</label>
+          <label for="empId" class="form-label">Employee *</label>
           <select 
             class="form-select" 
-            id="currentDepartment"
-            formControlName="currentDepartment"
-            [class.is-invalid]="form.get('currentDepartment')?.invalid && form.get('currentDepartment')?.touched">
-            <option value="">Select Department</option>
-            <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
+            id="empId" 
+            formControlName="empId"
+            [class.is-invalid]="form.get('empId')?.invalid && form.get('empId')?.touched"
+            [disabled]="isLoading">
+            <option value="" disabled selected>Select Employee</option>
+            <option *ngFor="let emp of employees" [value]="emp.employee?.empId">
+              {{ formatEmployeeName(emp.employee) }}
+            </option>
           </select>
-          <div 
-            *ngIf="form.get('currentDepartment')?.invalid && form.get('currentDepartment')?.touched" 
-            class="invalid-feedback">
-            Current department is required
-          </div>
+          <div *ngIf="isLoading" class="form-text">Loading employees...</div>
+          <div class="invalid-feedback">Employee is required</div>
         </div>
-        
+
         <div class="col-md-6">
-          <label for="newDepartment" class="form-label">New Department *</label>
+          <label for="transferTypeId" class="form-label">Transfer Type *</label>
           <select 
             class="form-select" 
-            id="newDepartment"
-            formControlName="newDepartment"
-            [class.is-invalid]="form.get('newDepartment')?.invalid && form.get('newDepartment')?.touched">
-            <option value="">Select Department</option>
-            <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
+            id="transferTypeId" 
+            formControlName="transferTypeId"
+            [class.is-invalid]="form.get('transferTypeId')?.invalid && form.get('transferTypeId')?.touched">
+            <option value="" disabled selected>Select Transfer Type</option>
+            <option *ngFor="let type of transferTypeOptions" [value]="type.id">
+              {{ type.name }}
+            </option>
           </select>
-          <div 
-            *ngIf="form.get('newDepartment')?.invalid && form.get('newDepartment')?.touched" 
-            class="invalid-feedback">
-            New department is required
-          </div>
+          <div class="invalid-feedback">Transfer type is required</div>
         </div>
-        
+
+        <!-- From Department Details -->
+        <div class="col-md-4">
+          <label for="fromDeptId" class="form-label">From Department *</label>
+          <select 
+            class="form-select" 
+            id="fromDeptId" 
+            formControlName="fromDeptId"
+            [class.is-invalid]="form.get('fromDeptId')?.invalid && form.get('fromDeptId')?.touched"
+            [disabled]="isLoading">
+            <option value="" disabled selected>Select Department</option>
+            <option *ngFor="let dept of departments" [value]="dept.dept_id">
+              {{ dept.dept_name }}
+            </option>
+          </select>
+          <div *ngIf="isLoading" class="form-text">Loading departments...</div>
+          <div class="invalid-feedback">From department is required</div>
+        </div>
+
+        <div class="col-md-4">
+          <label for="fromBranchId" class="form-label">From Branch *</label>
+          <select 
+            class="form-select" 
+            id="fromBranchId" 
+            formControlName="fromBranchId"
+            [class.is-invalid]="form.get('fromBranchId')?.invalid && form.get('fromBranchId')?.touched"
+            [disabled]="isLoading">
+            <option value="" disabled selected>Select Branch</option>
+            <option *ngFor="let branch of branches" [value]="branch.branchId">
+              {{ branch.branchName }}
+            </option>
+          </select>
+          <div *ngIf="isLoading" class="form-text">Loading branches...</div>
+          <div class="invalid-feedback">From branch is required</div>
+        </div>
+
+        <div class="col-md-4">
+          <label for="fromPositionId" class="form-label">From Position</label>
+          <select 
+            class="form-select" 
+            id="fromPositionId" 
+            formControlName="fromPositionId"
+            [class.is-invalid]="form.get('fromPositionId')?.invalid && form.get('fromPositionId')?.touched"
+            [disabled]="isLoading">
+            <option value="" disabled selected>Select Position</option>
+            <option *ngFor="let position of jobPositions" [value]="position.positionId">
+              {{ position.positionName }}
+            </option>
+          </select>
+          <div *ngIf="isLoading" class="form-text">Loading positions...</div>
+        </div>
+
+        <!-- To Department Details -->
+        <div class="col-md-4">
+          <label for="toDeptId" class="form-label">To Department *</label>
+          <select 
+            class="form-select" 
+            id="toDeptId" 
+            formControlName="toDeptId"
+            [class.is-invalid]="form.get('toDeptId')?.invalid && form.get('toDeptId')?.touched"
+            [disabled]="isLoading">
+            <option value="" disabled selected>Select Department</option>
+            <option *ngFor="let dept of departments" [value]="dept.dept_id">
+              {{ dept.dept_name }}
+            </option>
+          </select>
+          <div *ngIf="isLoading" class="form-text">Loading departments...</div>
+          <div class="invalid-feedback">To department is required</div>
+        </div>
+
+        <div class="col-md-4">
+          <label for="toBranchId" class="form-label">To Branch *</label>
+          <select 
+            class="form-select" 
+            id="toBranchId" 
+            formControlName="toBranchId"
+            [class.is-invalid]="form.get('toBranchId')?.invalid && form.get('toBranchId')?.touched"
+            [disabled]="isLoading">
+            <option value="" disabled selected>Select Branch</option>
+            <option *ngFor="let branch of branches" [value]="branch.branchId">
+              {{ branch.branchName }}
+            </option>
+          </select>
+          <div *ngIf="isLoading" class="form-text">Loading branches...</div>
+          <div class="invalid-feedback">To branch is required</div>
+        </div>
+
+        <div class="col-md-4">
+          <label for="toPositionId" class="form-label">To Position</label>
+          <select 
+            class="form-select" 
+            id="toPositionId" 
+            formControlName="toPositionId"
+            [class.is-invalid]="form.get('toPositionId')?.invalid && form.get('toPositionId')?.touched"
+            [disabled]="isLoading">
+            <option value="" disabled selected>Select Position</option>
+            <option *ngFor="let position of jobPositions" [value]="position.positionId">
+              {{ position.positionName }}
+            </option>
+          </select>
+          <div *ngIf="isLoading" class="form-text">Loading positions...</div>
+        </div>
+
+        <!-- Manager Information -->
         <div class="col-md-6">
-          <label for="transferDate" class="form-label">Transfer Date *</label>
+          <label for="fromManagerId" class="form-label">Current Manager</label>
+          <select 
+            class="form-select" 
+            id="fromManagerId" 
+            formControlName="fromManagerId"
+            [disabled]="isLoading">
+            <option value="" disabled selected>Select Current Manager</option>
+            <option *ngFor="let emp of employees" [value]="emp.employee?.empId">
+              {{ formatEmployeeName(emp.employee) }}
+            </option>
+          </select>
+          <div *ngIf="isLoading" class="form-text">Loading managers...</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="toManagerId" class="form-label">New Manager</label>
+          <select 
+            class="form-select" 
+            id="toManagerId" 
+            formControlName="toManagerId"
+            [disabled]="isLoading">
+            <option value="" disabled selected>Select New Manager</option>
+            <option *ngFor="let emp of employees" [value]="emp.employee?.empId">
+              {{ formatEmployeeName(emp.employee) }}
+            </option>
+          </select>
+          <div *ngIf="isLoading" class="form-text">Loading managers...</div>
+        </div>
+
+        <!-- Transfer Details -->
+        <div class="col-12">
+          <label for="transferReason" class="form-label">Transfer Reason *</label>
+          <textarea 
+            class="form-control" 
+            id="transferReason" 
+            rows="2" 
+            formControlName="transferReason"
+            placeholder="Enter the reason for transfer"
+            [class.is-invalid]="form.get('transferReason')?.invalid && form.get('transferReason')?.touched"></textarea>
+          <div class="invalid-feedback">Transfer reason is required</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="effectiveDate" class="form-label">Effective Date *</label>
           <input 
             type="date" 
             class="form-control" 
-            id="transferDate"
-            formControlName="transferDate"
-            [class.is-invalid]="form.get('transferDate')?.invalid && form.get('transferDate')?.touched">
-          <div 
-            *ngIf="form.get('transferDate')?.invalid && form.get('transferDate')?.touched" 
-            class="invalid-feedback">
-            Transfer date is required
-          </div>
+            id="effectiveDate" 
+            formControlName="effectiveDate"
+            [class.is-invalid]="form.get('effectiveDate')?.invalid && form.get('effectiveDate')?.touched">
+          <div class="invalid-feedback">Effective date is required</div>
         </div>
-        
+
         <div class="col-md-6">
-          <label for="transferType" class="form-label">Transfer Type *</label>
-          <select 
-            class="form-select" 
-            id="transferType"
-            formControlName="transferType"
-            [class.is-invalid]="form.get('transferType')?.invalid && form.get('transferType')?.touched">
-            <option value="">Select Type</option>
-            <option value="Permanent">Permanent</option>
-            <option value="Temporary">Temporary</option>
-            <option value="Lateral">Lateral</option>
-            <option value="Promotion">Promotion</option>
-          </select>
-          <div 
-            *ngIf="form.get('transferType')?.invalid && form.get('transferType')?.touched" 
-            class="invalid-feedback">
-            Transfer type is required
-          </div>
-        </div>
-        
-        <div class="col-md-6">
-          <label for="status" class="form-label">Status *</label>
-          <select 
-            class="form-select" 
-            id="status"
-            formControlName="status"
-            [class.is-invalid]="form.get('status')?.invalid && form.get('status')?.touched">
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-            <option value="Completed">Completed</option>
+          <label for="transferStatus" class="form-label">Status</label>
+          <select class="form-select" id="transferStatus" formControlName="transferStatus">
+            <option *ngFor="let status of transferStatuses" [value]="status">{{ status }}</option>
           </select>
         </div>
-        
-        <div class="col-md-6">
-          <label for="effectiveDate" class="form-label">Effective Date</label>
+
+        <!-- Temporary Transfer Section -->
+        <div class="col-12 mt-3">
+          <h6 class="border-bottom pb-2">Temporary Transfer Details</h6>
+        </div>
+
+        <div class="col-12">
+          <div class="form-check">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="isTemporary" 
+              formControlName="isTemporary">
+            <label class="form-check-label" for="isTemporary">
+              This is a temporary transfer
+            </label>
+          </div>
+        </div>
+
+        <div class="col-md-6" *ngIf="form.get('isTemporary')?.value">
+          <label for="temporaryEndDate" class="form-label">Temporary End Date</label>
           <input 
             type="date" 
             class="form-control" 
-            id="effectiveDate"
-            formControlName="effectiveDate">
+            id="temporaryEndDate" 
+            formControlName="temporaryEndDate">
         </div>
-        
+
+        <!-- Probation Section -->
+        <div class="col-12 mt-3">
+          <h6 class="border-bottom pb-2">Probation Details</h6>
+        </div>
+
         <div class="col-12">
-          <label for="reason" class="form-label">Reason for Transfer</label>
+          <div class="form-check">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="probationApplicable" 
+              formControlName="probationApplicable">
+            <label class="form-check-label" for="probationApplicable">
+              Probation is applicable
+            </label>
+          </div>
+        </div>
+
+        <div class="col-md-6" *ngIf="form.get('probationApplicable')?.value">
+          <label for="probationEndDate" class="form-label">Probation End Date</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="probationEndDate" 
+            formControlName="probationEndDate">
+        </div>
+
+        <!-- Relocation Allowance -->
+        <div class="col-12 mt-3">
+          <h6 class="border-bottom pb-2">Relocation Details</h6>
+        </div>
+
+        <div class="col-md-6">
+          <label for="relocationAllowance" class="form-label">Relocation Allowance ($)</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input 
+              type="number" 
+              class="form-control" 
+              id="relocationAllowance" 
+              formControlName="relocationAllowance"
+              min="0"
+              step="0.01"
+              placeholder="0.00">
+          </div>
+        </div>
+
+        <!-- Employee Consent -->
+        <div class="col-12 mt-3">
+          <h6 class="border-bottom pb-2">Employee Consent</h6>
+        </div>
+
+        <div class="col-12">
+          <div class="form-check">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="employeeConsent" 
+              formControlName="employeeConsent">
+            <label class="form-check-label" for="employeeConsent">
+              Employee has given consent for this transfer
+            </label>
+          </div>
+        </div>
+
+        <div class="col-md-6" *ngIf="form.get('employeeConsent')?.value">
+          <label for="consentDate" class="form-label">Consent Date</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="consentDate" 
+            formControlName="consentDate">
+        </div>
+
+        <!-- Approval Details (Readonly for new transfers) -->
+        <div class="col-12 mt-3" *ngIf="isEditMode">
+          <h6 class="border-bottom pb-2">Approval Details</h6>
+        </div>
+
+        <div class="col-md-6" *ngIf="isEditMode">
+          <label for="approvedBy" class="form-label">Approved By</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="approvedBy" 
+            formControlName="approvedBy"
+            readonly>
+        </div>
+
+        <div class="col-md-6" *ngIf="isEditMode">
+          <label for="approvalDate" class="form-label">Approval Date</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="approvalDate" 
+            formControlName="approvalDate"
+            readonly>
+        </div>
+
+        <div class="col-12" *ngIf="form.get('rejectionReason')?.value">
+          <label for="rejectionReason" class="form-label">Rejection Reason</label>
           <textarea 
             class="form-control" 
-            id="reason" 
-            rows="3"
-            formControlName="reason"></textarea>
+            id="rejectionReason" 
+            rows="2" 
+            formControlName="rejectionReason"
+            readonly></textarea>
         </div>
-        
-        <div class="col-12">
-          <label for="notes" class="form-label">Additional Notes</label>
-          <textarea 
-            class="form-control" 
-            id="notes" 
-            rows="2"
-            formControlName="notes"></textarea>
-        </div>
+
+
       </div>
     </div>
+  
     <div class="modal-footer">
       <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Cancel</button>
-      <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
-        {{ isEditMode ? 'Update' : 'Save' }}
+      <button type="submit" class="btn btn-primary" [disabled]="form.invalid || isSaving">
+        <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        {{ isEditMode ? 'Update' : 'Save' }} Transfer
       </button>
     </div>
   </form>
@@ -278,59 +475,78 @@
 
 <!-- View Transfer Details Modal -->
 <ng-template #viewTransferModal let-modal>
-  <div class="modal-header bg-primary text-white">
-    <h5 class="modal-title fw-bold">Transfer Details</h5>
-    <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
-  </div>
-  <div class="modal-body">
-    <div class="row g-3" *ngIf="currentTransfer">
-      <div class="col-md-6">
-        <h6 class="text-muted mb-1">Employee</h6>
-        <p class="mb-3">{{ currentTransfer.employeeName }} ({{ currentTransfer.employeeId }})</p>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold">Transfer Details</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
       </div>
-      <div class="col-md-6">
-        <h6 class="text-muted mb-1">Transfer Date</h6>
-        <p class="mb-3">{{ currentTransfer.transferDate | date:'mediumDate' }}</p>
+      <div class="modal-body">
+        <div class="row g-3" *ngIf="currentTransfer">
+          <div class="col-md-6">
+            <h6 class="text-muted mb-1">Employee</h6>
+            <p class="mb-3">{{ currentTransfer.employeeName || 'N/A' }} ({{ currentTransfer.empId || 'N/A' }})</p>
+          </div>
+          <div class="col-md-6">
+            <h6 class="text-muted mb-1">Transfer Type</h6>
+            <p class="mb-3">{{ getTransferTypeName(currentTransfer.transferTypeId) }}</p>
+          </div>
+          <div class="col-md-6">
+            <h6 class="text-muted mb-1">From Department</h6>
+            <p class="mb-3">{{ getDepartmentName(currentTransfer.fromDeptId) }}</p>
+          </div>
+          <div class="col-md-6">
+            <h6 class="text-muted mb-1">To Department</h6>
+            <p class="mb-3">{{ getDepartmentName(currentTransfer.toDeptId) }}</p>
+          </div>
+          <div class="col-md-6">
+            <h6 class="text-muted mb-1">Status</h6>
+            <p class="mb-3">
+              <span class="badge" [ngClass]="getStatusBadgeClass(currentTransfer.transferStatus || 'Pending')">
+                {{ currentTransfer.transferStatus || 'Pending' }}
+              </span>
+            </p>
+          </div>
+          <div class="col-md-6">
+            <h6 class="text-muted mb-1">Effective Date</h6>
+            <p class="mb-3">{{ (currentTransfer.effectiveDate | date:'mediumDate') || 'N/A' }}</p>
+          </div>
+          <div class="col-md-6" *ngIf="currentTransfer.isTemporary">
+            <h6 class="text-muted mb-1">Temporary End Date</h6>
+            <p class="mb-3">{{ (currentTransfer.temporaryEndDate | date:'mediumDate') || 'N/A' }}</p>
+          </div>
+          <div class="col-md-6" *ngIf="currentTransfer.probationApplicable">
+            <h6 class="text-muted mb-1">Probation End Date</h6>
+            <p class="mb-3">{{ (currentTransfer.probationEndDate | date:'mediumDate') || 'N/A' }}</p>
+          </div>
+          <div class="col-12">
+            <h6 class="text-muted mb-1">Reason for Transfer</h6>
+            <p class="mb-3">{{ currentTransfer.transferReason || 'N/A' }}</p>
+          </div>
+          <div class="col-12">
+            <h6 class="text-muted mb-1">Relocation Allowance</h6>
+            <p class="mb-3">${{ currentTransfer.relocationAllowance || '0.00' }}</p>
+          </div>
+          <div class="col-12">
+            <h6 class="text-muted mb-1">Employee Consent</h6>
+            <p class="mb-3">
+              <span class="badge" [ngClass]="currentTransfer.employeeConsent ? 'bg-success' : 'bg-warning text-dark'">
+                {{ currentTransfer.employeeConsent ? 'Given' : 'Pending' }}
+              </span>
+              <span *ngIf="currentTransfer.consentDate" class="ms-2 text-muted">
+                ({{ currentTransfer.consentDate | date:'mediumDate' }})
+              </span>
+            </p>
+          </div>
+          <div class="col-12" *ngIf="currentTransfer.notes">
+            <h6 class="text-muted mb-1">Additional Notes</h6>
+            <p class="mb-0">{{ currentTransfer.notes || 'N/A' }}</p>
+          </div>
+        </div>
       </div>
-      <div class="col-md-6">
-        <h6 class="text-muted mb-1">Current Department</h6>
-        <p class="mb-3">{{ currentTransfer.currentDepartment }}</p>
-      </div>
-      <div class="col-md-6">
-        <h6 class="text-muted mb-1">New Department</h6>
-        <p class="mb-3">{{ currentTransfer.newDepartment }}</p>
-      </div>
-      <div class="col-md-6">
-        <h6 class="text-muted mb-1">Transfer Type</h6>
-        <p class="mb-3">{{ currentTransfer.transferType }}</p>
-      </div>
-      <div class="col-md-6">
-        <h6 class="text-muted mb-1">Status</h6>
-        <p class="mb-3">
-          <span class="badge" [ngClass]="getStatusBadgeClass(currentTransfer.status)">
-            {{ currentTransfer.status }}
-          </span>
-        </p>
-      </div>
-      <div class="col-md-6" *ngIf="currentTransfer.effectiveDate">
-        <h6 class="text-muted mb-1">Effective Date</h6>
-        <p class="mb-3">{{ currentTransfer.effectiveDate | date:'mediumDate' }}</p>
-      </div>
-      <div class="col-md-6" *ngIf="currentTransfer.approvedBy">
-        <h6 class="text-muted mb-1">Approved By</h6>
-        <p class="mb-3">{{ currentTransfer.approvedBy }}</p>
-      </div>
-      <div class="col-12" *ngIf="currentTransfer.reason">
-        <h6 class="text-muted mb-1">Reason for Transfer</h6>
-        <p class="mb-3">{{ currentTransfer.reason || 'N/A' }}</p>
-      </div>
-      <div class="col-12" *ngIf="currentTransfer.notes">
-        <h6 class="text-muted mb-1">Additional Notes</h6>
-        <p class="mb-0">{{ currentTransfer.notes || 'N/A' }}</p>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Close</button>
       </div>
     </div>
-  </div>
-  <div class="modal-footer">
-    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Close</button>
   </div>
 </ng-template>

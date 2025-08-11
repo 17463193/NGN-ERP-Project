@@ -152,4 +152,21 @@ export class TrainingService {
       program
     );
   }
+
+  /**
+   * Update the status of a training nomination
+   * @param nominationId The ID of the nomination to update
+   * @param status The new status to set
+   * @returns Observable of the updated TrainingNomination
+   */
+  updateNominationStatus(nominationId: string, status: 'Pending' | 'Approved' | 'Rejected' | 'Completed'): Observable<TrainingNomination> {
+    if (!nominationId) {
+      throw new Error('Cannot update nomination status without nominationId');
+    }
+    
+    return this.http.patch<TrainingNomination>(
+      `${this.apiUrl}/api/v1/training/nominations/${nominationId}/status`,
+      { status }
+    );
+  }
 }
