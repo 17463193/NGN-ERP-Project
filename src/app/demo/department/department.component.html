@@ -252,17 +252,46 @@
           
           <div class="col-md-6">
             <label for="budget_allocation" class="form-label">Budget Allocation</label>
-            <input 
-              type="number" 
-              class="form-control" 
-              id="budget_allocation" 
-              formControlName="budget_allocation"
-              min="0"
-              [ngClass]="{ 'is-invalid': departmentForm.get('budget_allocation')?.invalid && departmentForm.get('budget_allocation')?.touched }"
-              placeholder="Enter budget allocation">
-            <div *ngIf="departmentForm.get('budget_allocation')?.invalid && departmentForm.get('budget_allocation')?.touched" class="invalid-feedback">
+            <div class="input-group">
+              <input 
+                type="number" 
+                class="form-control" 
+                id="budget_allocation" 
+                formControlName="budget_allocation"
+                min="0"
+                step="0.01"
+                [ngClass]="{ 'is-invalid': departmentForm.get('budget_allocation')?.invalid && departmentForm.get('budget_allocation')?.touched }"
+                placeholder="Enter budget allocation">
+            </div>
+            <div *ngIf="departmentForm.get('budget_allocation')?.invalid && departmentForm.get('budget_allocation')?.touched" class="invalid-feedback d-block">
               Budget must be a positive number
             </div>
+          </div>
+          
+          <div class="col-12">
+            <h6 class="border-bottom pb-2 mb-3 mt-4">Additional Information</h6>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="approval_hierarchy" class="form-label">Approval Hierarchy</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="approval_hierarchy" 
+              formControlName="approval_hierarchy"
+              placeholder="Enter approval hierarchy">
+            <small class="form-text text-muted">Enter the approval hierarchy details</small>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="reporting_structure" class="form-label">Reporting Structure</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="reporting_structure" 
+              formControlName="reporting_structure"
+              placeholder="Enter reporting structure">
+            <small class="form-text text-muted">Enter the reporting structure details</small>
           </div>
         </div>
         

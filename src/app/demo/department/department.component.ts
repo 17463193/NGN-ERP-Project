@@ -1,6 +1,7 @@
 import { Component, HostListener, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DepartmentService, Department, DepartmentListResponse, DepartmentResponse, Organization, Branch } from '../../services/department.service';
+import Swal from 'sweetalert2';
 
 interface DepartmentTableItem extends Department {
   org_name: string;
@@ -77,9 +78,11 @@ export class DepartmentComponent implements OnInit {
       dept_code: ['', [Validators.required]],
       org_id: ['', [Validators.required]],
       branch_id: ['', [Validators.required]],
-      parent_dept_id: [''],
-      dept_head_id: [''],
-      budget_allocation: [0, [Validators.min(0)]]
+      parent_dept_id: [''],  // Empty string instead of null for consistency
+      dept_head_id: [''],    // Empty string instead of null for consistency
+      budget_allocation: [100000, [Validators.min(0)]],
+      approval_hierarchy: [null],
+      reporting_structure: [null]
     });
   }
 
@@ -216,7 +219,9 @@ export class DepartmentComponent implements OnInit {
             dept_code: dept.dept_code,
             parent_dept_id: dept.parent_department?.dept_id || '',
             dept_head_id: dept.dept_head_id || '',
-            budget_allocation: dept.budget_allocation || 0
+            budget_allocation: dept.budget_allocation || 0,
+            approval_hierarchy: dept.approval_hierarchy || null,
+            reporting_structure: dept.reporting_structure || null
           });
 
           this.modalRef = this.modalService.open(this.departmentModal, { 
@@ -250,19 +255,45 @@ export class DepartmentComponent implements OnInit {
     this.isSubmitting = true;
     this.error = null;
     
+    // Prepare form data according to the expected API format
     const formData = {
-      ...this.departmentForm.value,
-      approval_hierarchy: JSON.stringify({ levels: ["manager", "director", "ceo"] }),
-      reporting_structure: JSON.stringify({ structure: "hierarchical" })
+      org_id: this.departmentForm.value.org_id,
+      branch_id: this.departmentForm.value.branch_id,
+      dept_name: this.departmentForm.value.dept_name,
+      dept_code: this.departmentForm.value.dept_code,
+      parent_dept_id: this.departmentForm.value.parent_dept_id || null,
+      dept_head_id: this.departmentForm.value.dept_head_id || null,
+      budget_allocation: Number(this.departmentForm.value.budget_allocation) || 0,
+      approval_hierarchy: this.departmentForm.value.approval_hierarchy || null,
+      reporting_structure: this.departmentForm.value.reporting_structure || null
     };
+    
+    // Remove null/empty values for optional fields
+    if (!formData.parent_dept_id) delete formData.parent_dept_id;
+    if (!formData.dept_head_id) delete formData.dept_head_id;
 
     const submitObservable = this.isEditMode && this.currentDepartmentId
       ? this.departmentService.updateDepartment(this.currentDepartmentId, formData)
       : this.departmentService.createDepartment(formData);
 
     submitObservable.subscribe({
-      next: (response) => {
+      next: (response: any) => {
         if (response && response.success) {
+          // Show success notification
+          const successMessage = this.isEditMode 
+            ? 'Department updated successfully!'
+            : 'Department created successfully!';
+            
+          Swal.fire({
+            title: 'Success!',
+            text: successMessage,
+            icon: 'success',
+            confirmButtonColor: '#23a9d2',
+            confirmButtonText: 'OK',
+            timer: 3000,
+            timerProgressBar: true
+          });
+          
           this.loadDepartments();
           this.modalRef.close();
           this.resetForm();
@@ -272,17 +303,28 @@ export class DepartmentComponent implements OnInit {
         }
         this.isSubmitting = false;
       },
-      error: (err) => {
-        this.error = this.isEditMode 
+      error: (err: any) => {
+        // Show error notification
+        const errorMessage = this.isEditMode 
           ? 'Error updating department. Please try again.'
           : 'Error creating department. Please try again.';
+          
+        Swal.fire({
+          title: 'Error!',
+          text: errorMessage,
+          icon: 'error',
+          confirmButtonColor: '#dc3545',
+          confirmButtonText: 'OK'
+        });
+        
+        this.error = errorMessage;
         this.isSubmitting = false;
         console.error(`Error ${this.isEditMode ? 'updating' : 'creating'} department:`, err);
       }
     });
   }
 
-  onPageChange(page: number) {
+  onPageChange(page: number): void {
     this.currentPage = page;
     this.updatePagination();
   }
