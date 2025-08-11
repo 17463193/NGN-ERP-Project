@@ -82,43 +82,39 @@ export const NavigationItems: NavigationItem[] = [
       ]
     },
     {
-      id: 'elmr',
+      id: 'leave-controller',
       title: 'Leave Management',
-      type: 'item',
-      url: '/elmr',
-      icon: 'ti ti-calendar-minus', // Changed to calendar with time for leave management
-      target: false,
-      breadcrumbs: false,
+      type: 'collapse',
+      icon: 'ti ti-calendar-minus',
       children: [
+        {
+          id: 'leave-management',
+          title: 'Leave Management',
+          type: 'item',
+          url: '/elmr',
+          icon: 'ti ti-file-text',
+          breadcrumbs: false,
+          hidden: false
+        },
+        {
+          id: 'leave-allocation',
+          title: 'Leave Allocation',
+          type: 'item',
+          url: '/leave-allocation',
+          icon: 'ti ti-calendar-plus',
+          breadcrumbs: false
+        },
         {
           id: 'balance-leave',
           title: 'Leave Balance',
           type: 'item',
           url: '/balanceleave',
+          icon: 'ti ti-calendar-stats',
           breadcrumbs: false,
           hidden: true
-        },
-        {
-          id: 'leave-form',
-          title: 'Leave Form',
-          type: 'item',
-          url: '/leave-form',
-          icon: 'ti ti-file-text',
-          breadcrumbs: false,
-          hidden: false
         }
       ]
     },
-    {
-  id: 'leave-allocation',
-  title: 'Leave Allocation',
-  type: 'item',
-  url: '/leave-allocation',
-  icon: 'ti ti-calendar-plus', // Best match for "allocation"
-  classes: 'nav-item',
-  breadcrumbs: false,
-  hidden: false
-},
     {
       id: 'Calendar',
       title: 'Calendar',
