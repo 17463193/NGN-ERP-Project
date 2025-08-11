@@ -82,37 +82,31 @@ export const NavigationItems: NavigationItem[] = [
       ]
     },
     {
-      id: 'leave-controller',
+      id: 'Leave-controller',
       title: 'Leave Management',
       type: 'collapse',
-      icon: 'ti ti-calendar-minus',
+      icon: 'ti ti-certificate',
+      classes: 'nav-item',
       children: [
         {
           id: 'leave-management',
           title: 'Leave Management',
           type: 'item',
           url: '/elmr',
-          icon: 'ti ti-file-text',
           breadcrumbs: false,
-          hidden: false
+          icon: 'ti ti-category',
+          classes: 'nav-item'
         },
         {
           id: 'leave-allocation',
           title: 'Leave Allocation',
           type: 'item',
           url: '/leave-allocation',
-          icon: 'ti ti-calendar-plus',
-          breadcrumbs: false
-        },
-        {
-          id: 'balance-leave',
-          title: 'Leave Balance',
-          type: 'item',
-          url: '/balanceleave',
-          icon: 'ti ti-calendar-stats',
           breadcrumbs: false,
-          hidden: true
-        }
+          icon: 'ti ti-certificate',
+          classes: 'nav-item',
+          active: true
+        },
       ]
     },
     {
