@@ -67,27 +67,22 @@ export class PayRollComponent implements OnInit {
     this.http.get<any[]>(this.deptApiUrl).subscribe({
       next: (data) => {
         this.departments = ['All', ...data.map(dept => dept.name)];
-        console.log('Departments loaded:', this.departments);
       },
       error: (err) => {
-        console.error('Failed to load departments:', err);
         this.departments = ['All'];
       }
     });
   }
 
   loadEmployees() {
-    const url = `${environment.apiUrl}/api/payRoll/getAllPayRoll`;
+    const url = `${environment.payrollApiUrl}/api/payRoll/getAllPayRoll`;
 
     const params = new HttpParams()
       .set('year', this.selectedYear)
       .set('month', this.selectedMonth);
 
-    console.log(`Fetching payroll data from: ${url}?year=${this.selectedYear}&month=${this.selectedMonth}`);
-
     this.http.get<any[]>(url, { params }).subscribe({
       next: (data) => {
-        console.log('Payroll data received:', data);
         this.employees = data.map(emp => ({
           id: emp.empId,
           empCode: emp.empCode,
@@ -100,8 +95,7 @@ export class PayRollComponent implements OnInit {
         }));
         this.applyFilters(); // Apply current filters
       },
-      error: (err) => {
-        console.error('Failed to load payroll data:', err);
+      error: () => {
         this.employees = [];
         this.filteredEmployees = [];
       }

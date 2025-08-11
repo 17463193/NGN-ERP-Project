@@ -23,6 +23,8 @@ interface Employee {
   maritalStatus: string;
   nationality: string;
   cidNumber: string;
+  orgId?: string;
+  orgName?: string;
   hireDate: string;
   employmentStatus: string;
   employmentType: string;
@@ -68,7 +70,10 @@ interface Grade {
   minSalary: number;
   maxSalary: number;
 }
-
+interface Organization {
+  orgId: string;
+  orgName: string;
+}
 @Component({
   selector: 'app-emp-view-detail',
   templateUrl: './emp-view-detail.component.html',
@@ -85,7 +90,7 @@ export class EmployeeViewComponent implements OnInit {
     { id: 'education', label: 'Education', icon: 'bi bi-book' },
     { id: 'contact', label: 'Contact', icon: 'bi bi-telephone' }
   ];
-  activeTab = 'grade';
+  activeTab = 'personal';
   employee: Employee | null = null;
   isLoading = true;
   errorMessage = '';
@@ -94,6 +99,8 @@ export class EmployeeViewComponent implements OnInit {
   selectedFile: File | null = null;
   profileImageUrl: string | null = null;
   isUploading = false;
+  organizations: Organization[] = [];
+selectedOrgId: string = '';
   private departments: Department[] = [];
   private positions: Position[] = [];
   private branches: Branch[] = [];
@@ -103,6 +110,7 @@ export class EmployeeViewComponent implements OnInit {
   private positionApiUrl = `${environment.apiUrl}/api/v1/job-positions`;
   private branchApiUrl = `${environment.apiUrl}/api/v1/branches`;
   private gradeApiUrl = `${environment.apiUrl}/api/v1/job-grades`;
+  private readonly orgApiUrl = `${environment.apiUrl}/api/v1/organizations`;
 
   constructor(
     private route: ActivatedRoute,
@@ -121,6 +129,7 @@ export class EmployeeViewComponent implements OnInit {
       maritalStatus: ['Single'],
       nationality: ['', Validators.required],
       cidNumber: ['', [Validators.required]],
+      organization: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       phonePrimary: ['', [Validators.required]],
       department: ['', Validators.required],
@@ -156,25 +165,27 @@ export class EmployeeViewComponent implements OnInit {
     this.activeTab = tabId;
   }
   private async loadReferenceData(): Promise<void> {
-    try {
-      const [deptsResponse, positionsResponse, branchesResponse] = await Promise.all([
-        this.http.get<{ data: Department[] }>(this.deptApiUrl).toPromise(),
-        this.http.get<Position[]>(this.positionApiUrl).toPromise(),
-        this.http.get<Branch[]>(this.branchApiUrl).toPromise()
-      ]);
+  try {
+    const [deptsResponse, positionsResponse, branchesResponse, orgsResponse] = await Promise.all([
+      this.http.get<{ data: Department[] }>(this.deptApiUrl).toPromise(),
+      this.http.get<Position[]>(this.positionApiUrl).toPromise(),
+      this.http.get<Branch[]>(this.branchApiUrl).toPromise(),
+      this.http.get<Organization[]>(this.orgApiUrl).toPromise()
+    ]);
 
-      this.departments = deptsResponse?.data || [];
-      this.positions = positionsResponse || [];
-      this.branches = branchesResponse || [];
-    } catch (error) {
-      console.error('Error loading reference data:', error);
-      this.departments = [];
-      this.positions = [];
-      this.branches = [];
-      throw error;
+    this.departments = deptsResponse?.data || [];
+    this.positions = positionsResponse || [];
+    this.branches = branchesResponse || [];
+    this.organizations = orgsResponse || [];
+    
+    if (this.organizations.length > 0) {
+      this.selectedOrgId = this.organizations[0].orgId;
     }
+  } catch (error) {
+    console.error('Error loading reference data:', error);
+    throw error;
   }
-
+}
   private handleMissingCodeError(): void {
     this.isLoading = false;
     this.errorMessage = 'Employee code is missing from URL';
@@ -247,7 +258,11 @@ export class EmployeeViewComponent implements OnInit {
     } else {
       locationName = emp.location || '';
     }
-
+    let orgName = '';
+    if (emp.orgId && Array.isArray(this.organizations)) {
+    const org = this.organizations.find(o => o.orgId === emp.orgId);
+    orgName = org?.orgName || '';
+  }
     const employee: Employee = {
       empId: emp.empId || '',
       empCode: emp.empCode || '',
@@ -259,6 +274,8 @@ export class EmployeeViewComponent implements OnInit {
       maritalStatus: emp.maritalStatus || 'Unknown',
       nationality: emp.nationality || '',
       cidNumber: emp.cidNumber || '',
+      orgId: emp.orgId,
+    orgName: orgName,
       hireDate: emp.hireDate || '',
       employmentStatus: emp.employmentStatus || '',
       employmentType: emp.employmentType || '',

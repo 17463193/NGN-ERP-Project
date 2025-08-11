@@ -4,7 +4,7 @@ import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { environment } from 'src/environments/environment';
-import * as html2pdf from 'html2pdf.js';
+import html2pdf from 'html2pdf.js';
 
 @Component({
   selector: 'app-pay-slip',
@@ -72,7 +72,7 @@ export class PaySlipComponent implements OnInit {
       .set('year', this.endYear.toString())
       .set('month', this.endMonth);
 
-    const url = `${environment.apiUrl}/api/payRoll/viewEachEmployeePayroll`;
+    const url = `${environment.payrollApiUrl}/api/payRoll/viewEachEmployeePayroll`;
 
     this.http.get<any>(url, { params }).subscribe({
       next: (res) => {
@@ -85,7 +85,7 @@ export class PaySlipComponent implements OnInit {
   }
 
   loadSalaryRange(empId: string) {
-    const url = `${environment.apiUrl}/api/payRoll/pay-summary/range/${empId}`;
+    const url = `${environment.payrollApiUrl}/api/payRoll/pay-summary/range/${empId}`;
     const params = new HttpParams()
       .set('startYear', this.startYear.toString())
       .set('startMonth', this.startMonth)

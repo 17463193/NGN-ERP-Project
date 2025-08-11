@@ -1,0 +1,305 @@
+<div class="job-grade-container">
+    <!-- Header Section -->
+    <div class="training-container">
+      <div class="header">
+        <div class="title">
+          <h2>Training Management</h2>
+          <p>Manage and organize training programs for your organization.</p>
+        </div>
+        <div class="controls">
+          <button class="add-btn" (click)="openAddModal()">
+            <i class="ti ti-plus"></i>
+            <span>Training</span>
+          </button>
+          <button class="add-btn" (click)="openAddModal()">
+              <i class="bi bi-download me-2"></i>
+              <span>Export</span>
+            </button>
+        </div>
+      </div>
+  
+    <!-- Search and Filter Row -->
+    <div class="search-filter-row">
+      <div class="d-flex justify-content-end w-100">
+        <div class="search-filter-content">
+          <div class="search-input-wrapper">
+            <i class="bi bi-search"></i>
+            <input 
+              type="text" 
+              placeholder="Search..."
+              [(ngModel)]="searchQuery"
+              (input)="applySearch()">
+          </div>
+  
+          <div class="filter-container">
+            <button class="filter-icon">
+              <i class="bi bi-funnel"></i>
+              <span>Filters</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Training List -->
+    <div class="attendance-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Training Name</th>
+            <th>Nominated Date</th>
+            <th>Status</th>
+            <th>Created Date</th>
+            <th>Modified Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let nomination of paginatedNominations">
+            <td class="fw-medium">
+              {{ nomination.program?.programName || 'N/A' }}
+            </td>
+            <td>
+              {{ formatDate(nomination.program?.startDate) }}
+            </td>
+            <td>
+              <span class="badge" [ngClass]="getStatusBadgeClass(nomination.status)">
+                {{ nomination.status || 'N/A' }}
+              </span>
+            </td>
+            <td>{{ formatDate(nomination.createdDate) || 'N/A' }}</td>
+            <td>{{ formatDate(nomination.modifiedDate) || 'N/A' }}</td>
+            <td>
+              <div class="action-buttons">
+                <button class="view-btn" (click)="openViewModal(nomination)" title="View">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="edit-btn" (click)="openEditModal(nomination)" title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="delete-btn" (click)="confirmDelete(nomination.id)" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredNominations.length === 0">
+            <td colspan="9" class="text-center">
+              <div class="text-muted">
+                <i class="bi bi-inbox"></i>
+                <p>No training records found</p>
+                <button class="btn btn-sm btn-outline-primary" (click)="openAddModal()">
+                  <i class="bi bi-plus-lg me-1"></i> Add New Training
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <!-- Pagination -->
+    <div class="simple-pagination" *ngIf="filteredNominations.length > 0">
+      <button 
+        (click)="onPageChange(currentPage - 1)" 
+        [disabled]="currentPage === 1">
+        <i class="bi bi-chevron-left"></i> Previous
+      </button>
+      
+      <div class="page-info">
+        Page {{ currentPage }} of {{ totalPages }}
+      </div>
+      
+      <button 
+        (click)="onPageChange(currentPage + 1)" 
+        [disabled]="currentPage === totalPages">
+        Next <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+  
+  <!-- Add/Edit Training Modal -->
+  <ng-template #trainingModal let-modal>
+    <form [formGroup]="form" (ngSubmit)="saveNomination()">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold">{{ isEditMode ? 'Edit' : 'Add New' }} Nomination</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="employeeName" class="form-label">Employee Name *</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="employeeName"
+              formControlName="employeeName"
+              [class.is-invalid]="form.get('employeeName')?.invalid && form.get('employeeName')?.touched">
+            <div 
+              *ngIf="form.get('employeeName')?.invalid && form.get('employeeName')?.touched" 
+              class="invalid-feedback">
+              Employee name is required
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="programId" class="form-label">Training Program *</label>
+            <select 
+              class="form-select"
+              id="programId"
+              formControlName="programId"
+              [class.is-invalid]="form.get('programId')?.invalid && form.get('programId')?.touched">
+              <option value="">Select a program</option>
+              <option *ngFor="let program of programs" [value]="program.programId">
+                {{ program.programName }} ({{ program.programCode }})
+              </option>
+            </select>
+            <div 
+              *ngIf="form.get('programId')?.invalid && form.get('programId')?.touched" 
+              class="invalid-feedback">
+              Please select a training program
+            </div>
+          </div>
+          
+          <div class="col-12">
+            <label for="status" class="form-label">Status *</label>
+            <select 
+              class="form-select"
+              id="status"
+              formControlName="status"
+              [class.is-invalid]="form.get('status')?.invalid && form.get('status')?.touched">
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+            <div 
+              *ngIf="form.get('status')?.invalid && form.get('status')?.touched" 
+              class="invalid-feedback">
+              Status is required
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="startDate" class="form-label">Start Date *</label>
+            <input 
+              type="date" 
+              class="form-control" 
+              id="startDate"
+              formControlName="startDate"
+              [class.is-invalid]="form.get('startDate')?.invalid && form.get('startDate')?.touched">
+            <div 
+              *ngIf="form.get('startDate')?.invalid && form.get('startDate')?.touched" 
+              class="invalid-feedback">
+              Start date is required
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="endDate" class="form-label">End Date *</label>
+            <input 
+              type="date" 
+              class="form-control" 
+              id="endDate"
+              formControlName="endDate"
+              [class.is-invalid]="form.get('endDate')?.invalid && form.get('endDate')?.touched">
+            <div 
+              *ngIf="form.get('endDate')?.invalid && form.get('endDate')?.touched" 
+              class="invalid-feedback">
+              End date is required and must be after start date
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="location" class="form-label">Location *</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="location"
+              formControlName="location"
+              [class.is-invalid]="form.get('location')?.invalid && form.get('location')?.touched">
+            <div 
+              *ngIf="form.get('location')?.invalid && form.get('location')?.touched" 
+              class="invalid-feedback">
+              Location is required
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="trainerName" class="form-label">Trainer Name *</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="trainerName"
+              formControlName="trainerName"
+              [class.is-invalid]="form.get('trainerName')?.invalid && form.get('trainerName')?.touched">
+            <div 
+              *ngIf="form.get('trainerName')?.invalid && form.get('trainerName')?.touched" 
+              class="invalid-feedback">
+              Trainer name is required
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
+          {{ isEditMode ? 'Update' : 'Save' }}
+        </button>
+      </div>
+    </form>
+  </ng-template>
+  
+  <!-- View Training Details Modal -->
+  <ng-template #viewTrainingModal let-modal>
+    <div class="modal-header bg-primary text-white">
+      <h5 class="modal-title fw-bold">Nomination Details</h5>
+      <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <h6>Employee Name</h6>
+          <p>{{ currentNomination?.employeeName || 'N/A' }}</p>
+        </div>
+        <div class="col-md-6 mb-3">
+          <h6>Training Program</h6>
+          <p>{{ currentNomination?.programName || 'N/A' }} ({{ currentNomination?.programCode || 'N/A' }})</p>
+        </div>
+        <div class="col-md-6 mb-3">
+          <h6>Status</h6>
+          <span class="badge" [ngClass]="getStatusBadgeClass(currentNomination?.status)">
+            {{ currentNomination?.status || 'N/A' }}
+          </span>
+        </div>
+        <div class="col-md-6 mb-3">
+          <h6>Nominated On</h6>
+          <p>{{ formatDate(currentNomination?.createdDate) || 'N/A' }}</p>
+        </div>
+        <div class="col-md-6 mb-3">
+          <h6>Last Modified</h6>
+          <p>{{ formatDate(currentNomination?.modifiedDate) || 'N/A' }}</p>
+        </div>
+        <div class="col-12 mb-3">
+          <h6>Training Period</h6>
+          <p>
+            {{ formatDate(currentNomination?.startDate) || 'N/A' }} 
+            to 
+            {{ formatDate(currentNomination?.endDate) || 'N/A' }}
+          </p>
+        </div>
+        <div class="col-md-6 mb-3">
+          <h6>Location</h6>
+          <p>{{ currentNomination?.location || 'Not specified' }}</p>
+        </div>
+        <div class="col-md-6 mb-3">
+          <h6>Trainer</h6>
+          <p>{{ currentNomination?.trainerName || 'Not assigned' }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="modal.close()">Close</button>
+    </div>
+  </ng-template>

@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { BalanceleaveComponent } from './balanceleave.component';
+import { DepartmentComponent } from './department.component';
 
-describe('BalanceleaveComponent', () => {
-  let component: BalanceleaveComponent;
-  let fixture: ComponentFixture<BalanceleaveComponent>;
+describe('DepartmentComponent', () => {
+  let component: DepartmentComponent;
+  let fixture: ComponentFixture<DepartmentComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [BalanceleaveComponent]
+      imports: [DepartmentComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(BalanceleaveComponent);
+    fixture = TestBed.createComponent(DepartmentComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

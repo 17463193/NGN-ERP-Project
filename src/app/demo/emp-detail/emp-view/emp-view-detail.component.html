@@ -11,366 +11,418 @@
     <span>{{ errorMessage }}</span>
   </div>
 
-  <!-- Employee Details -->
-  <div *ngIf="employee && !isLoading" class="erp-employee-card">
-    <!-- Header Section -->
-    <div class="erp-employee-header">
-      <div class="erp-header-content">
-        <div class="erp-profile-image-container">
-          <div class="erp-profile-image-wrapper">
-            <div class="erp-profile-image-placeholder" *ngIf="!profileImageUrl && !employee.profileImage">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <img *ngIf="profileImageUrl || employee.profileImage" [src]="profileImageUrl || employee.profileImage"
-              class="erp-profile-image" alt="Profile Photo">
-          </div>
-        </div>
-
-        <div class="erp-header-info">
-          <h1 class="erp-employee-name">{{ employee.firstName }} {{ employee.lastName }}</h1>
-          <div class="erp-employee-meta">
-            <span class="erp-badge erp-badge-code">{{ employee.empCode }}</span>
-            <span class="erp-badge erp-badge-position">{{ employee.positionName || 'No position' }}</span>
-            <span class="erp-badge erp-badge-status" [ngClass]="getStatusBadgeClass(employee.employmentStatus)">
-              {{ employee.employmentStatus }}
-            </span>
-          </div>
-
-          <div class="erp-header-actions">
-            <div class="erp-photo-upload">
-              <input type="file" id="profileUpload" accept="image/*" (change)="onFileSelected($event)"
-                style="display: none;">
-              <label for="profileUpload" class="erp-btn erp-btn-secondary erp-btn-sm">
-                <i class="fa fa-upload"></i> Upload Photo
-              </label>
-              <button *ngIf="selectedFile" class="erp-btn erp-btn-success erp-btn-sm" (click)="uploadPhoto()"
-                [disabled]="isUploading">
-                <span *ngIf="!isUploading">Save</span>
-                <span *ngIf="isUploading" class="erp-spinner-sm"></span>
-              </button>
-
-            </div>
-            <button class="erp-btn erp-btn-primary erp-btn-sm" (click)="exportToPDF()">
-              <i class="erp-icon-download"></i> Export PDF
-            </button>
-          </div>
-        </div>
-      </div>
+  <!-- Main Content -->
+  <div *ngIf="employee && !isLoading">
+    <h1 class="profile-title">Employee Profile</h1>
+    
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+      <ul class="tab-list">
+        <li class="tab-item">
+          <button class="tab-link" 
+                  [class.active]="activeTab === 'personal'" 
+                  (click)="changeTab('personal')">
+            <i class="fa-solid fa-user tab-icon"></i> Personal
+          </button>
+        </li>
+        <li class="tab-item">
+          <button class="tab-link" 
+                  [class.active]="activeTab === 'employment'" 
+                  (click)="changeTab('employment')">
+            <i class="fa-solid fa-briefcase tab-icon"></i> Employment
+          </button>
+        </li>
+        <li class="tab-item">
+          <button class="tab-link" 
+                  [class.active]="activeTab === 'contact'" 
+                  (click)="changeTab('contact')">
+            <i class="fa-solid fa-phone tab-icon"></i> Contact
+          </button>
+        </li>
+        <li class="tab-item">
+          <button class="tab-link" 
+                  [class.active]="activeTab === 'bank'" 
+                  (click)="changeTab('bank')">
+            <i class="fa-solid fa-university tab-icon"></i> Bank
+          </button>
+        </li>
+        <li class="tab-item">
+          <button class="tab-link" 
+                  [class.active]="activeTab === 'education'" 
+                  (click)="changeTab('education')">
+            <i class="fa-solid fa-graduation-cap tab-icon"></i> Education
+          </button>
+        </li>
+      </ul>
     </div>
 
-    <!-- Main Content -->
-    <div class="erp-employee-body">
-      <!-- Quick Info Cards -->
-      <div class="erp-quick-info-grid">
-        <div class="erp-info-card">
-          <div class="erp-info-card-icon">
-            <i class="fa-regular fa-address-card"></i>
+    <!-- Two Card Layout -->
+    <div class="cards-container">
+      <!-- Left Card - Employee Overview -->
+      <div class="overview-card">
+         <div class="profile-header-container">
+    <!-- Status Badge -->
+    <div class="status-badge" >
+      {{ employee.employmentStatus || '-' }}
+    </div>
+         </div>
+        <!-- Profile Image -->
+        <div class="profile-image-section">
+          <div class="profile-image-wrapper">
+        
+            <div class="profile-image-placeholder" *ngIf="!profileImageUrl && !employee.profileImage">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <img *ngIf="profileImageUrl || employee.profileImage" 
+                 [src]="profileImageUrl || employee.profileImage"
+                 class="profile-image" 
+                 alt="Profile Photo">
+            <!-- Camera Icon for Upload -->
+            <div class="camera-icon-overlay">
+              <input type="file" id="profileUpload" accept="image/*" 
+                     (change)="onFileSelected($event)" style="display: none;">
+              <label for="profileUpload" class="camera-icon">
+                <i class="fa fa-camera"></i>
+              </label>
+            </div>
           </div>
-          <div class="erp-info-card-content">
-            <h3>Employee ID</h3>
-            <p>{{ employee.empCode }}</p>
-          </div>
+          
+          <!-- Upload Save Button -->
+          <button *ngIf="selectedFile" 
+                  class="save-photo-btn" 
+                  (click)="uploadPhoto()"
+                  [disabled]="isUploading">
+            <span *ngIf="!isUploading">Save</span>
+            <span *ngIf="isUploading" class="spinner-sm"></span>
+          </button>
         </div>
 
-        <div class="erp-info-card">
-          <div class="erp-info-card-icon">
-            <i class="fa fa-building-user"></i>
-          </div>
-          <div class="erp-info-card-content">
-            <h3>Department</h3>
-            <p>{{ employee.department || 'Not specified' }}</p>
-          </div>
+
+        <!-- Employee Name -->
+        <div class="employee-name-section">
+          <h2 class="employee-name">{{ employee.firstName || 'Dorji' }} {{ employee.lastName || 'Penjor' }}</h2>
+          <p class="employee-position">{{ employee.positionName || 'Programmer' }}</p>
         </div>
 
-        <div class="erp-info-card">
-          <div class="erp-info-card-icon">
-            <i class="fa-regular fa-calendar-days"></i>
+        <!-- Quick Info Cards -->
+        <div class="quick-info-section">
+          <div class="info-item">
+            <i class="fa-regular fa-address-card info-icon"></i>
+            <div class="info-content">
+              <span class="info-label">Employee ID</span>
+              <span class="info-value">{{ employee.empCode || 'EMP010' }}</span>
+            </div>
           </div>
-          <div class="erp-info-card-content">
-            <h3>Hire Date</h3>
-            <p>{{ formatDate(employee.hireDate) }}</p>
-          </div>
-        </div>
 
-        <div class="erp-info-card">
-          <div class="erp-info-card-icon">
-            <i class="fa-solid fa-user-tie"></i>
+          <div class="info-item">
+            <i class="fa fa-building-user info-icon"></i>
+            <div class="info-content">
+              <span class="info-label">Department</span>
+              <span class="info-value">{{ employee.department || 'Ecentric' }}</span>
+            </div>
           </div>
-          <div class="erp-info-card-content">
-            <h3>Position</h3>
-            <p>{{ employee.positionName || 'Not specified' }}</p>
+
+          <div class="info-item">
+            <i class="fa-regular fa-calendar-days info-icon"></i>
+            <div class="info-content">
+              <span class="info-label">Hire Date</span>
+              <span class="info-value">{{ formatDate(employee.hireDate) || '10 June 2025' }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <i class="fa-solid fa-user-tie info-icon"></i>
+            <div class="info-content">
+              <span class="info-label">Position</span>
+              <span class="info-value">{{ employee.positionName || 'Backend Developer' }}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Tab Navigation -->
-      <div class="erp-tab-container">
-        <nav class="erp-tab-nav">
-          <ul ngbNav #nav="ngbNav" class="erp-tab-list">
-            <li ngbNavItem="personal" class="erp-tab-item">
-              <a ngbNavLink class="erp-tab-link">
-                <i class="erp-icon-user"></i> Personal
-              </a>
-              <ng-template ngbNavContent>
-                <div class="erp-tab-content">
-                  <div class="erp-detail-section">
-                    <h3 class="erp-section-title">Basic Information</h3>
-                    <div class="erp-detail-grid">
-                      <div class="erp-detail-item">
-                        <label>Full Name</label>
-                        <p>{{ employee.firstName }} {{ employee.middleName || '' }} {{ employee.lastName }}</p>
-                      </div>
-                      <div class="erp-detail-item">
-                        <label>Date of Birth</label>
-                        <p>{{ formatDate(employee.dateOfBirth) }}</p>
-                      </div>
-                      <div class="erp-detail-item">
-                        <label>Gender</label>
-                        <p>{{ employee.gender || 'Not specified' }}</p>
-                      </div>
-                      <div class="erp-detail-item">
-                        <label>Marital Status</label>
-                        <p>{{ employee.maritalStatus || 'Not specified' }}</p>
-                      </div>
-                      <div class="erp-detail-item">
-                        <label>Nationality</label>
-                        <p>{{ employee.nationality || 'Not specified' }}</p>
-                      </div>
-                      <div class="erp-detail-item">
-                        <label>CID Number</label>
-                        <p>{{ employee.cidNumber || 'Not specified' }}</p>
-                      </div>
-                    </div>
-                  </div>
+      <!-- Right Card - Details -->
+      <div class="details-card">
+        <!-- Tab Content -->
+        <div class="tab-content">
+          <!-- Personal Tab -->
+          <div *ngIf="activeTab === 'personal'" class="tab-panel">
+            <!-- Header with Badges and Export -->
+            <div class="content-header">
+              <div class="content-badges">
+                <span class="content-badge badge-blue">
+                  <i class="fa-regular fa-address-card"></i> {{ employee.empCode || 'Not Specified' }}
+                </span>
+                <span class="content-badge badge-purple">
+                  <i class="fa fa-user-tie"></i> {{ employee.positionName || 'Not Specified' }}
+                </span>
+              </div>
+              <button class="export-btn" (click)="exportToPDF()">
+                <i class="fa fa-download"></i> Export
+              </button>
+            </div>
+
+            <!-- Basic Information -->
+            <div class="content-section">
+              <h3 class="section-title">Basic Information</h3>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <label>Full Name</label>
+                  <p>{{ (employee.firstName || 'Not Specified') + ' ' + (employee.lastName || 'Not Specified') }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Date of Birth</label>
+                  <p>{{ formatDate(employee.dateOfBirth) || 'Not Specified' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Gender</label>
+                  <p>{{ employee.gender || 'Not Specified' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Marital Status</label>
+                  <p>{{ employee.maritalStatus || 'Not Specified' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Nationality</label>
+                  <p>{{ employee.nationality || 'Not Specified' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>CID Number</label>
+                  <p>{{ employee.cidNumber || 'Not Specified' }}</p>
+                </div>
+                <div class="detail-item">
+  <label>Organization</label>
+  <p>{{ employee.orgName || 'Not Specified' }}</p>
+</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Employment Tab -->
+          <div *ngIf="activeTab === 'employment'" class="tab-panel">
+            <div class="content-header">
+              <div class="content-badges">
+                <span class="content-badge badge-blue">
+                  <i class="fa fa-building-user"></i> {{ employee.department || 'Not Specified' }}
+                </span>
+                <span class="content-badge badge-purple">
+                  <i class="fa fa-medal"></i> {{ employee.gradeName || 'Not Specified' }}
+                </span>
+              </div>
+              <button class="export-btn" (click)="exportToPDF()">
+                <i class="fa fa-download"></i> Export
+              </button>
+            </div>
+
+            <div class="content-section">
+              <h3 class="section-title">Position Details</h3>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <label>Department</label>
+                  <p>{{ employee.department || 'Not Specified' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Position</label>
+                  <p>{{ employee.positionName || 'Not Specified' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Employment Type</label>
+                  <p>{{ employee.employmentType || 'Not Specified' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Location</label>
+                  <p>{{ employee.location || 'Not Specified' }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="content-section">
+              <h3 class="section-title">Grade & Salary</h3>
+              <div *ngIf="employee?.gradeId || true; else noGrade" class="detail-grid">
+                <div class="detail-item">
+                  <label>Grade</label>
+                  <p>
+                    {{ employee.gradeName || 'Not Specified' }}
+                    <span *ngIf="employee.gradeCode" class="grade-code">({{ employee.gradeCode }})</span>
+                  </p>
+                </div>
+                <div class="detail-item">
+                  <label>Basic Salary</label>
+                  <p>{{ employee.basicSalary ? (employee.basicSalary | currency:'Nu.':'symbol':'1.2-2') : 'Not Specified' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Max Salary</label>
+                  <p>{{ employee.maxSalary ? (employee.maxSalary | currency:'Nu.':'symbol':'1.2-2') : 'Not Specified' }}</p>
+                </div>
+              </div>
+              <ng-template #noGrade>
+                <div class="empty-state">
+                  <i class="fa fa-info-circle"></i>
+                  <p>No grade information available</p>
                 </div>
               </ng-template>
-            </li>
+            </div>
+          </div>
 
-            <li ngbNavItem="employment" class="erp-tab-item">
-              <a ngbNavLink class="erp-tab-link">
-                <i class="erp-icon-briefcase"></i> Employment
-              </a>
-              <ng-template ngbNavContent>
-                <div class="erp-tab-content">
-                  <div class="erp-detail-section">
-                    <h3 class="erp-section-title">Position Details</h3>
-                    <div class="erp-detail-grid">
-                      <div class="erp-detail-item">
-                        <label>Department</label>
-                        <p>{{ employee.department || 'Not specified' }}</p>
-                      </div>
-                      <div class="erp-detail-item">
-                        <label>Position</label>
-                        <p>{{ employee.positionName || 'Not specified' }}</p>
-                      </div>
-                      <div class="erp-detail-item">
-                        <label>Employment Type</label>
-                        <p>{{ employee.employmentType || 'Not specified' }}</p>
-                      </div>
-                      <div class="erp-detail-item">
-                        <label>Location</label>
-                        <p>{{ employee.location || 'Not specified' }}</p>
-                      </div>
-                    </div>
-                  </div>
+          <!-- Contact Tab -->
+          <div *ngIf="activeTab === 'contact'" class="tab-panel">
+            <div class="content-header">
+              <div class="content-badges">
+                <span class="content-badge badge-blue">
+                  <i class="fa fa-location-dot"></i> {{ employee.address?.addressLine1 || 'Not Specified' }}
+                </span>
+                <span class="content-badge badge-purple">
+                  <i class="fa fa-phone"></i> {{ employee.contact?.phonePrimary || 'Not Specified' }}
+                </span>
+              </div>
+              <button class="export-btn" (click)="exportToPDF()">
+                <i class="fa fa-download"></i> Export
+              </button>
+            </div>
 
-                  <div class="erp-detail-section">
-                    <h3 class="erp-section-title">Grade & Salary</h3>
-                    <div *ngIf="employee?.gradeId; else noGrade" class="erp-detail-grid">
-                      <div class="erp-detail-item">
-                        <label>Grade</label>
-                        <p>
-                          {{ employee.gradeName || 'Grade ID: ' + employee.gradeId }}
-                          <span *ngIf="employee.gradeCode" class="erp-grade-code">({{ employee.gradeCode }})</span>
-                        </p>
-                      </div>
-                      <div class="erp-detail-item">
-                        <label>Basic Salary</label>
-                        <p>{{ employee.basicSalary ? (employee.basicSalary | currency:'Nu.':'symbol':'1.2-2') : 'Not
-                          specified' }}</p>
-                      </div>
-                      <div class="erp-detail-item">
-                        <label>Max Salary</label>
-                        <p>{{ employee.maxSalary ? (employee.maxSalary | currency:'Nu.':'symbol':'1.2-2') : 'Not
-                          specified' }}</p>
-                      </div>
-                    </div>
-                    <ng-template #noGrade>
-                      <div class="erp-empty-state">
-                        <i class="erp-icon-info"></i>
-                        <p>No grade information available</p>
-                      </div>
-                    </ng-template>
-                  </div>
-                </div>
-              </ng-template>
-            </li>
+            <div class="content-section">
+              <h3 class="section-title">Contact Information</h3>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Email</th>
+                      <th>Primary Phone</th>
+                      <th>Secondary Phone</th>
+                      <th>Emergency Contact</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{{ employee.contact?.email || 'Not Specified' }}</td>
+                      <td>{{ employee.contact?.phonePrimary || 'Not Specified' }}</td>
+                      <td>{{ employee.contact?.phoneSecondary || 'Not Specified' }}</td>
+                      <td>
+                        <span class="badge" 
+                              [ngClass]="employee.contact?.isEmergencyContact ? 'badge-success' : 'badge-success'">
+                          {{ employee.contact?.isEmergencyContact ? 'Yes' : 'Yes' }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-            <li ngbNavItem="contact" class="erp-tab-item">
-              <a ngbNavLink class="erp-tab-link">
-                <i class="erp-icon-phone"></i> Contact
-              </a>
-              <ng-template ngbNavContent>
-                <div class="erp-tab-content">
-                  <div *ngIf="employee.contact; else noContact" class="erp-detail-section">
-                    <h3 class="erp-section-title">Contact Information</h3>
-                    <div class="erp-table-responsive">
-                      <table class="erp-data-table">
-                        <thead>
-                          <tr>
-                            <th>Email</th>
-                            <th>Primary Phone</th>
-                            <th>Secondary Phone</th>
-                            <th>Emergency Contact</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>{{ employee.contact.email || '-' }}</td>
-                            <td>{{ employee.contact.phonePrimary || '-' }}</td>
-                            <td>{{ employee.contact.phoneSecondary || '-' }}</td>
-                            <td>
-                              <span class="erp-badge"
-                                [ngClass]="employee.contact.isEmergencyContact ? 'erp-badge-success' : 'erp-badge-neutral'">
-                                {{ employee.contact.isEmergencyContact ? 'Yes' : 'No' }}
-                              </span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+            <div class="content-section">
+              <h3 class="section-title">Address Information</h3>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Address Type</th>
+                      <th>Address Line 1</th>
+                      <th>Address Line 2</th>
+                      <th>Thromde/Dzongkhag</th>
+                      <th>Country</th>
+                      <th>Current</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{{ employee.address?.addressType || 'Not Specified' }}</td>
+                      <td>{{ employee.address?.addressLine1 || 'Not Specified' }}</td>
+                      <td>{{ employee.address?.addressLine2 || 'Not Specified' }}</td>
+                      <td>{{ employee.address?.thromde || employee.address?.dzongkhag || 'Not Specified' }}</td>
+                      <td>{{ employee.address?.country || 'Not Specified' }}</td>
+                      <td>
+                        <span class="badge" 
+                              [ngClass]="employee.address?.isCurrent ? 'badge-success' : 'badge-success'">
+                          {{ employee.address?.isCurrent ? 'Yes' : 'Yes' }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
-                  <div *ngIf="employee.address; else noAddress" class="erp-detail-section">
-                    <h3 class="erp-section-title">Address Information</h3>
-                    <div class="erp-table-responsive">
-                      <table class="erp-data-table">
-                        <thead>
-                          <tr>
-                            <th>Address Type</th>
-                            <th>Address Line 1</th>
-                            <th>Address Line 2</th>
-                            <th>Thromde/Dzongkhag</th>
-                            <th>Country</th>
-                            <th>Current</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>{{ employee.address.addressType || '-' }}</td>
-                            <td>{{ employee.address.addressLine1 || '-' }}</td>
-                            <td>{{ employee.address.addressLine2 || '-' }}</td>
-                            <td>{{ employee.address.thromde || employee.address.dzongkhag || '-' }}</td>
-                            <td>{{ employee.address.country || '-' }}</td>
-                            <td>
-                              <span class="erp-badge"
-                                [ngClass]="employee.address.isCurrent ? 'erp-badge-success' : 'erp-badge-neutral'">
-                                {{ employee.address.isCurrent ? 'Yes' : 'No' }}
-                              </span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+          <!-- Bank Tab -->
+          <div *ngIf="activeTab === 'bank'" class="tab-panel">
+            <div class="content-header">
+              <div class="content-badges">
+                <span class="content-badge badge-blue">
+                  <i class="fa fa-building-columns"></i> {{ employee.bankDetail?.bankName || 'Not Specified' }}
+                </span>
+                <span class="content-badge badge-purple">
+                  <i class="fa fa-user-gear"></i> {{ employee.bankDetail?.accountNumber || 'Not Specified' }}
+                </span>
+              </div>
+              <button class="export-btn" (click)="exportToPDF()">
+                <i class="fa fa-download"></i> Export
+              </button>
+            </div>
 
-                  <ng-template #noContact>
-                    <div class="erp-empty-state">
-                      <i class="erp-icon-info"></i>
-                      <p>No contact information available</p>
-                    </div>
-                  </ng-template>
+            <div class="content-section">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Bank Name</th>
+                      <th>Branch Name</th>
+                      <th>Account Number</th>
+                      <th>Account Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{{ employee.bankDetail?.bankName || 'Not Specified' }}</td>
+                      <td>{{ employee.bankDetail?.branchName || 'Not Specified' }}</td>
+                      <td>{{ employee.bankDetail?.accountNumber || 'Not Specified' }}</td>
+                      <td>{{ employee.bankDetail?.accountType || 'Not Specified' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
-                  <ng-template #noAddress>
-                    <div class="erp-empty-state">
-                      <i class="erp-icon-info"></i>
-                      <p>No address information available</p>
-                    </div>
-                  </ng-template>
-                </div>
-              </ng-template>
-            </li>
+          <!-- Education Tab -->
+          <div *ngIf="activeTab === 'education'" class="tab-panel">
+            <div class="content-header">
+              <div class="content-badges">
+                <span class="content-badge badge-blue">
+                  <i class="fa fa-university"></i> {{ employee.qualification?.institutionName || 'Not Specified' }}
+                </span>
+                <span class="content-badge badge-purple">
+                  <i class="fa fa-graduation-cap"></i> {{ employee.qualification?.degreeName || 'Not Specified' }}
+                </span>
+              </div>
+              <button class="export-btn" (click)="exportToPDF()">
+                <i class="fa fa-download"></i> Export
+              </button>
+            </div>
 
-            <li ngbNavItem="bank" class="erp-tab-item">
-              <a ngbNavLink class="erp-tab-link">
-                <i class="erp-icon-bank"></i> Bank
-              </a>
-              <ng-template ngbNavContent>
-                <div class="erp-tab-content">
-                  <div *ngIf="employee.bankDetail; else noBank" class="erp-detail-section">
-                    <div class="erp-table-responsive">
-                      <table class="erp-data-table">
-                        <thead>
-                          <tr>
-                            <th>Bank Name</th>
-                            <th>Branch Name</th>
-                            <th>Account Number</th>
-                            <th>Account Type</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>{{ employee.bankDetail.bankName || '-' }}</td>
-                            <td>{{ employee.bankDetail.branchName || '-' }}</td>
-                            <td>{{ employee.bankDetail.accountNumber || '-' }}</td>
-                            <td>{{ employee.bankDetail.accountType || '-' }}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                  <ng-template #noBank>
-                    <div class="erp-empty-state">
-                      <i class="erp-icon-info"></i>
-                      <p>No bank information available</p>
-                    </div>
-                  </ng-template>
-                </div>
-              </ng-template>
-            </li>
-
-            <li ngbNavItem="education" class="erp-tab-item">
-              <a ngbNavLink class="erp-tab-link">
-                <i class="erp-icon-education"></i> Education
-              </a>
-              <ng-template ngbNavContent>
-                <div class="erp-tab-content">
-                  <div *ngIf="employee.qualification; else noEdu" class="erp-detail-section">
-                    <div class="erp-table-responsive">
-                      <table class="erp-data-table">
-                        <thead>
-                          <tr>
-                            <th>Institution</th>
-                            <th>Degree</th>
-                            <th>Specialization</th>
-                            <th>Year of Completion</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>{{ employee.qualification.institutionName || '-' }}</td>
-                            <td>{{ employee.qualification.degreeName || '-' }}</td>
-                            <td>{{ employee.qualification.specialization || '-' }}</td>
-                            <td>{{ employee.qualification.yearOfCompletion || '-' }}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                  <ng-template #noEdu>
-                    <div class="erp-empty-state">
-                      <i class="erp-icon-info"></i>
-                      <p>No education information available</p>
-                    </div>
-                  </ng-template>
-                </div>
-              </ng-template>
-            </li>
-          </ul>
-        </nav>
-
-        <!-- Tab Content Outlet -->
-        <div [ngbNavOutlet]="nav" class="erp-tab-content-container"></div>
+            <div class="content-section">
+              <h3 class="section-title">Education</h3>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>College / Institution</th>
+                      <th>Major</th>
+                      <th>Specialization</th>
+                      <th>Year of Completion</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{{ employee.qualification?.institutionName || 'Not Specified' }}</td>
+                      <td>{{ employee.qualification?.degreeName || 'Not Specified' }}</td>
+                      <td>{{ employee.qualification?.specialization || 'Not Specified' }}</td>
+                      <td>{{ employee.qualification?.yearOfCompletion || 'Not Specified' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

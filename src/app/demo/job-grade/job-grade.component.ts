@@ -168,7 +168,7 @@ clearFilters(): void {
         this.organizations = orgs;
       },
       error: (error) => {
-        console.error('Error loading organizations:', error);
+
         this.errorMessage = 'Failed to load organizations';
       }
     });
@@ -373,14 +373,14 @@ clearFilters(): void {
       salaryComponents: salaryComponents
     };
     
-    console.log('Prepared request body:', JSON.stringify(requestBody, null, 2));
+
 
     const handleSuccess = (response: any) => {
       try {
         const savedGrade = response?.data || response;
         
         if (!savedGrade) {
-          console.error('No grade data received in the response');
+
           this.errorMessage = 'Failed to save grade: No data received';
           return;
         }
@@ -433,18 +433,18 @@ clearFilters(): void {
         }, 100);
         
       } catch (error) {
-        console.error('Error updating grade list:', error);
+  
         this.errorMessage = 'Failed to update grade list. Please refresh the page.';
         this.cdr.detectChanges();
       }
     };
 
     const handleError = (error: any) => {
-      console.error('Error saving grade:', error);
+
       
       if (error.status === 400) {
         // Log the full error response for debugging
-        console.error('Full error response:', error);
+
         
         // Handle validation errors
         if (error.error) {
@@ -493,16 +493,16 @@ clearFilters(): void {
       this.cdr.detectChanges();
     };
 
-    console.log('Saving grade data:', requestBody);
+
     
     if (this.isEditMode && this.currentGrade?.gradeId) {
-      console.log('Updating grade ID:', this.currentGrade.gradeId);
+
       this.jobGradeService.updateGrade(this.currentGrade.gradeId, requestBody).subscribe({
         next: handleSuccess,
         error: handleError
       });
     } else {
-      console.log('Creating new grade');
+
       this.jobGradeService.createGrade(requestBody).subscribe({
         next: handleSuccess,
         error: handleError
@@ -542,7 +542,7 @@ clearFilters(): void {
             );
           },
           error: (error: any) => {
-            console.error('Error deleting grade:', error);
+
             this.errorMessage = error.message || 'Failed to delete grade';
             this.cdr.detectChanges();
             
@@ -582,7 +582,7 @@ clearFilters(): void {
         this.showViewModal = true;
       },
       error: (error) => {
-        console.error('Error loading grade details:', error);
+
         this.errorMessage = 'Failed to load grade details';
       }
     });
@@ -622,8 +622,7 @@ clearFilters(): void {
     this.selectedComponentId = '';
     this.showSalaryComponentForm = false;
     
-    // Log the updated salary components array for debugging
-    console.log('Added salary component. Current components:', this.salaryComponentsArray.value);
+    this.cdr.detectChanges();
   }
 
   removeSalaryComponent(index: number): void {
@@ -735,10 +734,10 @@ clearFilters(): void {
    * Load all salary components from the service
    */
   loadSalaryComponents(): void {
-    console.log('Loading salary components...');
+
     this.salaryComponentService.getAllComponents().subscribe({
       next: (response: any) => {
-        console.log('Raw API Response:', response);
+
         try {
           let components: any[] = [];
           
@@ -754,10 +753,7 @@ clearFilters(): void {
             components = [response.data];
           }
           
-          console.log('Extracted Components:', components);
-          
           if (components.length === 0) {
-            console.warn('No salary components found in the API response');
             this.useFallbackData();
             return;
           }
@@ -777,25 +773,16 @@ clearFilters(): void {
           // Sort components by displayOrder
           this.availableSalaryComponents.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
           
-          // Log the component IDs and details
-          console.log('Fetched Component IDs:', this.availableSalaryComponents.map(c => c.id));
-          console.log('Available Components:', this.availableSalaryComponents);
-          
+
           // Force UI update
           this.cdr.detectChanges();
         } catch (error) {
-          console.error('Error processing salary components:', error);
+
           this.useFallbackData();
         }
       },
       error: (error) => {
-        console.error('Error loading salary components:', error);
-        console.error('Error details:', {
-          status: error.status,
-          statusText: error.statusText,
-          message: error.message,
-          error: error.error
-        });
+
         this.useFallbackData();
       }
     });
@@ -815,7 +802,7 @@ clearFilters(): void {
       { id: 'c796b21b-b53a-448a-9d27-bf40dd818f2d', name: 'Gratuity', type: 'Deduction', calculationBasis: 'Formula' },
       { id: '521e906c-96f0-45d4-a0ef-f3a808e0c8b2', name: 'Bonus', type: 'Earning', calculationBasis: 'Fixed' }
     ];
-    console.warn('Using fallback data');
+
   }
 
   // Helper method to get a form control from a form group

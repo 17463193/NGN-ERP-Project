@@ -113,10 +113,10 @@
     </button>
   </div>
   <!-- Main Attendance Table -->
-  <div class="main-attendance-section">
-    <div class="attendance-table-wrapper">
+ <div class="main-attendance-section">
+    <!--  <div class="attendance-table-wrapper">
       <table class="main-attendance-table">
-        <!-- Fixed Header -->
+         Fixed Header 
         <thead>
           <tr class="week-header">
             <th class="row-label-header"></th>
@@ -134,17 +134,17 @@
           </tr>
         </thead>
 
-        <!-- Employee Data Sections -->
+        Employee Data Sections 
         <tbody>
           <ng-container *ngFor="let person of employees; let personIndex = index">
-            <!-- Employee Name and Designation -->
+          Employee Name and Designation 
             <tr class="employee-name-row">
               <td colspan="32" class="employee-info">
                 <strong>{{ person.name }}</strong> &nbsp;&nbsp; Department: <strong>{{ person.designation }}</strong>
               </td>
             </tr>
 
-            <!-- Dashed separator line -->
+            Dashed separator line 
             <tr class="separator-row">
               <td colspan="32" class="dashed-separator"></td>
             </tr>
@@ -154,7 +154,7 @@
                 {{ person.records[i]?.shift || '--' }}
               </td>
             </tr>
-            <!-- Status Row -->
+            Status Row 
             <tr class="data-row">
               <td class="row-label">Day Status</td>
               <td *ngFor="let date of dynamicDateHeaders; let i = index"
@@ -187,7 +187,7 @@
               </td>
             </tr>
 
-            <!-- Working Hours Row -->
+             Working Hours Row 
             <tr class="data-row">
               <td class="row-label">Working Hours</td>
               <td *ngFor="let date of dynamicDateHeaders; let i = index" class="data-cell"
@@ -217,7 +217,7 @@
               </td>
             </tr>
 
-            <!-- Space between employees -->
+          Space between employees 
             <tr class="employee-spacer" *ngIf="personIndex < employees.length - 1">
               <td colspan="32"></td>
             </tr>
@@ -225,7 +225,7 @@
         </tbody>
       </table>
       
-      <!-- Pagination Controls -->
+     Pagination Controls 
       <div class="pagination-controls" *ngIf="totalItems > itemsPerPage">
         <button 
           class="page-button" 
@@ -267,77 +267,139 @@
           {{ currentPage * itemsPerPage > totalItems ? totalItems : currentPage * itemsPerPage }} 
           of {{ totalItems }} entries
         </span>
-      </div>
-    </div>
+      </div>->
+    </div> -->
 
     <!-- Summary Section -->
     <div class="summary-section">
       <div class="summary-header">
-        <i class="ti ti-layout-grid summary-icon"></i>
-        <span>Summary</span>
+        <h2 class="summary-title">
+          <i class="ti ti-layout-grid summary-icon"></i>
+          <span>Summary</span>
+        </h2>
+        <button class="view-button" (click)="viewEmployeeDetails()" title="View Employee Details">
+          <i class="ti ti-eye"></i>
+          <span>View Details</span>
+        </button>
       </div>
 
-      <div class="summary-content" *ngFor="let person of employees">
-        <div class="summary-employee-name">{{ person.name }}</div>
+      <div class="summary-grid-container">
+        <ng-container *ngIf="employees.length > 0; else noData">
+          <div *ngFor="let person of employees" class="employee-card">
+            <div class="employee-card-inner">
+              <div class="summary-employee-name">{{ person.name }}</div>
+              <div class="summary-grid">
+                <div class="summary-column">
+                  <div class="summary-column-header">TOTALS</div>
+                  <div class="summary-row">
+                    <span class="summary-label">Full Day:</span>
+                    <span class="summary-value">{{ person.totals.fullDay }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Half Day:</span>
+                    <span class="summary-value">{{ person.totals.halfDay }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Present Day:</span>
+                    <span class="summary-value">{{ person.totals.presentDay }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Absent Day:</span>
+                    <span class="summary-value">{{ person.totals.absentDay }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Leaves:</span>
+                    <span class="summary-value">{{ person.totals.leaves }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Late Days:</span>
+                    <span class="summary-value">{{ person.totals.lateDays }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Holidays:</span>
+                    <span class="summary-value">{{ person.totals.holidays }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Early Days:</span>
+                    <span class="summary-value">{{ person.totals.earlyDays }}</span>
+                  </div>
+                </div>
 
-        <div class="summary-grid">
-          <div class="summary-column">
-            <div class="summary-column-header">TOTALS</div>
-            <div class="summary-row">
-              <span class="summary-label">Full Day:</span>
-              <span class="summary-value">{{ person.totals.fullDay }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="summary-label">Half Day:</span>
-              <span class="summary-value">{{ person.totals.halfDay }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="summary-label">Present Day:</span>
-              <span class="summary-value">{{ person.totals.presentDay }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="summary-label">Absent Day:</span>
-              <span class="summary-value">{{ person.totals.absentDay }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="summary-label">Leaves:</span>
-              <span class="summary-value">{{ person.totals.leaves }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="summary-label">Late Days:</span>
-              <span class="summary-value">{{ person.totals.lateDays }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="summary-label">Holidays:</span>
-              <span class="summary-value">{{ person.totals.holidays }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="summary-label">Early Days:</span>
-              <span class="summary-value">{{ person.totals.earlyDays }}</span>
+                <div class="summary-column">
+                  <div class="summary-column-header">OTHERS</div>
+                  <div class="summary-row">
+                    <span class="summary-label">Late/Early Penalty:</span>
+                    <span class="summary-value">{{ formatTimeDisplay(person.totals.latePenalty / 60) }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Applied Penalty:</span>
+                    <span class="summary-value">{{ calculateAppliedPenalty(person.totals.latePenalty) }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Over Time:</span>
+                    <span class="summary-value">{{ formatTimeDisplay(person.totals.extraHours) }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="summary-label">Total Work Hours:</span>
+                    <span class="summary-value">{{ formatTimeDisplay(person.totals.totalWorkHours) }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-
-          <div class="summary-column">
-            <div class="summary-column-header">OTHERS</div>
-            <div class="summary-row">
-              <span class="summary-label">Total Late/Early Penalty:</span>
-              <span class="summary-value">{{ formatTimeDisplay(person.totals.latePenalty / 60) }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="summary-label">Applied Penalty:</span>
-              <span class="summary-value">{{ calculateAppliedPenalty(person.totals.latePenalty) }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="summary-label">Over Time:</span>
-              <span class="summary-value">{{ formatTimeDisplay(person.totals.extraHours) }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="summary-label">Total Work Hours:</span>
-              <span class="summary-value">{{ formatTimeDisplay(person.totals.totalWorkHours) }}</span>
-            </div>
+        </ng-container>
+        
+        <ng-template #noData>
+          <div class="no-data-message">
+            <i class="ti ti-info-circle"></i>
+            <span>No attendance data available for the selected period</span>
           </div>
-        </div>
+        </ng-template>
       </div>
     </div>
+   
   </div>
+   <!--Pagination Controls -->
+   <div class="pagination-controls" *ngIf="totalItems > itemsPerPage">
+    <button 
+      class="page-button" 
+      [disabled]="currentPage === 1"
+      (click)="onPageChange(1)">
+      &laquo;
+    </button>
+    <button 
+      class="page-button" 
+      [disabled]="currentPage === 1"
+      (click)="onPageChange(currentPage - 1)">
+      &lsaquo;
+    </button>
+    
+    <ng-container *ngFor="let page of pageNumbers">
+      <button 
+        class="page-button" 
+        [class.active]="page === currentPage"
+        (click)="onPageChange(page)">
+        {{ page }}
+      </button>
+    </ng-container>
+    
+    <button 
+      class="page-button" 
+      [disabled]="currentPage === totalPages"
+      (click)="onPageChange(currentPage + 1)">
+      &rsaquo;
+    </button>
+    <button 
+      class="page-button" 
+      [disabled]="currentPage === totalPages"
+      (click)="onPageChange(totalPages)">
+      &raquo;
+    </button>
+    
+    <span class="page-info">
+      Showing {{ (currentPage - 1) * itemsPerPage + 1 }} - 
+      {{ currentPage * itemsPerPage > totalItems ? totalItems : currentPage * itemsPerPage }} 
+      of {{ totalItems }} entries
+    </span>
+  </div> 
 </div>

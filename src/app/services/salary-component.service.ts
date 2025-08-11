@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import { environment } from 'src/environments/environment';
 
@@ -32,8 +32,17 @@ export class SalaryComponentService {
   /**
    * Get all salary components
    */
+  private getAuthHeaders() {
+    const token = localStorage.getItem('token');
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+  }
+
   getAllComponents(): Observable<SalaryComponent[]> {
-    return this.http.get<SalaryComponent[]>(this.baseUrl).pipe(
+    const headers = this.getAuthHeaders();
+    return this.http.get<SalaryComponent[]>(this.baseUrl, { headers }).pipe(
       map(response => {
         // Handle different response formats
         if (Array.isArray(response)) {
@@ -53,7 +62,8 @@ export class SalaryComponentService {
    * Get a single salary component by ID
    */
   getComponentById(componentId: string): Observable<SalaryComponent> {
-    return this.http.get<SalaryComponent>(`${this.baseUrl}/${componentId}`).pipe(
+    const headers = this.getAuthHeaders();
+    return this.http.get<SalaryComponent>(`${this.baseUrl}/${componentId}`, { headers }).pipe(
       map(response => {
         // Handle different response formats
         if (response && (response as any).data) {
@@ -69,7 +79,8 @@ export class SalaryComponentService {
    * Create a new salary component
    */
   createComponent(componentData: Omit<SalaryComponent, 'componentId'>): Observable<SalaryComponent> {
-    return this.http.post<SalaryComponent>(this.baseUrl, componentData).pipe(
+    const headers = this.getAuthHeaders();
+    return this.http.post<SalaryComponent>(this.baseUrl, componentData, { headers }).pipe(
       map(response => {
         if (response && (response as any).data) {
           return (response as any).data;
@@ -84,7 +95,8 @@ export class SalaryComponentService {
    * Update an existing salary component
    */
   updateComponent(componentId: string, componentData: Partial<SalaryComponent>): Observable<SalaryComponent> {
-    return this.http.put<SalaryComponent>(`${this.baseUrl}/${componentId}`, componentData).pipe(
+    const headers = this.getAuthHeaders();
+    return this.http.put<SalaryComponent>(`${this.baseUrl}/${componentId}`, componentData, { headers }).pipe(
       map(response => {
         if (response && (response as any).data) {
           return (response as any).data;
@@ -99,7 +111,8 @@ export class SalaryComponentService {
    * Delete a salary component
    */
   deleteComponent(componentId: string): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(`${this.baseUrl}/${componentId}`).pipe(
+    const headers = this.getAuthHeaders();
+    return this.http.delete<{ success: boolean; message: string }>(`${this.baseUrl}/${componentId}`, { headers }).pipe(
       catchError(this.handleError)
     );
   }

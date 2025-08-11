@@ -105,14 +105,19 @@
   }
 
   .bg-success {
-    background-color: #2ecc71 !important;
+    background-color: #198754 !important;
   }
 
   .bg-secondary {
-    background-color: #95a5a6 !important;
+    background-color: #f59e0b !important;
+  }
+  .bg-danger{
+    background-color: #dc3545 !important;
   }
 }
-
+.btn-outline-primary{
+  color: #f59e0b;
+}
 /* Loading and error states */
 .text-center {
   text-align: center;

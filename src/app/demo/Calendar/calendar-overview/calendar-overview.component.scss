@@ -1,7 +1,7 @@
 .calendar-container {
     padding: 2rem;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f9fafb;
+    font-family: 'Poppins', sans-serif;
+    background-color: white;
     min-height: 100vh;
     box-sizing: border-box;
     color: #333;
@@ -158,13 +158,6 @@
       }
     }
 
-    .table-responsive {
-      background: white;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-      border: 1px solid #e2e8f0;
-    }
 
     .table-responsive {
       width: 100%;
@@ -186,11 +179,11 @@
       table-layout: fixed;
 
       thead {
-        background-color: #f8fafc;
+        background-color: #f8f9fa;
         
         th {
           padding: 1rem;
-          color: #4a5568;
+          color: #333;
           font-weight: 600;
           font-size: 0.8rem;
           text-transform: uppercase;

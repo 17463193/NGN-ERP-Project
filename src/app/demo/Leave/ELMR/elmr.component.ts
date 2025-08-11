@@ -4,14 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { LeaveService, LeaveRequest, LeaveType } from '../../../services/leave.service';
-import { AuthService } from '../../../../app/core/services/auth.service';
 import { finalize } from 'rxjs/operators';
 import { combineLatest } from 'rxjs';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import Swal from 'sweetalert2';
 import { LeaveFormComponent } from '../leave-form/leave-form.component'
-import { environment } from 'src/environments/environment';
+import { QRCodeComponent } from 'angularx-qrcode';
 
 interface LeaveRequestUI {
   id: string;
@@ -38,7 +37,7 @@ interface LeaveRequestUI {
 @Component({
   selector: 'app-elmr',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, LeaveFormComponent],
+  imports: [CommonModule, FormsModule, RouterLink, LeaveFormComponent, QRCodeComponent],
   templateUrl: './elmr.component.html',
   styleUrls: ['./elmr.component.scss'],
   providers: [LeaveService]
@@ -47,16 +46,17 @@ export class ELMRComponent implements OnInit {
   @ViewChild('exportDiv', { static: false }) exportDiv!: ElementRef;
   @ViewChild('dateInput') dateInput!: ElementRef;
 
+  baseUrl = window.location.origin;
+  qrData = this.baseUrl + '/leave-form';
+
   // UI State
   isLoading = false;
-  isCTO = false;
   errorMessage: string | null = null;
   showQRCodeModal = false;
   showLeaveForm = false;
   qrCodeImage = 'assets/frame (2).png'; // Path to your placeholder image
   searchTerm = '';
   selectedDepartment = 'All';
-  departments: string[] = ['All'];
   selectedDate: string | null = null;
   showDatePicker = false;
   showFilter = false;
@@ -64,9 +64,6 @@ export class ELMRComponent implements OnInit {
   filterDate = '';
   filterDepartment = '';
   
-
-  private readonly deptApiUrl = `${environment.apiUrl}/api/v1/departments`;
-
   // Template methods
   toggleDatePicker(): void {
     this.showDatePicker = !this.showDatePicker;
@@ -92,7 +89,7 @@ export class ELMRComponent implements OnInit {
   toggleFilter(): void {
     this.showFilter = !this.showFilter;
   }
-
+  
   clearFilters(): void {
     this.searchTerm = '';
     this.selectedDepartment = 'All';
@@ -102,46 +99,7 @@ export class ELMRComponent implements OnInit {
     this.filterDepartment = '';
     this.applyFilters();
   }
-  private fetchDepartments(): void {
-    this.isLoading = true;
-    this.http.get<any>(this.deptApiUrl)
-      .pipe(
-        finalize(() => this.isLoading = false)
-      )
-      .subscribe({
-        next: (response) => {
-          try {
-            // Handle different possible response formats
-            let departmentsList: string[] = [];
-            
-            if (Array.isArray(response)) {
-              // If response is already an array
-              departmentsList = response;
-            } else if (response && Array.isArray(response.data)) {
-              // If response has a data property that's an array
-              departmentsList = response.data;
-            } else if (response && typeof response === 'object') {
-              // If response is an object with department names as values
-              departmentsList = Object.values(response);
-            }
-            
-            // Filter out any non-string values and ensure uniqueness
-            this.departments = ['All', ...new Set(
-              departmentsList
-                .filter((dept: any) => typeof dept === 'string' || (dept && typeof dept.name === 'string'))
-                .map((dept: any) => typeof dept === 'string' ? dept : dept.name)
-            )];
-          } catch (error) {
-            console.error('Error processing departments:', error);
-            this.departments = ['All'];
-          }
-        },
-        error: (error) => {
-          console.error('Failed to fetch departments:', error);
-          this.departments = ['All'];
-        }
-      });
-  }
+  
   formatDisplayDate(dateString: string | null): string {
     if (!dateString) return 'Select Date';
     try {
@@ -157,24 +115,35 @@ export class ELMRComponent implements OnInit {
     }
   }
   
-  applyFilters(): void {
-  console.log('Applying filters...');
-  console.log('Selected department:', this.selectedDepartment);
-  
-  this.leaveRequests = this.allLeaveRequests.filter(leave => {
-    const matchesSearch = !this.searchTerm || 
-      leave.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-      leave.empCode.toLowerCase().includes(this.searchTerm.toLowerCase());
+  private applyFilters(): void {
+    console.log('Applying filters...');
+    console.log('Search term:', this.searchTerm);
+    console.log('Selected department:', this.selectedDepartment);
+    console.log('Selected date:', this.selectedDate);
+    console.log('Filter name:', this.filterName);
+    console.log('Filter date:', this.filterDate);
+    console.log('Filter department:', this.filterDepartment);
     
-    const matchesDepartment = this.selectedDepartment === 'All' || 
-      leave.department === this.selectedDepartment;
+    // Apply filters to leaveRequests
+    this.leaveRequests = this.allLeaveRequests.filter(leave => {
+      // Filter by search term (name or employee code)
+      const matchesSearch = !this.searchTerm || 
+        leave.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        leave.empCode.toLowerCase().includes(this.searchTerm.toLowerCase());
+      
+      // Filter by department
+      const matchesDepartment = this.selectedDepartment === 'All' || 
+        leave.department === this.selectedDepartment;
+      
+      // Filter by date if selected
+      const matchesDate = !this.selectedDate || 
+        (leave.rawDate && leave.rawDate === this.selectedDate);
+      
+      return matchesSearch && matchesDepartment && matchesDate;
+    });
     
-    const matchesDate = !this.selectedDate || 
-      (leave.rawDate && leave.rawDate === this.selectedDate);
-    
-    return matchesSearch && matchesDepartment && matchesDate;
-  });
-}
+    console.log('Filtered leave requests:', this.leaveRequests);
+  }
   
   // Modal state
   showRequestModal = false;
@@ -183,32 +152,16 @@ export class ELMRComponent implements OnInit {
   leaveRequests: LeaveRequestUI[] = [];
   allLeaveRequests: LeaveRequestUI[] = [];
 
-  // CTO role ID - replace with the actual CTO role ID from your system
-  private readonly CTO_ROLE_ID = '2f4a751e-159b-4d5d-a270-e7334a822d0d';
-  private currentUserId: string | null = null;
+  // Services
+  private http = inject(HttpClient);
+  private leaveService = inject(LeaveService);
+  private router = inject(Router);
 
-  constructor(
-    private leaveService: LeaveService,
-    private http: HttpClient,
-    private router: Router,
-    private authService: AuthService
-  ) {
-    // Get current user info
-    const currentUser = this.authService.currentUserValue;
-    this.currentUserId = currentUser?.userId || null;
-    this.isCTO = currentUser?.roleId === this.CTO_ROLE_ID;
-    console.log('User is CTO:', this.isCTO, 'User ID:', this.currentUserId, 'Role ID:', currentUser?.roleId);
-  }
 
   ngOnInit(): void {
     console.log('Component initialized');
-    // Debug current user role
-    const currentUser = this.authService.currentUserValue;
-    console.log('Current user role:', currentUser?.roleId);
-    console.log('isCTO flag:', this.isCTO);
     // Load both current and all leave requests
     this.loadLeaveRequests();
-  this.fetchDepartments();
   }
 
   loadLeaveRequests(): void {
@@ -286,12 +239,7 @@ export class ELMRComponent implements OnInit {
       return [];
     }
 
-    // If not CTO, filter to show only current user's leave requests
-    const filteredData = this.isCTO 
-      ? apiData 
-      : apiData.filter(item => item.employeeId === this.currentUserId);
-
-    return filteredData.map(item => {
+    return apiData.map(item => {
       try {
         // Parse the date string to a Date object
         const fromDate = new Date(item.fromDate);
@@ -415,7 +363,7 @@ return matchesSearch && matchesDepartment && matchesDate;
    * @param status The new status ('Approved' or 'Rejected')
    */
   updateStatus(leave: LeaveRequestUI, status: 'Approved' | 'Rejected'): void {
-    console.log('Updating leave status:', { leave, status, isCTO: this.isCTO });
+    console.log(leave)
     const isApproved = status === 'Approved';
     const actionText = isApproved ? 'approve' : 'reject';
     
@@ -424,12 +372,12 @@ return matchesSearch && matchesDepartment && matchesDate;
       if (isApproved) {
         return Swal.fire({
           title: 'Approve Leave',
-          text: `Are you sure you want to ${this.isCTO ? 'approve as CTO' : 'approve'} this leave request?`,
+          text: 'Are you sure you want to approve this leave request?',
           icon: 'question',
           showCancelButton: true,
           confirmButtonColor: '#3085d6',
           cancelButtonColor: '#6c757d',
-          confirmButtonText: 'Yes, ' + (this.isCTO ? 'Approve as CTO' : 'Approve'),
+          confirmButtonText: 'Yes',
           cancelButtonText: 'Cancel'
         }).then((result) => ({
           isConfirmed: result.isConfirmed,
@@ -446,7 +394,7 @@ return matchesSearch && matchesDepartment && matchesDate;
           showCancelButton: true,
           confirmButtonColor: '#d33',
           cancelButtonColor: '#6c757d',
-          confirmButtonText: 'Reject',
+          confirmButtonText: 'Yes',
           cancelButtonText: 'Cancel',
           focusConfirm: false,
           preConfirm: () => {
@@ -476,41 +424,34 @@ return matchesSearch && matchesDepartment && matchesDate;
             Swal.showLoading();
           }
         });
-
-        console.log(`Updating leave request ${leave.id} to ${status} with reason:`, reason);
-
+        console.log(`Updating leave request ${leave.id} to ${status} with reason:`, leave);
         // Call the service to update the status with the correct request format
         this.leaveService.updateLeaveStatus({
           empCode: leave.empCode,
           id: leave.id,
           approved: isApproved,
-          reason: reason,
-          isCTO: this.isCTO // This will be sent to the backend
+          reason: reason
         }).subscribe({
-          next: (response) => {
-            console.log('Update response:', response);
-
-            // Update the local state in both leaveRequests and allLeaveRequests
+          next: () => {
+            // Update the local state in leaveRequests
             const updateLeaveInArray = (arr: LeaveRequestUI[]) => {
               const index = arr.findIndex(l => l.id === leave.id);
               if (index !== -1) {
-                // Create a new array to trigger change detection
-                const updated = [...arr];
-                updated[index] = { ...updated[index], status };
-                return updated;
+                arr[index].status = status;
+                return [...arr];
               }
               return arr;
             };
 
-            // Update both arrays with the new status
+            // Update both leaveRequests and allLeaveRequests
             this.leaveRequests = updateLeaveInArray(this.leaveRequests);
             this.allLeaveRequests = updateLeaveInArray(this.allLeaveRequests);
-
+            
             // Close loading and show success
             Swal.fire({
               icon: 'success',
               title: 'Success!',
-              text: `Leave request has been ${status.toLowerCase()}${this.isCTO ? ' by CTO' : ''}.`,
+              text: `Leave request has been ${status.toLowerCase()}.`,
               confirmButtonColor: '#3085d6',
             });
           },
@@ -519,7 +460,7 @@ return matchesSearch && matchesDepartment && matchesDate;
             Swal.fire({
               icon: 'error',
               title: 'Error',
-              text: `Failed to ${actionText} leave request. ${error?.error?.message || 'Please try again.'}`,
+              text: `Failed to ${actionText} leave request. Please try again.`,
               confirmButtonColor: '#d33',
             });
           }
@@ -586,15 +527,13 @@ return matchesSearch && matchesDepartment && matchesDate;
     this.router.navigate(['/leave-form']);
   }
 
-  closeLeaveForm(): void {
+  closeLeaveForm() {
     this.showLeaveForm = false;
-    document.body.style.overflow = 'auto'; // Re-enable scrolling
+    document.body.style.overflow = 'auto';
   }
 
-  onLeaveSubmitted(success: boolean): void {
+  onLeaveSubmitted(success: boolean) {
     if (success) {
-      // Refresh leave requests after successful submission
-      this.loadLeaveRequests();
       // Show success message
       Swal.fire({
         title: 'Success!',
@@ -602,7 +541,12 @@ return matchesSearch && matchesDepartment && matchesDate;
         icon: 'success',
         confirmButtonText: 'OK'
       });
+      
+      // Refresh the leave requests list
+      this.loadLeaveRequests();
     }
+    
+    // Always close the form
     this.closeLeaveForm();
   }
 

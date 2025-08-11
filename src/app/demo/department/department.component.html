@@ -1,0 +1,141 @@
+<div class="job-position-container">
+    <div class="header">
+      <div class="title">
+        <h2>Department Management</h2>
+        <p>Manage and organize department for your organization.</p>
+      </div>
+    </div>
+  
+    <div class="filter-row-container">
+      <div class="search-filter-row">
+        <div class="search-input-wrapper">
+          <i class="ti ti-search"></i>
+          <input type="text" placeholder="Search positions..." disabled />
+        </div>
+  
+        <div class="filter-container">
+          <button class="filter-icon" (click)="toggleFilters($event)" [class.active]="showFilters">
+            <i class="ti ti-filter-2"></i>
+            <span>Filters</span>
+            <span class="filter-count">2</span>
+          </button>
+  
+          <div class="filter-dropdown" [class.show]="showFilters">
+            <div class="filter-section">
+              <h4>Position Name</h4>
+              <div class="filter-options">
+                <div class="filter-options-scroll">
+                  <label class="filter-option">
+                    <input type="checkbox" checked disabled />
+                    <span>Developer</span>
+                  </label>
+                  <label class="filter-option">
+                    <input type="checkbox" disabled />
+                    <span>Manager</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+  
+            <div class="filter-section">
+              <h4>Grade</h4>
+              <div class="filter-options">
+                <div class="filter-options-scroll">
+                  <label class="filter-option">
+                    <input type="checkbox" checked disabled />
+                    <span>G1</span>
+                  </label>
+                  <label class="filter-option">
+                    <input type="checkbox" disabled />
+                    <span>G2</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+  
+            <div class="filter-actions">
+              <button class="clear-btn" (click)="closeFilters()">Clear All</button>
+              <button class="apply-btn" (click)="closeFilters()">Apply</button>
+            </div>
+          </div>
+        </div>
+  
+        <button class="emp-att-add-btn">
+          <i class="bi bi-plus-lg me-1"></i>
+          <span>Add Department</span>
+        </button>
+      </div>
+    </div>
+  
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading departments...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error && !isLoading" class="error-state">
+      <i class="ti ti-alert-circle"></i>
+      <p>{{ error }}</p>
+      <button class="retry-btn" (click)="loadDepartments()">
+        <i class="ti ti-refresh"></i> Try Again
+      </button>
+    </div>
+
+    <!-- Data Table -->
+    <div *ngIf="!isLoading && !error" class="attendance-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Department Name</th>
+            <th>Department Code</th>
+            <th>Organization</th>
+            <th>Branch</th>
+            <th>Budget</th>
+            <th>Sub-Departments</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let dept of paginatedDepartments">
+            <td>{{ dept.dept_name }}</td>
+            <td>{{ dept.dept_code }}</td>
+            <td>{{ dept.org_name }}</td>
+            <td>{{ dept.branch_name }}</td>
+            <td>{{ dept.budget_allocation | currency:'BTN ':'symbol':'1.0-0' }}</td>
+            <td>{{ dept.sub_departments_count }}</td>
+            <td>
+              <span class="status-badge active">
+                Active
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="view-btn" title="View"><i class="ti ti-eye"></i></button>
+                <button class="edit-btn" title="Edit"><i class="ti ti-edit"></i></button>
+                <button class="delete-btn" title="Delete">
+                  <i class="ti ti-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="!paginatedDepartments.length">
+            <td colspan="8" class="no-records">No departments found</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="pagination-wrapper" *ngIf="showPagination">
+      <div class="simple-pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">
+          <i class="ti ti-chevron-left"></i> Previous
+        </button>
+        <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">
+          Next <i class="ti ti-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>

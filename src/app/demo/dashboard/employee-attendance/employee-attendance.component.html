@@ -8,10 +8,10 @@
 
     <!-- Action Buttons -->
     <div class="att-det-actions d-flex gap-2 align-items-start">
-      <button class="att-det-date-btn btn btn-outline-dark d-flex align-items-center">
+      <!-- <button class="att-det-date-btn btn btn-outline-dark d-flex align-items-center">
         <i class="bi bi-calendar-week me-2"></i>
         {{ currentDate | date:'dd MMMM yyyy' }}
-      </button>
+      </button> -->
       <button class="att-det-export-btn btn btn-warning d-flex align-items-center" (click)="exportToPdf()">
         <i class="bi bi-download me-2"></i>
         Export
@@ -22,153 +22,148 @@
   <!-- Divider -->
   <div class="att-det-divider w-100 pb-3 mb-4" style="border-bottom: 1px solid #dee2e6;"></div>
 
-  <div class="att-det-filter-section d-flex align-items-center mb-4 gap-4">
+  <div class="filter-container d-flex flex-wrap align-items-stretch gap-2 mb-4">
     <!-- Branch Select -->
-    <div class="att-det-filter-select">
-      <select class="form-select" [(ngModel)]="selectedBranchId" (change)="onBranchChange()">
+    <div class="filter-item">
+      <select class="form-select form-select-sm h-100" [(ngModel)]="selectedBranchId" (change)="onBranchChange()">
         <option value="">All Branches</option>
         <option *ngFor="let branch of branches" [value]="branch.branchId">{{ branch.branchName }}</option>
       </select>
     </div>
 
     <!-- Department Select -->
-    <div class="att-det-filter-select">
-      <select class="form-select" [(ngModel)]="activeTab" (change)="selectTab(activeTab)">
-        <option *ngFor="let dept of tabDepartments" [value]="dept">{{ dept }}</option>
+    <div class="filter-item">
+      <select class="form-select form-select-sm h-100" [(ngModel)]="activeTab" (change)="selectTab(activeTab)">
+        <option *ngFor="let dept of tabDepartments" [value]="dept">
+          {{ getDepartmentName(dept) }}
+        </option>
       </select>
     </div>
 
-    <!-- Search Input -->
-    <div class="att-det-search-container">
-      <div class="att-det-search position-relative">
-        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-        <input type="text" class="att-det-search-input form-control ps-5" placeholder="Search by name or id..."
-          [(ngModel)]="searchQuery" (input)="onSearchInput($event)">
+    <!-- Date Filter Button -->
+    <div class="filter-item position-relative">
+      <button type="button" 
+              class="date-filter-button btn btn-outline-dark btn-sm d-flex align-items-center h-100 w-100" 
+              (click)="toggleDateFilter($event); $event.stopPropagation()">
+        <i class="bi bi-calendar3 me-2"></i>
+        {{ currentFilterDate ? (currentFilterDate | date: 'dd MMM yyyy') : 'Select Date' }}
+      </button>
+      
+      <!-- Date filter dropdown -->
+      <div class="date-picker-dropdown card shadow-sm position-absolute top-100 start-0 mt-1" 
+           *ngIf="showDateFilter" 
+           style="z-index: 1050; width: 300px;"
+           (click)="$event.stopPropagation()">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">Select Date</h6>
+            <button type="button" class="btn-close" (click)="showDateFilter = false" aria-label="Close"></button>
+          </div>
+          
+          <form [formGroup]="dateFilterForm" (ngSubmit)="$event.preventDefault(); applyDateFilter()">
+            <div class="mb-3">
+              <input type="date" 
+                     class="form-control form-control-sm" 
+                     [min]="minDate | date: 'yyyy-MM-dd'"
+                     [max]="maxDate | date: 'yyyy-MM-dd'"
+                     formControlName="filterDate"
+                     (click)="$event.stopPropagation()">
+            </div>
+            
+            <div class="d-flex gap-2">
+              <button type="submit" 
+                      class="btn btn-primary btn-sm flex-grow-1" 
+                      [disabled]="!dateFilterForm.get('filterDate').value">
+                Apply
+              </button>
+              <button type="button" 
+                      class="btn btn-outline-secondary btn-sm" 
+                      (click)="clearDateFilter()"
+                      *ngIf="currentFilterDate">
+                Clear
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
-
-    <!-- Filter Button -->
-    <div class="att-det-filter-container">
-      <button class="att-det-filter-btn btn btn-outline-dark d-flex align-items-center" (click)="toggleFilters()">
-        <i class="bi bi-funnel me-2"></i>
-        Filters
-        <span class="att-det-filter-count badge bg-primary ms-2" *ngIf="filterCount > 0">{{ filterCount }}</span>
-      </button>
-
-      <!-- Filter Dropdown -->
-      <div class="att-det-filter-dropdown card shadow-sm" *ngIf="showFilters">
-        <div class="card-body p-3">
-          <div class="att-det-filter-section">
-            <h6 class="fw-bold mb-2">Branch</h6>
-            <div class="att-det-filter-options d-flex flex-wrap gap-2">
-              <button class="btn btn-sm" 
-                [class.btn-primary]="selectedBranch === 'All Branches'" 
-                [class.btn-outline-primary]="selectedBranch !== 'All Branches'"
-                (click)="setBranchFilter('All Branches')">
-                All Branches
-              </button>
-              <button *ngFor="let branch of branches" class="btn btn-sm"
-                [class.btn-primary]="selectedBranch === branch.id" 
-                [class.btn-outline-primary]="selectedBranch !== branch.id"
-                (click)="setBranchFilter(branch.id)">
-                {{ branch.name }}
-              </button>
-            </div>
-          </div>
-
-          <div class="att-det-filter-section mt-3">
-            <h6 class="fw-bold mb-2">Department</h6>
-            <div class="att-det-filter-options d-flex flex-wrap gap-2">
-              <button class="btn btn-sm"
-                [class.btn-primary]="selectedDivision === 'All Employee'" 
-                [class.btn-outline-primary]="selectedDivision !== 'All Employee'"
-                (click)="setDivisionFilter('All Employee')">
-                All Employee
-              </button>
-              <button *ngFor="let dept of divisions" class="btn btn-sm"
-                [class.btn-primary]="selectedDivision === (dept.isMainBranch ? dept.name : dept.code)" 
-                [class.btn-outline-primary]="selectedDivision !== (dept.isMainBranch ? dept.name : dept.code)"
-                (click)="setDivisionFilter(dept.isMainBranch ? dept.name : dept.code)">
-                {{ dept.isMainBranch ? dept.name : dept.code }}
-              </button>
-            </div>
-          </div>
-
-          <div class="att-det-filter-section mt-3">
-            <h6 class="fw-bold mb-2">Status</h6>
-            <div class="att-det-filter-options d-flex flex-wrap gap-2">
-              <button *ngFor="let status of statuses" class="btn btn-sm"
-                [class.btn-primary]="selectedStatus === status" 
-                [class.btn-outline-primary]="selectedStatus !== status"
-                (click)="setStatusFilter(status)">
-                {{ status }}
-              </button>
-            </div>
-          </div>
-        </div>
+    
+    <!-- Search Input - Aligned to the right on larger screens -->
+    <div class="search-container ms-md-auto">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" 
+               class="form-control form-control-sm border-start-0" 
+               placeholder="Search by name or id..."
+               [(ngModel)]="searchQuery" 
+               (input)="onSearchInput($event)">
       </div>
     </div>
   </div>
 
   <!-- Attendance Table -->
-  <div class="att-det-table-card card border-0 shadow-sm">
+  <div class="card border-0 shadow-sm" *ngIf="hasAppliedFilters()">
     <div class="table-responsive">
-      <table class="att-det-table table table-hover mb-0">
+      <table class="table table-hover mb-0">
         <thead class="table-light">
           <tr>
-            <th class="border-0 py-3">Employee ID</th>
-            <th class="border-0 py-3">Employee</th>
-            <th class="border-0 py-3">Date</th>
-            <th class="border-0 py-3">Shift</th>
-            <th class="border-0 py-3">Status</th>
-            <th class="border-0 py-3">Clock In</th>
-            <th class="border-0 py-3">Clock Out</th>
-            <th class="border-0 py-3">Late Check-In</th>
-            <th class="border-0 py-3">Over Time</th>
+            <th class="py-2">Emp ID</th>
+            <th class="py-2">Employee</th>
+            <th class="py-2">Date</th>
+            <th class="py-2">Shift</th>
+            <th class="py-2">Status</th>
+            <th class="py-2">Clock In</th>
+            <th class="py-2">Clock Out</th>
+            <th class="py-2">Late Check-In</th>
+            <th class="py-2">Over Time</th>
           </tr>
         </thead>
-        <tbody>
-          <ng-container *ngIf="!isLoading && attendanceData.length > 0; else noData">
-            <tr *ngFor="let emp of paginatedData" class="att-det-table-row border-bottom" [class.table-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00'">
-              <td class="py-3">
-                <span>{{ emp.empCode || '--' }}</span>
+        <tbody *ngIf="!isLoading">
+          <ng-container *ngIf="attendanceData.length > 0; else noData">
+            <tr *ngFor="let emp of paginatedData" class="att-det-table-row border-bottom">
+              <td class="py-2 align-middle">
+                <span class="text-nowrap">{{ emp.empCode || '--' }}</span>
               </td>
-              <td class="py-3">
+              <td class="py-2 align-middle">
                 <div class="d-flex align-items-center">
                   <div>
-                    <div class="fw-medium">{{ emp.name || 'Unknown' }}</div>
-                    <small>{{ emp.displayDepartment || emp.department || 'Unassigned' }}</small>
+                    <div class="fw-medium text-nowrap">{{ getEmployeeFullName(emp) || '--' }}</div>
+                    <small class="text-muted">{{ getDepartmentDisplayName(emp) }}</small>
                   </div>
                 </div>
               </td>
-              <td class="py-3">
-                <span>{{ formatDate(emp.attendanceDate) || '--' }}</span>
+              <td class="py-2 align-middle">
+                <span class="text-nowrap">{{ formatDate(emp.attendanceDate) || '--' }}</span>
               </td>
-              <td class="py-3">
-                <span class="badge bg-warning-subtle text-warning-emphasis">{{ emp.timePeriod || '--' }}</span>
+              <td class="py-2 align-middle">
+                <span class="badge bg-warning bg-opacity-10 text-warning text-nowrap">{{ emp.timePeriod || '--' }}</span>
               </td>
-              <td class="py-3">
-                <span class="badge" [ngClass]="{
-                  'bg-success': emp.status === 'Present',
-                  'bg-danger': emp.status === 'Absent',
-                  'bg-warning': emp.status === 'Late',
-                  'bg-info': emp.status === 'Early Departure'
+              <td class="py-2 align-middle">
+                <span class="badge d-inline-flex align-items-center" [ngClass]="{
+                  'bg-success bg-opacity-10 text-success': emp.status === 'Present',
+                  'bg-danger bg-opacity-10 text-danger': emp.status === 'Absent',
+                  'bg-warning bg-opacity-10 text-warning': emp.status === 'Late',
+                  'bg-info bg-opacity-10 text-info': emp.status === 'Early Departure',
+                  'bg-secondary bg-opacity-10 text-secondary': !emp.status
                 }">
                   {{ emp.status || '--' }}
                 </span>
               </td>
-              <td class="py-3">
-                <span>{{ emp.actualCheckInTime || '--' }}</span>
+              <td class="py-2 align-middle">
+                <span class="text-nowrap">{{ emp.actualCheckInTime || '--' }}</span>
               </td>
-              <td class="py-3">
-                <span>{{ emp.actualCheckOutTime || '--' }}</span>
+              <td class="py-2 align-middle">
+                <span class="text-nowrap">{{ emp.actualCheckOutTime || '--' }}</span>
               </td>
-              <td class="py-3" [ngClass]="{'fw-bold text-danger': emp.lateCheckInTime && emp.lateCheckInTime !== '00:00'}">
-                <span *ngIf="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00'">⚠ {{ emp.lateCheckInTime }}</span>
-                <span *ngIf="!emp.lateCheckInTime || emp.lateCheckInTime === '00:00'">--</span>
+              <td class="py-2 align-middle">
+                <span *ngIf="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00'" class="d-inline-flex align-items-center text-danger">
+                  <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                  <span class="text-nowrap">{{ emp.lateCheckInTime }}</span>
+                </span>
+                <span *ngIf="!emp.lateCheckInTime || emp.lateCheckInTime === '00:00'" class="text-muted">--</span>
               </td>
-              <td class="py-3">
-                <span>{{ emp.overTime || '--' }}</span>
+              <td class="py-2 align-middle">
+                <span class="text-nowrap">{{ emp.overTime || '--' }}</span>
               </td>
             </tr>
           </ng-container>

@@ -351,6 +351,16 @@
                       CID number is required (numbers only)
                     </div>
                   </div>
+                  <div class="col-md-6">
+  <label class="emp-det-form-label form-label fw-medium">Organization</label>
+  <select class="emp-det-form-select form-select" formControlName="organization" 
+          (change)="onOrganizationChange()">
+    <option value="" disabled selected>Select Organization</option>
+    <option *ngFor="let org of organizations" [value]="org.orgId">
+      {{ org.orgName }}
+    </option>
+  </select>
+</div>
                 </div>
               </div>
 
@@ -389,16 +399,27 @@
                     </select>
                   </div>
 
-                  <div class="col-md-6">
-                    <label class="emp-det-form-label form-label fw-medium">Department</label>
-                    <select class="emp-det-form-select form-select" formControlName="department"
-                      (change)="onDepartmentChange()">
-                      <option value="" disabled selected>Select Department</option>
-                      <option *ngFor="let dept of formDepartments" [value]="dept.dept_id">
-                        {{ dept.dept_name }}
-                      </option>
-                    </select>
-                  </div>
+                <div class="col-md-6">
+  <label class="emp-det-form-label form-label fw-medium">Branch</label>
+  <select class="emp-det-form-select form-select" formControlName="location" 
+          (change)="onBranchChangeInForm()">
+    <option value="" disabled selected>Select Branch</option>
+    <option *ngFor="let branch of branches" [value]="branch.branchName">
+      {{ branch.branchName }}
+    </option>
+  </select>
+</div>
+
+<div class="col-md-6">
+  <label class="emp-det-form-label form-label fw-medium">Department</label>
+  <select class="emp-det-form-select form-select" formControlName="department"
+          (change)="onDepartmentChange()" [disabled]="!employeeForm.get('location')?.value">
+    <option value="" disabled selected>Select Department</option>
+    <option *ngFor="let dept of formDepartments" [value]="dept.dept_id">
+      {{ dept.dept_name }}
+    </option>
+  </select>
+</div>
 
                   <div class="col-md-6">
                     <label class="emp-det-form-label form-label fw-medium">Position</label>
@@ -407,16 +428,6 @@
                       <option value="" disabled selected>Select Position</option>
                       <option *ngFor="let pos of filteredPositions" [value]="pos.positionId">
                         {{ pos.positionName }}
-                      </option>
-                    </select>
-                  </div>
-
-                  <div class="col-md-6">
-                    <label class="emp-det-form-label form-label fw-medium">Branch</label>
-                    <select class="emp-det-form-select form-select" formControlName="location">
-                      <option value="" disabled selected>Select Branch</option>
-                      <option *ngFor="let loc of locations" [value]="loc">
-                        {{ loc }}
                       </option>
                     </select>
                   </div>

@@ -1,4 +1,5 @@
 import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
 import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -63,7 +64,7 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
 
   // Pagination properties
   currentPage: number = 1;
-  itemsPerPage: number = 4;
+  itemsPerPage: number = 6;
   totalItems: number = 0;
   pageSizeOptions: number[] = [4, 10, 25, 50];
   
@@ -83,7 +84,7 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
   public dynamicDayHeaders: string[] = [];
   public currentDate = new Date();
 
-  constructor(private attendanceService: AttendanceSheetService) { }
+  constructor(private attendanceService: AttendanceSheetService, private router: Router) { }
 
   ngOnInit(): void {
     this.initializeFilters();
@@ -838,6 +839,15 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
       pages.push(i);
     }
     return pages;
+  }
+
+  // Navigate to view employee details page
+  viewEmployeeDetails(): void {
+    // Navigate to the view-employee page using the full path from root
+    this.router.navigate(['/dashboard/employees']);
+    
+    // If you need to pass parameters (like employee ID), you can use:
+    // this.router.navigate(['/dashboard/employees', { id: employeeId }]);
   }
 
   ngOnDestroy() {

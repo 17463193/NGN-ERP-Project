@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { environment } from 'src/environments/environment';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-const API_BASE_URL = 'http://192.168.124.226:8088';
+const API_BASE_URL = environment.apiUrl;
 
 export interface Organization {
   orgId: string;
@@ -61,7 +62,13 @@ export class JobPositionService {
   constructor(private http: HttpClient) { }
 
   getOrganizations(): Observable<Organization[]> {
-    return this.http.get<Organization[]>(`${API_BASE_URL}/api/v1/organizations`).pipe(
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+    
+    return this.http.get<Organization[]>(`${API_BASE_URL}/api/v1/organizations`, { headers }).pipe(
       catchError(error => this.handleError(error))
     );
   }
@@ -77,36 +84,42 @@ export class JobPositionService {
   }
 
   getGrades(orgId: string): Observable<Grade[]> {
-    const url = `${API_BASE_URL}/api/v1/job-grades/organization/${orgId}`;
-    return this.http.get<Grade[]>(url).pipe(
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+    
+    const url = `${API_BASE_URL}api/v1/job-grades/organization/${orgId}`;
+    return this.http.get<Grade[]>(url, { headers }).pipe(
       map(response => Array.isArray(response) ? response : (response as any).data || []),
       catchError(error => this.handleError(error))
     );
   }
 
   getJobGrades(): Observable<Grade[]> {
-    return this.http.get<Grade[]>(`${API_BASE_URL}/api/v1/job-grades`).pipe(
+        return this.http.get<Grade[]>(`${environment.apiUrl}/api/v1/job-grades`).pipe(
       map(response => Array.isArray(response) ? response : (response as any).data || []),
       catchError(error => this.handleError(error))
     );
   }
 
   addJobGrade(gradeData: Omit<Grade, 'gradeId'>): Observable<Grade> {
-    return this.http.post<{ data: Grade }>(`${API_BASE_URL}/api/v1/job-grades`, gradeData).pipe(
+        return this.http.post<{ data: Grade }>(`${environment.apiUrl}/api/v1/job-grades`, gradeData).pipe(
       map(response => response.data),
       catchError(this.handleError)
     );
   }
 
   updateJobGrade(id: string, gradeData: Partial<Grade>): Observable<Grade> {
-    return this.http.put<{ data: Grade }>(`${API_BASE_URL}/api/v1/job-grades/${id}`, gradeData).pipe(
+        return this.http.put<{ data: Grade }>(`${environment.apiUrl}/api/v1/job-grades/${id}`, gradeData).pipe(
       map(response => response.data),
       catchError(this.handleError)
     );
   }
 
   deleteJobGrade(id: string): Observable<{ success: boolean, message: string }> {
-    return this.http.delete<{ success: boolean, message: string }>(`${API_BASE_URL}/api/v1/job-grades/${id}`)
+        return this.http.delete<{ success: boolean, message: string }>(`${environment.apiUrl}/api/v1/job-grades/${id}`)
       .pipe(
         catchError(this.handleError)
       );

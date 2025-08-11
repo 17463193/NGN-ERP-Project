@@ -1,43 +1,43 @@
-import { Directive, Input, TemplateRef, ViewContainerRef } from '@angular/core';
-import { AuthService } from './services/auth.service';
+// // shared/directives/has-permission.directive.ts
+// import { Directive, Input, TemplateRef, ViewContainerRef, OnDestroy } from '@angular/core';
+// import { AuthService } from './services/auth.service';
+// import { Subscription } from 'rxjs';
 
-@Directive({
-  selector: '[hasPermission]'
-})
-export class HasPermissionDirective {
-  private hasView = false;
-  private checkAll = false;
+// @Directive({
+//   selector: '[appHasPermission]'
+// })
+// export class HasPermissionDirective implements OnDestroy {
+//   private permissionSubscription: Subscription;
+//   private currentPermission: string;
 
-  constructor(
-    private templateRef: TemplateRef<any>,
-    private viewContainer: ViewContainerRef,
-    private authService: AuthService
-  ) {}
+//   constructor(
+//     private templateRef: TemplateRef<any>,
+//     private viewContainer: ViewContainerRef,
+//     private authService: AuthService
+//   ) {}
 
-  @Input() set hasPermission(permission: string | string[]) {
-    this.updateView(permission, this.checkAll);
-  }
+//   @Input() set appHasPermission(permission: string) {
+//     this.currentPermission = permission;
+//     this.updateView();
+    
+//     // Subscribe to permission changes
+//     this.permissionSubscription = this.authService.permissions$.subscribe(() => {
+//       this.updateView();
+//     });
+//   }
 
-  @Input() set hasPermissionCheckAll(checkAll: boolean) {
-    this.checkAll = checkAll;
-    // Re-evaluate permissions when this input changes
-    if (typeof this.hasPermission !== 'boolean') {
-      this.updateView(this.hasPermission, checkAll);
-    }
-  }
+//   private updateView(): void {
+//     const hasPermission = this.authService.hasPermission(this.currentPermission);
+//     this.viewContainer.clear();
+    
+//     if (hasPermission) {
+//       this.viewContainer.createEmbeddedView(this.templateRef);
+//     }
+//   }
 
-  private updateView(permission: string | string[], checkAll: boolean): void {
-    const permissions = Array.isArray(permission) ? permission : [permission];
-    const hasPermission = checkAll
-      ? this.authService.hasAllPermissions(permissions)
-      : this.authService.hasAnyPermission(permissions);
-
-    if (hasPermission && !this.hasView) {
-      this.viewContainer.createEmbeddedView(this.templateRef);
-      this.hasView = true;
-    } else if (!hasPermission && this.hasView) {
-      this.viewContainer.clear();
-      this.hasView = false;
-    }
-  }
-}
+//   ngOnDestroy(): void {
+//     if (this.permissionSubscription) {
+//       this.permissionSubscription.unsubscribe();
+//     }
+//   }
+// }
