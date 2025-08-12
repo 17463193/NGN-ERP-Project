@@ -2,12 +2,23 @@ import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Subject, of, throwError } from 'rxjs';
-import { debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
+import { Subject, of, throwError, forkJoin, map } from 'rxjs';
+import { debounceTime, distinctUntilChanged, catchError, finalize } from 'rxjs/operators';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { HttpClient, HttpClientModule, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpClientModule, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { FormBuilder, FormGroup } from '@angular/forms';
+
+interface AttendanceApiResponse {
+  content: any[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
 
 interface EmployeeAttendance {
   id?: string;
@@ -93,13 +104,15 @@ export class EmployeeAttendanceComponent implements OnInit {
   apiUrl = `${environment.apiUrl}/api/v1/employee-attendance/latest`;
   deptApiUrl = `${environment.apiUrl}/api/v1/departments`;
   branchApiUrl = `${environment.apiUrl}/api/v1/branches`;
+  availableDatesApiUrl = `${environment.apiUrl}/api/v1/employee-attendance/available-dates`;
 
   // Date filter properties
   dateFilterForm: FormGroup;
   showDateFilter = false;
   currentFilterDate: string | null = null;
-  minDate: Date;
-  maxDate: Date;
+  availableDates: string[] = [];
+  groupedDates: { month: string; dates: string[] }[] = [];
+  loadingDates = false;
 
   httpOptions = {
     headers: new HttpHeaders({
@@ -108,6 +121,13 @@ export class EmployeeAttendanceComponent implements OnInit {
   };
 
   private departmentMap: { [key: string]: string } = {}
+  totalElements = 0;
+  totalPages = 0;
+  paginatedData: EmployeeAttendance[] = [];
+  filteredAttendanceData: EmployeeAttendance[] = [];
+
+  // Make Math available in template
+  Math = Math;
 
   constructor(private http: HttpClient, private fb: FormBuilder) { }
 
@@ -134,19 +154,123 @@ export class EmployeeAttendanceComponent implements OnInit {
     ).subscribe((query) => {
       this.searchQuery = query;
       this.currentPage = 1;
+      this.applyFilters();
       this.showEmptyStateIfNeeded();
     });
   }
 
   private initDateFilter(): void {
-    const today = new Date();
-    this.maxDate = new Date(today);
-    this.minDate = new Date(today);
-    this.minDate.setMonth(today.getMonth() - 3); // Allow filtering up to 3 months back
-    
     this.dateFilterForm = this.fb.group({
       filterDate: [null]
     });
+    this.fetchAvailableDates();
+  }
+
+  private fetchAvailableDates(): void {
+    this.loadingDates = true;
+    this.availableDates = [];
+    
+    // Try to get available dates from API endpoint if it exists
+    this.http.get<string[]>(this.availableDatesApiUrl, this.httpOptions)
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          console.log('Available dates endpoint not found, falling back to date checking method');
+          return this.fallbackFetchAvailableDates();
+        })
+      )
+      .subscribe({
+        next: (dates: string[]) => {
+          this.availableDates = dates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+          this.groupDatesByMonth();
+          this.loadingDates = false;
+        },
+        error: (error) => {
+          console.error('Error fetching available dates:', error);
+          this.loadingDates = false;
+          this.availableDates = [];
+          this.groupedDates = [];
+        }
+      });
+  }
+
+  private fallbackFetchAvailableDates() {
+    // Fallback method: check recent dates for attendance data
+    const currentDate = new Date();
+    const datesToCheck: string[] = [];
+    
+    // Check last 60 days
+    for (let i = 0; i < 60; i++) {
+      const date = new Date(currentDate);
+      date.setDate(date.getDate() - i);
+      datesToCheck.push(this.formatDateForApi(date));
+    }
+    
+    const dateChecks = datesToCheck.map(date => 
+      this.http.get<AttendanceApiResponse>(`${environment.apiUrl}/api/v1/employee-attendance/date/${date}?page=0&size=1`, this.httpOptions).pipe(
+        map(response => (response.content && response.content.length > 0 ? date : null)),
+        catchError(() => of(null))
+      )
+    );
+    
+    return forkJoin(dateChecks).pipe(
+      map(results => {
+        const validDates = results.filter(date => date !== null) as string[];
+        return validDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+      })
+    );
+  }
+  
+  private groupDatesByMonth(): void {
+    const groups: { [key: string]: string[] } = {};
+    
+    this.availableDates.forEach(dateStr => {
+      const date = new Date(dateStr);
+      const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      
+      if (!groups[monthYear]) {
+        groups[monthYear] = [];
+      }
+      
+      groups[monthYear].push(dateStr);
+    });
+    
+    // Convert to array and sort by date (newest first)
+    this.groupedDates = Object.entries(groups)
+      .map(([month, dates]) => ({
+        month,
+        dates: [...dates].sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+      }))
+      .sort((a, b) => new Date(b.dates[0]).getTime() - new Date(a.dates[0]).getTime());
+  }
+  
+  formatDateForDisplay(dateStr: string): string {
+    if (!dateStr) return '--';
+    
+    try {
+      const date = new Date(dateStr);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      // Format for display (e.g., "Today, 15 Aug" or "Mon, 14 Aug")
+      if (date.toDateString() === today.toDateString()) {
+        return `Today, ${date.getDate()} ${date.toLocaleString('default', { month: 'short' })}`;
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        return `Yesterday, ${date.getDate()} ${date.toLocaleString('default', { month: 'short' })}`;
+      } else {
+        return `${date.toLocaleString('default', { weekday: 'short' })}, ${date.getDate()} ${date.toLocaleString('default', { month: 'short' })}`;
+      }
+    } catch (error) {
+      console.error('Error formatting date:', dateStr, error);
+      return dateStr; // Return the original string if there's an error
+    }
+  }
+  
+  private formatDateForApi(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   toggleDateFilter(event?: Event): void {
@@ -160,7 +284,7 @@ export class EmployeeAttendanceComponent implements OnInit {
       // Set default date to today if no date is selected
       if (this.currentFilterDate) {
         this.dateFilterForm.patchValue({
-          filterDate: this.formatDateForInput(this.currentFilterDate)
+          filterDate: this.currentFilterDate
         });
       }
     }
@@ -169,18 +293,21 @@ export class EmployeeAttendanceComponent implements OnInit {
   applyDateFilter(): void {
     const selectedDate = this.dateFilterForm.get('filterDate')?.value;
     if (selectedDate) {
-      // Convert to YYYY-MM-DD format string for the API
-      this.currentFilterDate = this.formatDate(new Date(selectedDate));
+      this.currentFilterDate = selectedDate;
       this.showDateFilter = false;
-      this.loadAttendanceData();
+      this.currentPage = 1;
+      this.loadAttendanceData(selectedDate);
+      this.updateFilterCount();
     }
   }
 
   clearDateFilter(): void {
     this.currentFilterDate = null;
     this.dateFilterForm.reset();
+    this.currentPage = 1;
     this.loadAttendanceData();
     this.showDateFilter = false;
+    this.updateFilterCount();
   }
 
   private formatDate(date: Date | string): string {
@@ -191,26 +318,16 @@ export class EmployeeAttendanceComponent implements OnInit {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  // Format date for input field (YYYY-MM-DD)
-  private formatDateForInput(date: string | Date): string {
-    if (!date) return '';
-    const d = typeof date === 'string' ? new Date(date) : date;
-    if (isNaN(d.getTime())) return '';
-    
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return `${day}-${month}-${year}`;
   }
 
   // Check if any filters have been applied
   hasAppliedFilters(): boolean {
     return this.currentFilterDate !== null || 
            this.selectedBranchId !== '' ||
-           this.activeTab !== 'All Employee';
+           this.activeTab !== 'All Employee' ||
+           this.selectedStatus !== 'All Employee' ||
+           this.searchQuery !== '';
   }
 
   // Get department name for display
@@ -235,22 +352,57 @@ export class EmployeeAttendanceComponent implements OnInit {
 
   // Get department display name for an employee
   getDepartmentDisplayName(emp: any): string {
-    if (!emp) return 'Unassigned';
-    // First try displayDepartment, then department, then departmentId
-    return emp.displayDepartment || emp.department || emp.departmentId || 'Unassigned';
+    if (!emp) return '';
+    if (emp.displayDepartment) return emp.displayDepartment;
+    if (emp.department) return emp.department;
+    return '';
+  }
+
+  hasDataForCurrentMonth(): boolean {
+    if (!this.attendanceData || this.attendanceData.length === 0) return false;
+    
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    return this.attendanceData.some(emp => {
+      if (!emp.attendanceDate) return false;
+      const empDate = new Date(emp.attendanceDate);
+      return empDate.getMonth() === currentMonth && 
+             empDate.getFullYear() === currentYear;
+    });
+  }
+
+  getBranchName(branchId: string): string {
+    if (!branchId) return '';
+    const branch = this.branches.find(b => b.branchId === branchId);
+    return branch ? branch.branchName : '';
+  }
+
+  clearAllFilters(): void {
+    this.clearDateFilter();
+    this.selectedBranchId = '';
+    this.activeTab = 'All Employee';
+    this.selectedStatus = 'All Employee';
+    this.searchQuery = '';
+    this.onBranchChange();
+    this.selectTab('All Employee');
+    this.applyFilters();
   }
 
   get emptyStateMessage(): string {
     if (this.errorMessage) return '';
     if (this.isLoading) return '';
 
-    if (this.searchQuery || this.selectedDivision !== 'All Employee' || this.selectedStatus !== 'All Employee' || this.selectedBranch !== 'All Branches') {
-      return 'No records match your search!';
+    if (this.hasAppliedFilters()) {
+      return 'No records match your search criteria!';
     }
     return 'No employee records found.';
   }
 
-  private showEmptyStateIfNeeded(): void { }
+  private showEmptyStateIfNeeded(): void { 
+    this.updatePagination();
+  }
 
   private safeString(value: any): string {
     if (value === null || value === undefined) return '';
@@ -347,58 +499,51 @@ export class EmployeeAttendanceComponent implements OnInit {
     this.loadDepartments(branchIdToLoad)
       .then(() => {
         console.log('Departments loaded, now loading attendance data');
-        this.loadAttendanceData();
+        if (this.currentFilterDate) {
+          this.loadAttendanceData(this.currentFilterDate);
+        } else {
+          this.loadAttendanceData();
+        }
+        this.updateFilterCount();
       })
       .catch(error => {
-        console.error('Error in branch change:', error);
-        this.errorMessage = 'Failed to load department data. Please try again.';
+        console.error('Error loading departments:', error);
+        this.errorMessage = 'Failed to load departments. Please try again later.';
       });
   }
 
-  loadAttendanceData(): void {
+  loadAttendanceData(date?: string): void {
     this.isLoading = true;
     this.errorMessage = '';
     
-    // Determine which API endpoint to use based on whether we have a date filter
     let url: string;
-    const params: any = {
-      page: (this.currentPage - 1).toString(),
-      size: this.itemsPerPage.toString()
-    };
-    
-    if (this.currentFilterDate) {
+    const params: any = {};
+
+    if (date) {
       // Use the date-specific endpoint
-      url = `${environment.apiUrl}/api/v1/employee-attendance/date/${this.currentFilterDate}`;
-      
-      // Add other filters as query parameters
-      if (this.selectedBranch !== 'All Branches') {
-        params.branchId = this.selectedBranch;
-      }
-      
-      if (this.selectedDivision !== 'All Employee') {
-        params.department = this.selectedDivision;
-      }
-      
-      if (this.searchQuery) {
-        params.employeeId = this.searchQuery;
-      }
+      url = `${environment.apiUrl}/api/v1/employee-attendance/date/${date}`;
     } else {
       // Use the default endpoint for latest data
       url = this.apiUrl;
-      
-      if (this.selectedBranch !== 'All Branches') {
-        params.branchId = this.selectedBranch;
-      }
-      
-      if (this.selectedDivision !== 'All Employee') {
-        params.department = this.selectedDivision;
-      }
-      
-      if (this.selectedStatus !== 'All Employee') {
-        params.status = this.selectedStatus;
-      }
-      
-      if (this.searchQuery) {
+    }
+
+    // Add parameters based on current filters
+    if (this.selectedBranchId && this.selectedBranchId !== '') {
+      params.branchId = this.selectedBranchId;
+    }
+    
+    if (this.selectedDivision !== 'All Employee') {
+      params.department = this.selectedDivision;
+    }
+    
+    if (!date && this.selectedStatus !== 'All Employee') {
+      params.status = this.selectedStatus;
+    }
+    
+    if (this.searchQuery) {
+      if (date) {
+        params.employeeId = this.searchQuery;
+      } else {
         params.search = this.searchQuery;
       }
     }
@@ -408,27 +553,32 @@ export class EmployeeAttendanceComponent implements OnInit {
         catchError((error: HttpErrorResponse) => {
           console.error('Error loading attendance data:', error);
           this.errorMessage = 'Failed to load attendance data. Please try again later.';
+          this.isLoading = false;
           return of({ content: [] });
+        }),
+        finalize(() => {
+          this.isLoading = false;
         })
       )
       .subscribe({
         next: (response) => {
           // Handle both response formats: array for old endpoint, paginated for new
           const data = response.content !== undefined ? response.content : response;
-          this.attendanceData = Array.isArray(data) ? data : [];
+          this.attendanceData = Array.isArray(data) ? this.validateAttendanceData(data) : [];
           
           // Update pagination info if available
           if (response.totalElements !== undefined) {
             this.itemsPerPage = response.size || this.itemsPerPage;
             this.currentPage = (response.number || 0) + 1;
+            this.totalElements = response.totalElements;
+            this.totalPages = response.totalPages;
           }
           
-          this.isLoading = false;
+          this.applyFilters();
           this.showEmptyStateIfNeeded();
         },
         error: (error) => {
           console.error('Error in subscription:', error);
-          this.isLoading = false;
           this.errorMessage = 'An error occurred while processing the data.';
           this.attendanceData = [];
           this.showEmptyStateIfNeeded();
@@ -587,6 +737,12 @@ export class EmployeeAttendanceComponent implements OnInit {
       this.selectedDivision = foundDept ? (foundDept.isMainBranch ? foundDept.name : foundDept.code) : dept;
     }
 
+    if (this.currentFilterDate) {
+      this.loadAttendanceData(this.currentFilterDate);
+    } else {
+      this.loadAttendanceData();
+    }
+    this.updateFilterCount();
     this.showEmptyStateIfNeeded();
   }
 
@@ -601,17 +757,20 @@ export class EmployeeAttendanceComponent implements OnInit {
 
   applyFilters(): void {
     this.currentPage = 1;
+    this.updatePagination();
     this.showEmptyStateIfNeeded();
   }
 
   get filteredAttendance(): EmployeeAttendance[] {
-    if (!this.attendanceData?.length) return [];
+    if (!this.attendanceData || !Array.isArray(this.attendanceData) || this.attendanceData.length === 0) {
+      return [];
+    }
 
     const query = this.safeLowerString(this.searchQuery);
     const status = this.safeLowerString(this.selectedStatus);
     const branch = this.safeLowerString(this.selectedBranch);
 
-    return this.attendanceData.filter(emp => {
+    this.filteredAttendanceData = this.attendanceData.filter(emp => {
       if (this.selectedDivision !== 'All Employee') {
         const foundDept = this.divisions.find(d =>
           (d.isMainBranch ? d.name : d.code) === this.selectedDivision
@@ -621,12 +780,12 @@ export class EmployeeAttendanceComponent implements OnInit {
         }
       }
 
-      if (status !== 'all employee') {
+      if (status !== 'all employee' && this.selectedStatus !== 'All Employee') {
         const empStatus = this.safeLowerString(emp.status);
         if (empStatus !== status) return false;
       }
 
-      if (branch !== 'all branches') {
+      if (branch !== 'all branches' && this.selectedBranch !== 'All Branches') {
         const empBranch = this.safeLowerString(emp.branchId);
         if (!empBranch.includes(branch)) return false;
       }
@@ -645,26 +804,99 @@ export class EmployeeAttendanceComponent implements OnInit {
 
       return true;
     }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    
+    return this.filteredAttendanceData;
   }
 
-  get totalPages(): number {
-    return Math.ceil(this.filteredAttendance.length / this.itemsPerPage);
-  }
+  updatePagination(): void {
+    const filtered = this.filteredAttendance;
+    
+    if (!filtered) {
+      this.totalElements = 0;
+      this.totalPages = 0;
+      this.paginatedData = [];
+      return;
+    }
 
-  get paginatedData(): EmployeeAttendance[] {
+    this.totalElements = filtered.length;
+    this.totalPages = Math.ceil(this.totalElements / this.itemsPerPage);
+    
+    // Ensure current page is within bounds
+    if (this.currentPage > this.totalPages && this.totalPages > 0) {
+      this.currentPage = this.totalPages;
+    } else if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+    
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-    return this.filteredAttendance.slice(startIndex, startIndex + this.itemsPerPage);
+    const endIndex = Math.min(startIndex + this.itemsPerPage, this.totalElements);
+    this.paginatedData = filtered.slice(startIndex, endIndex);
   }
 
   previousPage(): void {
     if (this.currentPage > 1) {
       this.currentPage--;
+      this.updatePagination();
     }
+  }
+
+  getPageNumbers(): number[] {
+    const pages: number[] = [];
+    const maxPagesToShow = 5; // Maximum number of page numbers to show
+    
+    if (this.totalPages <= maxPagesToShow) {
+      // If total pages are less than or equal to maxPagesToShow, show all pages
+      for (let i = 1; i <= this.totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+      
+      // Calculate start and end of the middle section
+      let startPage = Math.max(2, this.currentPage - 1);
+      let endPage = Math.min(this.totalPages - 1, this.currentPage + 1);
+      
+      // Adjust if we're near the start or end
+      if (this.currentPage <= 3) {
+        endPage = 4;
+      } else if (this.currentPage >= this.totalPages - 2) {
+        startPage = this.totalPages - 3;
+      }
+      
+      // Add ellipsis if needed after first page
+      if (startPage > 2) {
+        pages.push(-1); // -1 represents ellipsis
+      }
+      
+      // Add middle pages
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      
+      // Add ellipsis if needed before last page
+      if (endPage < this.totalPages - 1) {
+        pages.push(-1); // -1 represents ellipsis
+      }
+      
+      // Always show last page
+      pages.push(this.totalPages);
+    }
+    
+    return pages;
   }
 
   nextPage(): void {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
+      this.updatePagination();
+    }
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages && page !== this.currentPage) {
+      this.currentPage = page;
+      this.updatePagination();
     }
   }
 
@@ -677,6 +909,11 @@ export class EmployeeAttendanceComponent implements OnInit {
     this.currentPage = 1;
     this.updateFilterCount();
     this.showFilters = false;
+    if (this.currentFilterDate) {
+      this.loadAttendanceData(this.currentFilterDate);
+    } else {
+      this.loadAttendanceData();
+    }
     this.showEmptyStateIfNeeded();
   }
 
@@ -685,6 +922,11 @@ export class EmployeeAttendanceComponent implements OnInit {
     this.currentPage = 1;
     this.updateFilterCount();
     this.showFilters = false;
+    if (this.currentFilterDate) {
+      this.loadAttendanceData(this.currentFilterDate);
+    } else {
+      this.loadAttendanceData();
+    }
     this.showEmptyStateIfNeeded();
   }
 
@@ -693,21 +935,13 @@ export class EmployeeAttendanceComponent implements OnInit {
       (this.selectedDivision !== 'All Employee' ? 1 : 0) +
       (this.selectedStatus !== 'All Employee' ? 1 : 0) +
       (this.selectedBranch !== 'All Branches' ? 1 : 0) +
-      (this.currentFilterDate ? 1 : 0);
+      (this.currentFilterDate ? 1 : 0) +
+      (this.searchQuery ? 1 : 0);
   }
 
   onSearchInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.searchSubject.next(value);
-  }
-
-  formatDateForDisplay(dateString: string): string {
-    try {
-      const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-      return new Date(dateString).toLocaleDateString(undefined, options);
-    } catch {
-      return dateString;
-    }
   }
 
   exportToPdf(): void {
@@ -720,9 +954,7 @@ export class EmployeeAttendanceComponent implements OnInit {
     if (this.searchQuery) title += ` [Search: "${this.searchQuery}"]`;
     if (this.currentFilterDate) {
       const filterDate = new Date(this.currentFilterDate);
-      const monthName = filterDate.toLocaleString('default', { month: 'long' });
-      const year = filterDate.getFullYear();
-      title += ` [${monthName} ${year}]`;
+      title += ` [Date: ${this.formatDate(filterDate)}]`;
     }
 
     doc.setFontSize(18);
@@ -754,7 +986,7 @@ export class EmployeeAttendanceComponent implements OnInit {
         nameWithDept: `${item.name || 'Unknown'}`,
         displayDepartment: item.displayDepartment || item.department || 'Unassigned',
         branchName: branchName,
-        attendanceDate: item.attendanceDate ? this.formatDateForDisplay(item.attendanceDate) : '--',
+        attendanceDate: item.attendanceDate ? this.formatDate(item.attendanceDate) : '--',
         timePeriod: String(item.timePeriod || '--'),
         status: String(item.status || '--'),
         actualCheckInTime: String(item.actualCheckInTime || '--'),
@@ -818,7 +1050,8 @@ export class EmployeeAttendanceComponent implements OnInit {
       const filterDate = new Date(this.currentFilterDate);
       const year = filterDate.getFullYear();
       const month = (filterDate.getMonth() + 1).toString().padStart(2, '0');
-      filename += `_${year}_${month}`;
+      const day = filterDate.getDate().toString().padStart(2, '0');
+      filename += `_${year}_${month}_${day}`;
     }
     filename += `_${new Date().toISOString().slice(0, 10)}.pdf`;
 
@@ -830,7 +1063,7 @@ export class EmployeeAttendanceComponent implements OnInit {
     // Close date filter when clicking outside
     const target = event.target as HTMLElement;
     const dateFilterButton = document.querySelector('.date-filter-button');
-    const dateFilterDropdown = document.querySelector('.date-filter-dropdown');
+    const dateFilterDropdown = document.querySelector('.date-picker-dropdown');
     
     if (dateFilterButton && !dateFilterButton.contains(target) && 
         dateFilterDropdown && !dateFilterDropdown.contains(target)) {

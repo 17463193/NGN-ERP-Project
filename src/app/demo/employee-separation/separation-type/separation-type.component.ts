@@ -1,4 +1,5 @@
 import { Component, OnInit, TemplateRef, ViewChild, ChangeDetectorRef } from '@angular/core';
+import Swal from 'sweetalert2';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NgbModal, NgbModalRef, NgbPaginationModule } from '@ng-bootstrap/ng-bootstrap';
@@ -30,11 +31,14 @@ export class SeparationTypeComponent implements OnInit {
   searchQuery = '';
   isEditMode = false;
   modalRef!: NgbModalRef;
-  
+
   typeForm: FormGroup;
 
   categories = [
-    // Removed predefined categories - now user will input manually
+    'Voluntary',
+    'Involuntary',
+    'Retirement',
+    'Others'
   ];
 
   // Pagination
@@ -97,7 +101,7 @@ export class SeparationTypeComponent implements OnInit {
         next: (types) => {
           this.separationTypes = types || [];
           this.filteredTypes = [...this.separationTypes];
-          
+
           // Only try to load organization details if we have types
           if (this.separationTypes.length > 0) {
             this.loadOrganizationDetails();
@@ -121,25 +125,31 @@ export class SeparationTypeComponent implements OnInit {
     const uniqueOrgIds = [...new Set(
       this.separationTypes
         .map(type => type.orgId)
-        .filter((id): id is string => !!id)
+        .filter((id): id is string => !!id && !this.failedOrgLoads.has(id))
     )];
-    
+
     // Load each organization
     uniqueOrgIds.forEach(orgId => {
-      if (this.organizationLoading.has(orgId)) return;
-      
+      if (this.organizationLoading.has(orgId) || this.failedOrgLoads.has(orgId)) return;
+
       this.organizationLoading.add(orgId);
-      
+
       this.organizationService.getOrganizationById(orgId).subscribe({
         next: (org) => {
-          // Update the organizations list for the dropdown
-          if (!this.organizations.some(o => o.orgId === orgId)) {
-            this.organizations.push(org);
+          if (org && org.orgName) {
+            // Only add valid organizations to the list
+            if (!this.organizations.some(o => o.orgId === orgId)) {
+              this.organizations.push(org);
+            }
+          } else {
+            this.failedOrgLoads.add(orgId);
           }
           this.organizationLoading.delete(orgId);
           this.cdr.detectChanges();
         },
-        error: () => {
+        error: (error) => {
+          console.warn(`Failed to load organization ${orgId}:`, error);
+          this.failedOrgLoads.add(orgId);
           this.organizationLoading.delete(orgId);
           this.cdr.detectChanges();
         }
@@ -148,33 +158,44 @@ export class SeparationTypeComponent implements OnInit {
   }
 
   getOrgName(orgId: string): string {
-    if (!orgId) return 'Unknown Organization';
-    
+    if (!orgId) return 'Restricted Organization';
+
     // Check if we have the organization in our local list
     const org = this.organizations.find(o => o.orgId === orgId);
     if (org) {
-      return org.orgName;
+      return org.orgName || 'Restricted Organization';
     }
-    
+
+    // If we previously failed to load this org, don't try again
+    if (this.failedOrgLoads.has(orgId)) {
+      return 'Restricted Organization';
+    }
+
     // If not found and not already loading, trigger a load
     if (!this.organizationLoading.has(orgId)) {
       this.organizationLoading.add(orgId);
-      
+
       this.organizationService.getOrganizationById(orgId).subscribe({
         next: (loadedOrg) => {
-          if (!this.organizations.some(o => o.orgId === orgId)) {
-            this.organizations.push(loadedOrg);
+          if (loadedOrg && loadedOrg.orgName) {
+            if (!this.organizations.some(o => o.orgId === orgId)) {
+              this.organizations.push(loadedOrg);
+            }
+          } else {
+            this.failedOrgLoads.add(orgId);
           }
           this.organizationLoading.delete(orgId);
           this.cdr.detectChanges();
         },
-        error: () => {
+        error: (error) => {
+          console.warn(`Failed to load organization ${orgId}:`, error);
+          this.failedOrgLoads.add(orgId);
           this.organizationLoading.delete(orgId);
           this.cdr.detectChanges();
         }
       });
     }
-    
+
     return 'Loading...';
   }
 
@@ -183,9 +204,9 @@ export class SeparationTypeComponent implements OnInit {
       this.filteredTypes = [...this.separationTypes];
       return;
     }
-    
+
     const query = this.searchQuery.toLowerCase().trim();
-    this.filteredTypes = this.separationTypes.filter(type => 
+    this.filteredTypes = this.separationTypes.filter(type =>
       type.separationName?.toLowerCase().includes(query) ||
       type.separationCode?.toLowerCase().includes(query) ||
       type.category?.toLowerCase().includes(query) ||
@@ -210,14 +231,14 @@ export class SeparationTypeComponent implements OnInit {
   }
 
   // Fixed getter for form controls
-  get f() { 
-    return this.typeForm?.controls || {}; 
+  get f() {
+    return this.typeForm?.controls || {};
   }
 
   openAddModal(): void {
     this.isEditMode = false;
     this.currentType = null;
-    
+
     this.typeForm.reset({
       orgId: '',
       separationName: '',
@@ -227,8 +248,8 @@ export class SeparationTypeComponent implements OnInit {
       exitInterviewRequired: false,
       rehireEligible: false
     });
-    this.modalRef = this.modalService.open(this.addEditModal, { 
-      size: 'lg', 
+    this.modalRef = this.modalService.open(this.addEditModal, {
+      size: 'lg',
       centered: true,
       backdrop: 'static',
       keyboard: false
@@ -247,8 +268,8 @@ export class SeparationTypeComponent implements OnInit {
       exitInterviewRequired: type.exitInterviewRequired || false,
       rehireEligible: type.rehireEligible || false
     });
-    this.modalRef = this.modalService.open(this.addEditModal, { 
-      size: 'lg', 
+    this.modalRef = this.modalService.open(this.addEditModal, {
+      size: 'lg',
       centered: true,
       backdrop: 'static',
       keyboard: false
@@ -257,9 +278,9 @@ export class SeparationTypeComponent implements OnInit {
 
   openViewModal(type: SeparationType): void {
     this.currentType = { ...type };
-    this.modalRef = this.modalService.open(this.viewModal, { 
-      size: 'lg', 
-      centered: true 
+    this.modalRef = this.modalService.open(this.viewModal, {
+      size: 'lg',
+      centered: true
     });
   }
 
@@ -284,12 +305,26 @@ export class SeparationTypeComponent implements OnInit {
     this.isLoading = true;
     const request = this.isEditMode && this.currentType?.separationTypeId
       ? this.separationTypeService.updateSeparationType(this.currentType.separationTypeId, separationType)
-: this.separationTypeService.createSeparationType(separationType);
+      : this.separationTypeService.createSeparationType(separationType);
 
     request.pipe(
       finalize(() => this.isLoading = false)
     ).subscribe({
       next: (response) => {
+        const successMessage = this.isEditMode
+          ? 'Separation type updated successfully!'
+          : 'Separation type created successfully!';
+
+        Swal.fire({
+          title: 'Success!',
+          text: successMessage,
+          icon: 'success',
+          confirmButtonColor: '#3085d6',
+          confirmButtonText: 'OK',
+          timer: 3000,
+          timerProgressBar: true
+        });
+
         this.loadSeparationTypes();
         this.modalRef.close();
       },

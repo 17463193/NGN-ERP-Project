@@ -1,4 +1,15 @@
 /* Attendance Management Component - Responsive SCSS */
+.late-checkin-cell {
+  .text-danger {
+    color: #dc3545 !important;
+    font-weight: 500;
+    
+    i {
+      color: #dc3545 !important;
+    }
+  }
+}
+
 $primary-color: #23a9d2;
 $primary-hover: #015b9d;
 $secondary-color: #6c757d;

@@ -165,6 +165,24 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     this.onFilterChange();
   }
 
+  // Navigate to employee details view
+  viewEmployeeDetails(): void {
+    this.router.navigate(['/dashboard/employees']);
+  }
+
+  // Navigate to individual employee view
+  viewEmployee(empId: string): void {
+    if (empId) {
+      this.router.navigate(['/dashboard/employees', empId], {
+        queryParams: {
+          year: this.selectedYear,
+          month: this.selectedMonth,
+          department: this.selectedDepartment === 'All' ? undefined : this.selectedDepartment
+        }
+      });
+    }
+  }
+
   ngAfterViewInit() {
     // Small delay to ensure DOM is ready
     setTimeout(() => {
@@ -791,8 +809,10 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     const total = this.totalPages;
     const current = this.currentPage;
     
-    // Always show first page
-    pages.push(1);
+    // Always show first page if there are pages
+    if (total > 0) {
+      pages.push(1);
+    }
     
     // Add ellipsis if needed before current page
     if (current > 3) {
@@ -808,7 +828,7 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     
     // Add ellipsis if needed after current page
     if (current < total - 2) {
-      pages.push(-1); // -1 represents ellipsis
+      pages.push(-1);
     }
     
     // Always show last page if there is more than one page
@@ -838,22 +858,19 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
+    
     return pages;
   }
 
-  // Navigate to view employee details page
-  viewEmployeeDetails(): void {
-    // Navigate to the view-employee page using the full path from root
-    this.router.navigate(['/dashboard/employees']);
-    
-    // If you need to pass parameters (like employee ID), you can use:
-    // this.router.navigate(['/dashboard/employees', { id: employeeId }]);
-  }
-
-  ngOnDestroy() {
+  // Implement OnDestroy interface
+  ngOnDestroy(): void {
+    // Clean up chart instance
     if (this.chart) {
       this.chart.destroy();
+      this.chart = null;
     }
+    
+    // Unsubscribe from all subscriptions
     if (this.subscription) {
       this.subscription.unsubscribe();
     }

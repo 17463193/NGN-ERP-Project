@@ -30,7 +30,7 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
   currentSeparation: Separation | null = null;
   isLoading = false;
   employeeMap: { [key: string]: Employee } = {};
-  
+
   employees: Employee[] = [];
   filteredEmployees: Employee[] = [];
   isLoadingEmployees = false;
@@ -39,22 +39,31 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
   showEmployeeDropdown = false;
   employeeSearchSubject = new Subject<string>();
   selectedEmployeeIndex = -1;
-  
+
   currentUserEmployee: Employee | null = null;
-  
+
   form: FormGroup;
   isEditMode = false;
-  
+
   searchQuery = '';
   currentPage = 1;
   itemsPerPage = 10;
   totalPages = 1;
   errorMessage = '';
-  
+  statusForm: FormGroup;
+
+  statusOptions = [
+    { value: 'Pending', label: 'Pending' },
+    { value: 'Approved', label: 'Approved' },
+    { value: 'Rejected', label: 'Rejected' },
+    { value: 'Completed', label: 'Completed' }
+  ];
+
   @ViewChild('separationModal', { static: true }) separationModalTemplate!: TemplateRef<any>;
   @ViewChild('viewSeparationModal', { static: true }) viewSeparationModalTemplate!: TemplateRef<any>;
-  private modalRef: any;
+  @ViewChild('statusModal', { static: true }) statusModalTemplate!: TemplateRef<any>;
 
+  private modalRef: any;
   private destroy$ = new Subject<void>();
   private subscriptions: Subscription[] = [];
 
@@ -77,11 +86,37 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       rehireEligible: [false],
       rehireNotes: ['']
     });
+
+    this.statusForm = this.fb.group({
+      status: ['', Validators.required],
+      notes: ['']
+    });
   }
 
   get paginatedSeparations(): Separation[] {
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     return this.filteredSeparations.slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  /**
+   * Shows the full separation reason in a SweetAlert popup
+   * @param reason The full separation reason to display
+   */
+  viewSeparationReason(reason: string): void {
+    if (!reason) return;
+    
+    Swal.fire({
+      title: 'Separation Reason',
+      html: `<div class="text-start">${reason.replace(/\n/g, '<br>')}</div>`,
+      icon: 'info',
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#0d6efd',
+      width: '600px',
+      customClass: {
+        confirmButton: 'btn btn-primary',
+        htmlContainer: 'text-start'
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -122,7 +157,7 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
           this.filteredEmployees = [];
           return of([]);
         }
-        
+
         this.isLoadingEmployees = true;
         return this.separationService.getAllEmployees().pipe(
           catchError(error => {
@@ -136,7 +171,7 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
     ).subscribe(employees => {
       if (this.employeeSearchTerm && this.employeeSearchTerm.trim().length >= 2) {
         const searchTerm = this.employeeSearchTerm.toLowerCase();
-        this.filteredEmployees = employees.filter(emp => 
+        this.filteredEmployees = employees.filter(emp =>
           `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(searchTerm) ||
           emp.empCode.toLowerCase().includes(searchTerm) ||
           emp.empId.toLowerCase().includes(searchTerm)
@@ -144,11 +179,11 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       } else {
         this.filteredEmployees = employees;
       }
-      
+
       this.isLoadingEmployees = false;
       this.selectedEmployeeIndex = -1;
     });
-    
+
     this.subscriptions.push(searchSub);
   }
 
@@ -157,14 +192,14 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
     this.employeeSearchTerm = searchTerm;
     this.showEmployeeDropdown = true;
     this.selectedEmployeeIndex = -1;
-    
+
     if (this.selectedEmployee) {
       const selectedName = `${this.selectedEmployee.firstName} ${this.selectedEmployee.lastName}`;
       if (searchTerm !== selectedName && searchTerm !== this.selectedEmployee.empCode) {
         this.clearEmployeeSelection();
       }
     }
-    
+
     this.employeeSearchSubject.next(searchTerm);
   }
 
@@ -179,20 +214,20 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
         this.selectedEmployeeIndex = Math.min(this.selectedEmployeeIndex + 1, this.filteredEmployees.length - 1);
         this.scrollToSelectedEmployee();
         break;
-        
+
       case 'ArrowUp':
         event.preventDefault();
         this.selectedEmployeeIndex = Math.max(this.selectedEmployeeIndex - 1, -1);
         this.scrollToSelectedEmployee();
         break;
-        
+
       case 'Enter':
         event.preventDefault();
         if (this.selectedEmployeeIndex >= 0 && this.selectedEmployeeIndex < this.filteredEmployees.length) {
           this.selectEmployee(this.filteredEmployees[this.selectedEmployeeIndex]);
         }
         break;
-        
+
       case 'Escape':
         event.preventDefault();
         this.showEmployeeDropdown = false;
@@ -215,28 +250,28 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       console.error('No employee data found');
       return;
     }
-    
+
     this.selectedEmployee = employee;
     const firstName = employee.firstName || '';
     const lastName = employee.lastName || '';
     const fullName = `${firstName} ${lastName}`.trim() || 'Unknown Employee';
     const empId = employee.empId || '';
-    
+
     this.employeeSearchTerm = fullName;
-    
+
     this.form.patchValue({
       empId: empId,
       empName: fullName
     }, { emitEvent: false });
-    
+
     this.form.get('empId')?.markAsTouched();
     this.form.get('empName')?.markAsTouched();
     this.form.get('empId')?.updateValueAndValidity();
     this.form.get('empName')?.updateValueAndValidity();
-    
+
     this.showEmployeeDropdown = false;
     this.selectedEmployeeIndex = -1;
-    
+
     setTimeout(() => {
       const nextField = document.getElementById('separationTypeId');
       if (nextField) {
@@ -244,28 +279,28 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       }
     }, 100);
   }
-  
+
   clearEmployeeSelection(event?: MouseEvent): void {
     if (event) {
       event.stopPropagation();
       event.preventDefault();
     }
-    
+
     this.selectedEmployee = null;
     this.employeeSearchTerm = '';
     this.filteredEmployees = [];
     this.selectedEmployeeIndex = -1;
-    
+
     this.form.patchValue({
       empId: '',
       empName: ''
     }, { emitEvent: false });
-    
+
     this.form.get('empId')?.markAsTouched();
     this.form.get('empName')?.markAsTouched();
     this.form.get('empId')?.updateValueAndValidity();
     this.form.get('empName')?.updateValueAndValidity();
-    
+
     setTimeout(() => {
       const input = document.getElementById('empName') as HTMLInputElement;
       if (input) {
@@ -295,65 +330,63 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
   }
 
   loadCurrentUserEmployee(): void {
-  try {
-    const currentUser = this.authService.currentUserValue;
-    
-    if (!currentUser) {
-      console.warn('No user is currently logged in');
-      this.router.navigate(['/auth/login']);
-      return;
-    }
-    
-    console.log('Loading employee data for user:', currentUser.username);
-    
-    const userSub = this.separationService.getCurrentUserEmployee().subscribe({
-      next: (employee) => {
-        if (employee) {
-          console.log('Successfully loaded employee data:', employee);
-          this.currentUserEmployee = employee;
-          
-          if (!this.employees.length) {
-            this.loadEmployeeNames();
-          }
-        }
-      },
-      error: (error) => {
-        // Skip showing error for permission issues (403)
-        if (error.status !== 403) {
-          console.error('Error loading current user employee:', error);
-          
-          let errorMessage = 'Failed to load your employee information';
-          
-          if (error.status === 404) {
-            errorMessage = 'Your employee record could not be found. Please contact HR.';
-          } else if (error.status === 401) {
-            errorMessage = 'Your session has expired. Redirecting to login...';
-            setTimeout(() => this.router.navigate(['/auth/login']), 2000);
-          }
-          
-          this.showError(errorMessage);
-        }
-        
-        // Continue with functionality even if employee data couldn't be loaded
-        if (currentUser.username) {
-          console.warn('Proceeding - employee record may not be accessible');
-        } else {
-          this.router.navigate(['/auth/login']);
-        }
+    try {
+      const currentUser = this.authService.currentUserValue;
+
+      if (!currentUser) {
+        console.warn('No user is currently logged in');
+        this.router.navigate(['/auth/login']);
+        return;
       }
-    });
-    
-    this.subscriptions.push(userSub);
-  } catch (error) {
-    console.error('Unexpected error in loadCurrentUserEmployee:', error);
-    // Continue without showing error
-    if (this.authService.currentUserValue?.username) {
-      console.warn('Continuing despite error');
-    } else {
-      this.router.navigate(['/auth/login']);
+
+      console.log('Loading employee data for user:', currentUser.username);
+
+      const userSub = this.separationService.getCurrentUserEmployee().subscribe({
+        next: (employee) => {
+          if (employee) {
+            console.log('Successfully loaded employee data:', employee);
+            this.currentUserEmployee = employee;
+
+            if (!this.employees.length) {
+              this.loadEmployeeNames();
+            }
+          }
+        },
+        error: (error) => {
+          if (error.status !== 403) {
+            console.error('Error loading current user employee:', error);
+
+            let errorMessage = 'Failed to load your employee information';
+
+            if (error.status === 404) {
+              errorMessage = 'Your employee record could not be found. Please contact HR.';
+            } else if (error.status === 401) {
+              errorMessage = 'Your session has expired. Redirecting to login...';
+              setTimeout(() => this.router.navigate(['/auth/login']), 2000);
+            }
+
+            this.showError(errorMessage);
+          }
+
+          if (currentUser.username) {
+            console.warn('Proceeding - employee record may not be accessible');
+          } else {
+            this.router.navigate(['/auth/login']);
+          }
+        }
+      });
+
+      this.subscriptions.push(userSub);
+    } catch (error) {
+      console.error('Unexpected error in loadCurrentUserEmployee:', error);
+      if (this.authService.currentUserValue?.username) {
+        console.warn('Continuing despite error');
+      } else {
+        this.router.navigate(['/auth/login']);
+      }
     }
   }
-}
+
   private initializeForm(): void {
     this.form = this.fb.group({
       empId: ['', Validators.required],
@@ -370,7 +403,6 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       rehireNotes: ['']
     });
 
-    // Update disabled state based on separationTypes array
     const control = this.form.get('separationTypeId');
     if (this.separationTypes.length === 0) {
       control?.disable();
@@ -405,7 +437,7 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
           this.isLoading = false;
         }
       });
-    
+
     this.subscriptions.push(separationsSub);
   }
 
@@ -427,17 +459,14 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
 
   private loadEmployeeNames(): void {
     try {
-      // Get all unique IDs from the separations
       const allIds = [
         ...this.separations.map(s => s.employeeId),
         ...this.separations.map(s => s.initiatedBy).filter(Boolean),
         ...this.separations.map(s => s.approvedBy).filter(Boolean)
       ];
 
-      // Filter out invalid and duplicate IDs
       const validUniqueIds = [...new Set(allIds.filter(id => this.isValidEmployeeId(id)))];
-      
-      // For invalid IDs, create unknown employee entries
+
       allIds.filter(id => !validUniqueIds.includes(id) && id).forEach(invalidId => {
         this.employeeMap[invalidId] = this.createUnknownEmployee(invalidId);
       });
@@ -447,12 +476,10 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Create requests only for valid IDs
-      const employeeRequests = validUniqueIds.map(empId => 
+      const employeeRequests = validUniqueIds.map(empId =>
         this.separationService.getEmployeeById(empId).pipe(
           catchError(error => {
             console.warn(`Failed to load employee ${empId}:`, error);
-            // Return a minimal employee object to prevent UI breakage
             return of(this.createUnknownEmployee(empId));
           })
         )
@@ -473,7 +500,7 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
           this.updateSeparationData();
         }
       });
-      
+
       this.subscriptions.push(employeeNamesSub);
     } catch (error) {
       console.error('Unexpected error in loadEmployeeNames:', error);
@@ -487,35 +514,35 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       separation.employeeName = `${employee.firstName} ${employee.lastName}`.trim();
       separation.department = employee.department || 'N/A';
       separation.position = employee.position || 'N/A';
-      
+
       if (separation.initiatedBy) {
         const initiator = this.employeeMap[separation.initiatedBy] || this.createUnknownEmployee(separation.initiatedBy);
         separation.initiatedByName = `${initiator.firstName} ${initiator.lastName}`.trim();
       }
-      
+
       if (separation.approvedBy) {
         const approver = this.employeeMap[separation.approvedBy] || this.createUnknownEmployee(separation.approvedBy);
         separation.approvedByName = `${approver.firstName} ${approver.lastName}`.trim();
       }
     });
-    
+
     this.filteredSeparations = [...this.separations];
     this.cdr.detectChanges();
   }
 
   private loadSeparationTypes(): void {
     this.isLoading = true;
-    
+
     const typesSub = this.separationService.getSeparationTypes().subscribe({
       next: (types) => {
         this.separationTypes = types || [];
         this.isLoading = false;
-        
+
         if (this.form && this.form.get('separationTypeId')?.value) {
           const selectedType = this.separationTypes.find(
             t => t.separationTypeId === this.form.get('separationTypeId')?.value
           );
-          
+
           if (!selectedType) {
             this.form.get('separationTypeId')?.setValue('');
           }
@@ -531,7 +558,7 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     });
-    
+
     this.subscriptions.push(typesSub);
   }
 
@@ -544,9 +571,9 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
     this.filteredEmployees = [];
     this.selectedEmployeeIndex = -1;
     this.initializeForm();
-    
+
     this.form.enable();
-    
+
     this.modalRef = this.modalService.open(this.separationModalTemplate, {
       size: 'lg',
       backdrop: 'static',
@@ -569,6 +596,19 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
     });
   }
 
+  openStatusModal(separation: Separation): void {
+    this.currentSeparation = separation;
+    this.statusForm.patchValue({
+      status: separation.status || 'Pending',
+      notes: separation.notes || ''
+    });
+
+    this.modalRef = this.modalService.open(this.statusModalTemplate, {
+      size: 'md',
+      backdrop: 'static'
+    });
+  }
+
   openEditModal(separation: Separation): void {
     this.isEditMode = true;
     this.currentSeparation = separation;
@@ -587,7 +627,7 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       Swal.fire({
         icon: 'success',
         title: 'Export Successful',
@@ -604,7 +644,7 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
   private convertToCSV(data: Separation[]): string {
     const headers = [
       'Employee ID',
-      'Employee Name', 
+      'Employee Name',
       'Separation Type',
       'Separation Reason',
       'Initiation Date',
@@ -641,14 +681,14 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       this.filteredSeparations = [...this.separations];
     } else {
       const query = this.searchQuery.toLowerCase().trim();
-      this.filteredSeparations = this.separations.filter(separation => 
+      this.filteredSeparations = this.separations.filter(separation =>
         separation.employeeName?.toLowerCase().includes(query) ||
         separation.employeeId.toLowerCase().includes(query) ||
         separation.separationReason?.toLowerCase().includes(query) ||
         this.getSeparationTypeName(separation.separationType).toLowerCase().includes(query)
       );
     }
-    
+
     this.currentPage = 1;
     this.totalPages = Math.ceil(this.filteredSeparations.length / this.itemsPerPage);
   }
@@ -684,20 +724,23 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
     }
   }
 
-
-
   saveSeparation(): void {
     if (this.form.invalid) {
-      // ... existing validation code ...
+      this.form.markAllAsTouched();
+      Swal.fire({
+        title: 'Form Invalid',
+        text: 'Please fill all required fields correctly',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
       return;
     }
-  
+
     this.isLoading = true;
     const formValue = this.form.getRawValue();
-    
-    // Get current user
+
     const currentUser = this.authService.currentUserValue;
-    if (!currentUser?.userId) {  // Use userId instead of empId
+    if (!currentUser?.userId) {
       this.isLoading = false;
       Swal.fire({
         title: 'Error!',
@@ -707,12 +750,11 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       });
       return;
     }
-    
-    // Prepare separation data with initiatedBy field
+
     const separationData: SeparationRequest = {
-      empId: formValue.empId,  // This should be the selected employee's empId
+      empId: formValue.empId,
       separationTypeId: formValue.separationTypeId,
-      initiatedBy: currentUser.userId,  // Use userId for initiatedBy
+      initiatedBy: currentUser.userId,
       lastWorkingDate: formValue.lastWorkingDate,
       noticePeriodServed: Number(formValue.noticePeriodServed) || 0,
       separationReason: formValue.separationReason,
@@ -720,9 +762,7 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       rehireEligible: Boolean(formValue.rehireEligible),
       rehireNotes: formValue.rehireNotes || ''
     };
-  
 
-    // Show confirmation dialog before saving
     Swal.fire({
       title: 'Confirm Submission',
       text: 'Are you sure you want to submit this separation request?',
@@ -747,13 +787,11 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       catchError((error: any) => {
         this.isLoading = false;
         console.error('Error in save operation:', error);
-        
-        // Handle specific error cases
+
         let errorMessage = 'An unexpected error occurred. Please try again.';
-        
+
         if (error.status === 401 || error.status === 403) {
           errorMessage = 'Your session has expired. Please log in again.';
-          // Optionally redirect to login
           this.authService.logout();
           this.router.navigate(['/auth/login']);
         } else if (error.status === 400) {
@@ -761,7 +799,7 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
         } else if (error.status === 409) {
           errorMessage = 'A separation request already exists for this employee.';
         }
-        
+
         return throwError(() => new Error(errorMessage));
       })
     ).subscribe({
@@ -769,15 +807,13 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         this.modalService.dismissAll();
         this.loadSeparations();
-        
-        // Show success message
+
         Swal.fire({
           title: 'Success!',
           text: 'Separation created successfully.',
           icon: 'success',
           confirmButtonText: 'OK'
         }).then(() => {
-          // Reset form after successful submission
           this.form.reset({
             noticePeriodServed: 0,
             rehireEligible: false
@@ -787,8 +823,7 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.isLoading = false;
-        
-        // Show error message
+
         Swal.fire({
           title: 'Error',
           text: 'Failed to process separation request. Please try again.',
@@ -803,7 +838,6 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
     return employee.empId;
   }
 
-  // Helper methods for displaying names in the UI
   getEmployeeNameById(empId: string): string {
     if (!this.employees) return 'Unknown';
     const employee = this.employees.find(emp => emp.empId === empId);
@@ -821,5 +855,89 @@ export class EmpSeparationComponent implements OnInit, OnDestroy {
       return separation.approvedByName;
     }
     return this.getEmployeeNameById(separation.approvedBy);
+  }
+
+  updateStatus(): void {
+    if (this.statusForm.invalid || !this.currentSeparation) {
+      return;
+    }
+
+    const status = this.statusForm.value.status;
+    const notes = this.statusForm.value.notes;
+
+    this.isLoading = true;
+
+    this.separationService.updateSeparationStatus(
+      this.currentSeparation.separationId,
+      status,
+      notes
+    ).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.modalService.dismissAll();
+        this.loadSeparations();
+
+        Swal.fire({
+          title: 'Success!',
+          text: 'Separation status updated successfully.',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        });
+      },
+      error: (error) => {
+        this.isLoading = false;
+
+        Swal.fire({
+          title: 'Error',
+          text: 'Failed to update separation status. Please try again.',
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
+      }
+    });
+  }
+
+  confirmDelete(id: string): void {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'You won\'t be able to revert this!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.deleteSeparation(id);
+      }
+    });
+  }
+
+  // Helper method to get the minimum of two numbers
+  getMathMin(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
+  deleteSeparation(id: string): void {
+    this.isLoading = true;
+    this.separationService.deleteSeparation(id).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.loadSeparations();
+        Swal.fire(
+          'Deleted!',
+          'The separation record has been deleted.',
+          'success'
+        );
+      },
+      error: (error) => {
+        this.isLoading = false;
+        Swal.fire(
+          'Error!',
+          'Failed to delete separation record.',
+          'error'
+        );
+      }
+    });
   }
 }

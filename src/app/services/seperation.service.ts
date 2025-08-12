@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-import { map, catchError, switchMap, tap } from 'rxjs/operators';
+import { map, catchError } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { AuthService } from '../core/services/auth.service';
 
@@ -144,17 +144,6 @@ export class SeparationService {
     private authService: AuthService
   ) { }
 
-  private handleError(error: HttpErrorResponse) {
-    let errorMessage = 'An error occurred';
-    if (error.error instanceof ErrorEvent) {
-      errorMessage = `Error: ${error.error.message}`;
-    } else {
-      errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
-    }
-    console.error(errorMessage);
-    return throwError(() => new Error(errorMessage));
-  }
-  
   private getAuthHeaders(): HttpHeaders {
     const user = this.authService.currentUserValue;
     if (!user || !user.accessToken) {
@@ -414,7 +403,6 @@ export class SeparationService {
       return throwError(() => new Error('No user is currently logged in'));
     }
   
-    // Use userId as the primary identifier
     const employeeId = currentUser.userId || currentUser.empId;
     
     if (!employeeId) {
@@ -423,20 +411,14 @@ export class SeparationService {
   
     return this.getEmployeeById(employeeId).pipe(
       catchError((error: HttpErrorResponse) => {
-        // Return empty employee object for 403 errors
-        if (error.status === 403) {
-          const emptyEmployee: Employee = {
-            empId: employeeId,
-            empCode: '',
-            firstName: currentUser.username || 'User',
-            lastName: '',
-            email: currentUser.email || ''
-          };
-          return of(emptyEmployee);
-        }
-        
-        console.error('Error fetching current user employee:', error);
-        return throwError(() => error);
+        const emptyEmployee: Employee = {
+          empId: employeeId,
+          empCode: '',
+          firstName: currentUser.username || 'User',
+          lastName: '',
+          email: currentUser.email || ''
+        };
+        return of(emptyEmployee);
       })
     );
   }
@@ -447,12 +429,10 @@ export class SeparationService {
       return throwError(() => new Error('No authentication token found. Please log in again.'));
     }
 
-    // Use userId as the initiatedBy field
     if (!currentUser.userId) {
       return throwError(() => new Error('No user ID found for current user.'));
     }
 
-    // Validate required fields
     if (!separation.empId) {
       return throwError(() => new Error('Employee ID is required'));
     }
@@ -466,7 +446,6 @@ export class SeparationService {
       return throwError(() => new Error('Separation reason is required'));
     }
 
-    // Format the date to YYYY-MM-DD format
     let formattedDate: string;
     try {
       const date = new Date(separation.lastWorkingDate);
@@ -480,11 +459,10 @@ export class SeparationService {
       formattedDate = separation.lastWorkingDate;
     }
 
-    // Prepare request payload - using userId as initiatedBy
     const requestPayload = {
       empId: separation.empId,
       separationTypeId: separation.separationTypeId,
-      initiatedBy: currentUser.userId, // Use userId for initiatedBy
+      initiatedBy: currentUser.userId,
       lastWorkingDate: formattedDate,
       noticePeriodServed: Number(separation.noticePeriodServed) || '',
       separationReason: separation.separationReason,
@@ -537,6 +515,41 @@ export class SeparationService {
         return throwError(() => new Error(errorMessage));
       })
     );
+  }
+
+  updateSeparationStatus(
+    separationId: string,
+    status: 'Pending' | 'Approved' | 'Rejected' | 'Completed',
+    approvalNotes: string = ''
+  ): Observable<any> {
+    const currentUser = this.authService.currentUserValue;
+    if (!currentUser?.userId) {
+      return throwError(() => new Error('Current user not available'));
+    }
+
+    const payload = {
+      separationStatus: status,
+      approvedBy: currentUser.userId,
+      approvalNotes: approvalNotes
+    };
+
+    const url = `${this.apiUrl}/${separationId}/status`;
+    return this.http.put(url, payload, { headers: this.getAuthHeaders() }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  private handleError(error: HttpErrorResponse) {
+    let errorMessage = 'An error occurred';
+    if (error.error instanceof ErrorEvent) {
+      errorMessage = `Error: ${error.error.message}`;
+    } else {
+      errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
+      if (error.error?.message) {
+        errorMessage = error.error.message;
+      }
+    }
+    return throwError(() => new Error(errorMessage));
   }
 
   deleteSeparationType(id: string): Observable<void> {

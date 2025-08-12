@@ -9,9 +9,14 @@ const routes: Routes = [
     data: { title: 'Employee Directory' }
   },
   {
-    path: 'view-employee',
+    path: 'employees/:empId',
     component: ViewEmployeeComponent,
-    data: { title: 'View Employee' }
+    data: { title: 'View Employee Details' }
+  },
+  {
+    path: 'view-employee',
+    redirectTo: 'employees',
+    pathMatch: 'full'
   },
   {
     path: '',

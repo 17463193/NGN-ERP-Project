@@ -1,3 +1,4 @@
+
 <div class="att-det-container container-fluid">
   <!-- ========== HEADER SECTION ========== -->
   <div class="att-det-header d-flex justify-content-between align-items-start mb-4">
@@ -8,10 +9,6 @@
 
     <!-- Action Buttons -->
     <div class="att-det-actions d-flex gap-2 align-items-start">
-      <!-- <button class="att-det-date-btn btn btn-outline-dark d-flex align-items-center">
-        <i class="bi bi-calendar-week me-2"></i>
-        {{ currentDate | date:'dd MMMM yyyy' }}
-      </button> -->
       <button class="att-det-export-btn btn btn-warning d-flex align-items-center" (click)="exportToPdf()">
         <i class="bi bi-download me-2"></i>
         Export
@@ -25,7 +22,7 @@
   <div class="filter-container d-flex flex-wrap align-items-stretch gap-2 mb-4">
     <!-- Branch Select -->
     <div class="filter-item">
-      <select class="form-select form-select-sm h-100" [(ngModel)]="selectedBranchId" (change)="onBranchChange()">
+      <select class="form-select form-select-sm h-100" [(ngModel)]="selectedBranchId" (ngModelChange)="onBranchChange()">
         <option value="">All Branches</option>
         <option *ngFor="let branch of branches" [value]="branch.branchId">{{ branch.branchName }}</option>
       </select>
@@ -33,10 +30,17 @@
 
     <!-- Department Select -->
     <div class="filter-item">
-      <select class="form-select form-select-sm h-100" [(ngModel)]="activeTab" (change)="selectTab(activeTab)">
+      <select class="form-select form-select-sm h-100" [(ngModel)]="activeTab" (ngModelChange)="selectTab(activeTab)">
         <option *ngFor="let dept of tabDepartments" [value]="dept">
           {{ getDepartmentName(dept) }}
         </option>
+      </select>
+    </div>
+
+    <!-- Status Select (only shown when no date filter is active) -->
+    <div class="filter-item" *ngIf="!currentFilterDate">
+      <select class="form-select form-select-sm h-100" [(ngModel)]="selectedStatus" (ngModelChange)="setStatusFilter(selectedStatus)">
+        <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
       </select>
     </div>
 
@@ -44,9 +48,11 @@
     <div class="filter-item position-relative">
       <button type="button" 
               class="date-filter-button btn btn-outline-dark btn-sm d-flex align-items-center h-100 w-100" 
+              [class.btn-primary]="currentFilterDate"
+              [class.btn-outline-dark]="!currentFilterDate"
               (click)="toggleDateFilter($event); $event.stopPropagation()">
         <i class="bi bi-calendar3 me-2"></i>
-        {{ currentFilterDate ? (currentFilterDate | date: 'dd MMM yyyy') : 'Select Date' }}
+        {{ currentFilterDate ? formatDateForDisplay(currentFilterDate) : 'Select Date' }}
       </button>
       
       <!-- Date filter dropdown -->
@@ -62,18 +68,31 @@
           
           <form [formGroup]="dateFilterForm" (ngSubmit)="$event.preventDefault(); applyDateFilter()">
             <div class="mb-3">
-              <input type="date" 
-                     class="form-control form-control-sm" 
-                     [min]="minDate | date: 'yyyy-MM-dd'"
-                     [max]="maxDate | date: 'yyyy-MM-dd'"
-                     formControlName="filterDate"
-                     (click)="$event.stopPropagation()">
+              <select class="form-select form-select-sm" 
+                      formControlName="filterDate"
+                      [disabled]="loadingDates">
+                <option [ngValue]="null">Select a date</option>
+                <ng-container *ngIf="groupedDates && groupedDates.length > 0">
+                  <optgroup *ngFor="let group of groupedDates" [label]="group.month">
+                    <option *ngFor="let date of group.dates" [value]="date">
+                      {{ formatDateForDisplay(date) }}
+                    </option>
+                  </optgroup>
+                </ng-container>
+              </select>
+              <div *ngIf="loadingDates" class="text-muted small mt-2">
+                <i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i>
+                <span class="ms-2">Loading available dates...</span>
+              </div>
+              <div *ngIf="!loadingDates && (!availableDates || availableDates.length === 0)" class="text-muted small mt-2">
+                No attendance records found
+              </div>
             </div>
             
             <div class="d-flex gap-2">
               <button type="submit" 
                       class="btn btn-primary btn-sm flex-grow-1" 
-                      [disabled]="!dateFilterForm.get('filterDate').value">
+                      [disabled]="!dateFilterForm.get('filterDate')?.value">
                 Apply
               </button>
               <button type="button" 
@@ -101,8 +120,48 @@
     </div>
   </div>
 
+  <!-- Applied Filters Info -->
+  <div class="alert alert-info py-2 px-3 mb-3" *ngIf="hasAppliedFilters()">
+    <div class="d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-funnel me-2"></i>
+        <span class="small">Filters applied:</span>
+        <div class="ms-2">
+          <span class="badge bg-primary me-1" *ngIf="currentFilterDate">
+            Date: {{ formatDateForDisplay(currentFilterDate) }}
+          </span>
+          <span class="badge bg-primary me-1" *ngIf="selectedBranchId">
+            Branch: {{ getBranchName(selectedBranchId) }}
+          </span>
+          <span class="badge bg-primary me-1" *ngIf="activeTab !== 'All Employee'">
+            Department: {{ activeTab }}
+          </span>
+          <span class="badge bg-primary me-1" *ngIf="selectedStatus !== 'All Employee'">
+            Status: {{ selectedStatus }}
+          </span>
+          <span class="badge bg-primary me-1" *ngIf="searchQuery">
+            Search: "{{ searchQuery }}"
+          </span>
+        </div>
+      </div>
+      <button type="button" 
+              class="btn btn-sm btn-outline-secondary" 
+              (click)="clearAllFilters()">
+        Clear All
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading attendance data...</p>
+  </div>
+
   <!-- Attendance Table -->
-  <div class="card border-0 shadow-sm" *ngIf="hasAppliedFilters()">
+  <div class="card border-0 shadow-sm" *ngIf="!isLoading">
     <div class="table-responsive">
       <table class="table table-hover mb-0">
         <thead class="table-light">
@@ -118,125 +177,164 @@
             <th class="py-2">Over Time</th>
           </tr>
         </thead>
-        <tbody *ngIf="!isLoading">
-          <ng-container *ngIf="attendanceData.length > 0; else noData">
-            <tr *ngFor="let emp of paginatedData" class="att-det-table-row border-bottom">
-              <td class="py-2 align-middle">
+        <tbody>
+          <ng-container *ngIf="(hasDataForCurrentMonth() && paginatedData && paginatedData.length > 0) || currentFilterDate || selectedBranchId || activeTab !== 'All Employee' || selectedStatus !== 'All Employee' || searchQuery; else noData">
+            <tr *ngFor="let emp of paginatedData" 
+                class="att-det-table-row border-bottom"
+                [ngClass]="{'table-danger': emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'}">
+              <td class="py-2 align-middle"
+                  [style.backgroundColor]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--' ? '#ffebee' : ''"
+                  [class.text-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'">
                 <span class="text-nowrap">{{ emp.empCode || '--' }}</span>
               </td>
-              <td class="py-2 align-middle">
+              <td class="py-2 align-middle"
+                  [style.backgroundColor]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--' ? '#ffebee' : ''"
+                  [class.text-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'">
                 <div class="d-flex align-items-center">
                   <div>
                     <div class="fw-medium text-nowrap">{{ getEmployeeFullName(emp) || '--' }}</div>
-                    <small class="text-muted">{{ getDepartmentDisplayName(emp) }}</small>
+                    <small [class.text-muted]="!(emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--')" [class.text-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'">{{ getDepartmentDisplayName(emp) }}</small>
                   </div>
                 </div>
               </td>
-              <td class="py-2 align-middle">
+              <td class="py-2 align-middle"
+                  [style.backgroundColor]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--' ? '#ffebee' : ''"
+                  [class.text-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'">
                 <span class="text-nowrap">{{ formatDate(emp.attendanceDate) || '--' }}</span>
               </td>
-              <td class="py-2 align-middle">
-                <span class="badge bg-warning bg-opacity-10 text-warning text-nowrap">{{ emp.timePeriod || '--' }}</span>
+              <td class="py-2 align-middle"
+                  [style.backgroundColor]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--' ? '#ffebee' : ''"
+                  [class.text-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'">
+                <span class="badge text-nowrap" [ngClass]="{
+                  'bg-warning bg-opacity-10 text-warning': !(emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'),
+                  'bg-danger bg-opacity-25 text-danger': emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'
+                }">{{ emp.timePeriod || '--' }}</span>
               </td>
-              <td class="py-2 align-middle">
+              <td class="py-2 align-middle"
+                  [style.backgroundColor]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--' ? '#ffebee' : ''"
+                  [class.text-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'">
                 <span class="badge d-inline-flex align-items-center" [ngClass]="{
-                  'bg-success bg-opacity-10 text-success': emp.status === 'Present',
-                  'bg-danger bg-opacity-10 text-danger': emp.status === 'Absent',
-                  'bg-warning bg-opacity-10 text-warning': emp.status === 'Late',
-                  'bg-info bg-opacity-10 text-info': emp.status === 'Early Departure',
-                  'bg-secondary bg-opacity-10 text-secondary': !emp.status
+                  'bg-success bg-opacity-10 text-success': emp.status === 'Present' && !(emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'),
+                  'bg-danger bg-opacity-10 text-danger': (emp.status === 'Absent' || (emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--')),
+                  'bg-warning bg-opacity-10 text-warning': emp.status === 'Late' && !(emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'),
+                  'bg-info bg-opacity-10 text-info': emp.status === 'Early Departure' && !(emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'),
+                  'bg-secondary bg-opacity-10 text-secondary': !emp.status && !(emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'),
+                  'border border-danger': emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'
                 }">
                   {{ emp.status || '--' }}
                 </span>
               </td>
-              <td class="py-2 align-middle">
+              <td class="py-2 align-middle"
+                  [style.backgroundColor]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--' ? '#ffebee' : ''"
+                  [class.text-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'">
                 <span class="text-nowrap">{{ emp.actualCheckInTime || '--' }}</span>
               </td>
-              <td class="py-2 align-middle">
+              <td class="py-2 align-middle"
+                  [style.backgroundColor]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--' ? '#ffebee' : ''"
+                  [class.text-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'">
                 <span class="text-nowrap">{{ emp.actualCheckOutTime || '--' }}</span>
               </td>
-              <td class="py-2 align-middle">
-                <span *ngIf="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00'" class="d-inline-flex align-items-center text-danger">
+              <td class="py-2 align-middle"
+                  [style.backgroundColor]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--' ? '#ffebee' : ''"
+                  [class.text-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'">
+                <span *ngIf="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'" 
+                      class="d-inline-flex align-items-center text-danger">
                   <i class="bi bi-exclamation-triangle-fill me-1"></i>
                   <span class="text-nowrap">{{ emp.lateCheckInTime }}</span>
                 </span>
-                <span *ngIf="!emp.lateCheckInTime || emp.lateCheckInTime === '00:00'" class="text-muted">--</span>
+                <span *ngIf="!emp.lateCheckInTime || emp.lateCheckInTime === '00:00' || emp.lateCheckInTime === '--'" 
+                      class="text-muted">--</span>
               </td>
-              <td class="py-2 align-middle">
+              <td class="py-2 align-middle"
+                  [style.backgroundColor]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--' ? '#ffebee' : ''"
+                  [class.text-danger]="emp.lateCheckInTime && emp.lateCheckInTime !== '00:00' && emp.lateCheckInTime !== '--'">
                 <span class="text-nowrap">{{ emp.overTime || '--' }}</span>
               </td>
             </tr>
           </ng-container>
 
            <ng-template #noData>
-          <tr>
-            <td colspan="9" class="att-det-empty text-center py-5">
-              <div>
-                <i class="bi bi-people display-4 d-block mb-3"></i>
-                <p class="mb-2">No employee records found.</p>
-              </div>
-            </td>
-          </tr>
-        </ng-template>
+            <tr>
+              <td colspan="9" class="text-center py-5">
+                <div>
+                  <i class="bi bi-search display-4 d-block mb-3 text-muted"></i>
+                  <p class="mb-2">{{ emptyStateMessage }}</p>
+                  <div class="d-flex gap-2 justify-content-center" *ngIf="hasAppliedFilters()">
+                    <button class="btn btn-sm btn-outline-secondary" 
+                            (click)="clearAllFilters()">
+                      Clear all filters
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
         </tbody>
       </table>
     </div>
   </div>
 
   <!-- Error State -->
-  <div *ngIf="errorMessage" class="alert alert-danger mt-3">
+  <div *ngIf="errorMessage && !isLoading" class="alert alert-danger mt-3">
     <i class="bi bi-exclamation-triangle-fill me-2"></i>
     {{ errorMessage }}
+    <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadAttendanceData()">
+      Retry
+    </button>
   </div>
 
   <!-- Pagination -->
-  <!-- <div class="row mt-3" *ngIf="attendanceData.length > 0 && !isLoading">
-    <div class="col-md-6">
-      <div class="dataTables_info">
-        Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
-        {{ Math.min(currentPage * itemsPerPage, attendanceData.length) }} of {{ attendanceData.length }} entries
-      </div>
+  <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="totalPages > 1 && !isLoading && paginatedData && paginatedData.length > 0">
+    <div class="text-muted small">
+      Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to 
+      {{ Math.min(currentPage * itemsPerPage, totalElements) }} of 
+      {{ totalElements }} entries
     </div>
-    <div class="col-md-6">
-      <div class="dataTables_paginate paging_simple_numbers float-end">
-        <select class="form-select form-select-sm d-inline-block w-auto me-2" [(ngModel)]="itemsPerPage"
-          (change)="onItemsPerPageChange()">
-          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} per page</option>
-        </select>
-        <nav>
-          <ul class="pagination pagination-sm mb-0">
-            <li class="page-item" [class.disabled]="currentPage === 1">
-              <a class="page-link" href="javascript:void(0)" (click)="goToPage(1)">
-                <i class="bi bi-chevron-double-left"></i>
-              </a>
-            </li>
-            <li class="page-item" [class.disabled]="currentPage === 1">
-              <a class="page-link" href="javascript:void(0)" (click)="goToPage(currentPage - 1)">
-                <i class="bi bi-chevron-left"></i>
-              </a>
-            </li>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <a class="page-link" href="javascript:void(0)" (click)="goToPage(1)" title="First page">
+            <i class="bi bi-chevron-double-left"></i>
+          </a>
+        </li>
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <a class="page-link" href="javascript:void(0)" (click)="previousPage()" title="Previous page">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        <ng-container *ngFor="let page of getPageNumbers()">
+          <li class="page-item" [class.active]="page === currentPage" [class.disabled]="page === -1">
+            <a class="page-link" 
+               href="javascript:void(0)" 
+               (click)="page !== -1 ? goToPage(page) : null"
+               [title]="page === -1 ? '' : 'Go to page ' + page">
+              <span *ngIf="page === -1">...</span>
+              <span *ngIf="page !== -1">{{ page }}</span>
+            </a>
+          </li>
+        </ng-container>
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <a class="page-link" href="javascript:void(0)" (click)="nextPage()" title="Next page">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <a class="page-link" href="javascript:void(0)" (click)="goToPage(totalPages)" title="Last page">
+            <i class="bi bi-chevron-double-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
 
-            <li class="page-item" *ngFor="let page of getPages()" [class.active]="page === currentPage"
-              [class.disabled]="page === -1">
-              <a *ngIf="page !== -1" class="page-link" href="javascript:void(0)" (click)="goToPage(page)">
-                {{ page }}
-              </a>
-              <span *ngIf="page === -1" class="page-link">...</span>
-            </li>
-
-            <li class="page-item" [class.disabled]="currentPage === totalPages()">
-              <a class="page-link" href="javascript:void(0)" (click)="goToPage(currentPage + 1)">
-                <i class="bi bi-chevron-right"></i>
-              </a>
-            </li>
-            <li class="page-item" [class.disabled]="currentPage === totalPages()">
-              <a class="page-link" href="javascript:void(0)" (click)="goToPage(totalPages())">
-                <i class="bi bi-chevron-double-right"></i>
-              </a>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    </div> -->
-  <!-- </div> -->
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && (!attendanceData || attendanceData.length === 0) && !errorMessage" class="text-center py-5">
+    <i class="bi bi-people display-4 d-block mb-3 text-muted"></i>
+    <p class="text-muted mb-3">{{ emptyStateMessage }}</p>
+    <div *ngIf="hasAppliedFilters()">
+      <button class="btn btn-outline-primary" (click)="clearAllFilters()">
+        Clear all filters
+      </button>
+    </div>
+  </div>
 </div>
