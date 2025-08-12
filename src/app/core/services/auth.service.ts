@@ -108,14 +108,7 @@ export class AuthService {
     const user = this.currentUserValue;
     return user ? ['Admin', 'CTO'].includes(user.roleName) : false;
   }
-// auth.service.ts
-updateCurrentUser(user: User): void {
-  localStorage.setItem('currentUser', JSON.stringify(user));
-  this.currentUserSubject.next(user);
-  if (user.permissions) {
-    this.permissionsSubject.next(user.permissions);
-  }
-}
+
   login(username: string, password: string): Observable<boolean> {
   const url = `${environment.apiUrl}/api/auth/login`;
 
@@ -126,46 +119,53 @@ updateCurrentUser(user: User): void {
       }
 
       const userData = loginResponse.data.user;
-      const roleId = userData.role.roleId; // Get roleId from nested role object
-      const roleName = userData.role.roleName; // Already available in response
-      const roleCode = userData.role.roleCode; // Already available in response
-
-      // Create the base user object with role-based ID handling
-      const baseUser: User = {
-        userId: userData.userId,
-        empId: roleName === 'Employee' ? userData.empId : undefined,
-        ctoId: roleName === 'CTO' ? (userData.ctoId || userData.userId) : undefined,
-        username: userData.username,
-        email: userData.email,
-        accountStatus: userData.accountStatus,
-        roleId: roleId,
-        roleName: roleName,
-        roleCode: roleCode,
-        mustChangePassword: userData.mustChangePassword,
-        accessToken: loginResponse.data.accessToken,
-        refreshToken: loginResponse.data.refreshToken,
-        getRoleBasedId: function() {
-          return this.roleName === 'CTO' 
-            ? (this.ctoId || this.userId) 
-            : (this.empId || this.userId);
-        }
-      };
-
-      // Since we already have role info, we can skip the first role fetch
-      // Just get permissions for this role
-      return this.http.get<Permission[]>(
-        `${environment.apiUrl}/api/v1/role-permissions/role/${roleId}/permissions`
+      
+      // First, get the role details from the API
+      return this.http.get<any>(
+        `${environment.apiUrl}/api/v1/user-roles/${userData.roleId}`
       ).pipe(
-        tap(permissions => {
-          const completeUser = {
-            ...baseUser,
-            permissions: permissions
+        switchMap(roleResponse => {
+          // Now we have the role details
+          const roleName = roleResponse.roleName;
+          const roleCode = roleResponse.roleCode;
+
+          // Create the base user object with role-based ID handling
+          const baseUser: User = {
+            userId: userData.userId,
+            empId: roleName === 'Employee' ? userData.empId : undefined,
+            ctoId: roleName === 'CTO' ? (userData.ctoId || userData.userId) : undefined,
+            username: userData.username,
+            email: userData.email,
+            accountStatus: userData.accountStatus,
+            roleId: userData.roleId,
+            roleName: roleName,
+            roleCode: roleCode,
+            mustChangePassword: userData.mustChangePassword,
+            accessToken: loginResponse.data.accessToken,
+            refreshToken: loginResponse.data.refreshToken,
+            getRoleBasedId: function() {
+              return this.roleName === 'CTO' 
+                ? (this.ctoId || this.userId) 
+                : (this.empId || this.userId);
+            }
           };
-          localStorage.setItem('currentUser', JSON.stringify(completeUser));
-          this.currentUserSubject.next(completeUser);
-          this.permissionsSubject.next(permissions);
-        }),
-        map(() => true)
+
+          // Then get the permissions for this role
+          return this.http.get<Permission[]>(
+            `${environment.apiUrl}/api/v1/role-permissions/role/${userData.roleId}/permissions`
+          ).pipe(
+            tap(permissions => {
+              const completeUser = {
+                ...baseUser,
+                permissions: permissions
+              };
+              localStorage.setItem('currentUser', JSON.stringify(completeUser));
+              this.currentUserSubject.next(completeUser);
+              this.permissionsSubject.next(permissions);
+            }),
+            map(() => true)
+          );
+        })
       );
     }),
     catchError(error => {

@@ -115,55 +115,6 @@
       {{ errorMessage }}
     </div>
 
-    <!-- History Section -->
-    <div class="history-container">
-      <h3>Leave Request Summary</h3>
-      <div class="cards-grid">
-        <!-- Employee CID Card -->
-        <div class="card">
-          <div class="card-icon">
-            <i class="fas fa-id-card"></i>
-          </div>
-          <div class="card-content">
-            <h4>Employee CID</h4>
-            <p>{{ leaveForm.get('cid')?.value || 'N/A' }}</p>
-          </div>
-        </div>
-
-        <!-- Employee Name Card -->
-        <div class="card">
-          <div class="card-icon">
-            <i class="fas fa-user"></i>
-          </div>
-          <div class="card-content">
-            <h4>Employee Name</h4>
-            <p>John Doe</p> <!-- Replace with actual employee name from your data -->
-          </div>
-        </div>
-
-        <!-- Reason Card -->
-        <div class="card">
-          <div class="card-icon">
-            <i class="fas fa-comment-alt"></i>
-          </div>
-          <div class="card-content">
-            <h4>Reason</h4>
-            <p class="truncate">{{ leaveForm.get('reason')?.value || 'No reason provided' }}</p>
-          </div>
-        </div>
-
-        <!-- Handover Details Card -->
-        <div class="card">
-          <div class="card-icon">
-            <i class="fas fa-exchange-alt"></i>
-          </div>
-          <div class="card-content">
-            <h4>Handover Details</h4>
-            <p class="truncate">{{ leaveForm.get('handoverDetails')?.value || 'No handover details' }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <div class="form-actions">
       <button type="button" class="btn btn-secondary" (click)="navigateBack()">Cancel</button>

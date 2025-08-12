@@ -170,21 +170,11 @@
           </div>
           <div class="leave-dates">{{ leave.date }}</div>
           <div class="leave-duration">{{ leave.duration }}</div>
-          <div class="status-actions" *ngIf="leave.status?.toLowerCase() === 'pending'; else statusDisplay">
-            <button class="approve" (click)="$event.stopPropagation(); updateStatus(leave, 'Approved')" title="Approve Leave">
-              <i class="fas fa-check"></i> Approve
-            </button>
-            <button class="reject" (click)="$event.stopPropagation(); updateStatus(leave, 'Rejected')" title="Reject Leave">
-              <i class="fas fa-times"></i> Reject
-            </button>
+          <div class="leave-status">
+            <span [class]="'status-label ' + leave.status.toLowerCase()">
+              {{ leave.status }}
+            </span>
           </div>
-          <ng-template #statusDisplay>
-            <div class="leave-status">
-              <span [class]="'status-label ' + leave.status.toLowerCase()">
-                {{ leave.status }}
-              </span>
-            </div>
-          </ng-template>
           <div class="leave-reason" title="{{ leave.reason }}">{{ leave.reason | slice:0:20 }}{{ leave.reason?.length > 20 ? '...' : '' }}</div>
           <button class="view-btn" [routerLink]="['/balanceleave', leave.empId]" (click)="$event.stopPropagation()">
             <i class="fas fa-eye"></i> View
@@ -220,21 +210,11 @@
           </div>
           <div class="leave-dates">{{ leave.date }}</div>
           <div class="leave-duration">{{ leave.duration }}</div>
-          <div class="status-actions" *ngIf="leave.status?.toLowerCase() === 'pending'; else statusDisplay">
-            <button class="approve" (click)="$event.stopPropagation(); updateStatus(leave, 'Approved')" title="Approve Leave">
-              <i class="fas fa-check"></i> Approve
-            </button>
-            <button class="reject" (click)="$event.stopPropagation(); updateStatus(leave, 'Rejected')" title="Reject Leave">
-              <i class="fas fa-times"></i> Reject
-            </button>
+          <div class="leave-status">
+            <span [class]="'status-label ' + leave.status.toLowerCase()">
+              {{ leave.status }}
+            </span>
           </div>
-          <ng-template #statusDisplay>
-            <div class="leave-status">
-              <span [class]="'status-label ' + leave.status.toLowerCase()">
-                {{ leave.status }}
-              </span>
-            </div>
-          </ng-template>
           <div class="leave-reason" title="{{ leave.reason }}">{{ leave.reason | slice:0:20 }}{{ leave.reason?.length > 20 ? '...' : '' }}</div>
           <button class="view-btn" [routerLink]="['/balanceleave', leave.empId]" (click)="$event.stopPropagation()">
             <i class="fas fa-eye"></i> View
