@@ -57,7 +57,7 @@
       </thead>
       <tbody>
         <tr *ngFor="let transfer of paginatedTransfers">
-          <td class="fw-medium">{{ getEmployeeName(transfer.empId) }}</td>
+          <td >{{ getEmployeeName(transfer.empId) }}</td>
           <td>{{ getDepartmentName(transfer.fromDeptId) }}</td>
           <td>{{ getDepartmentName(transfer.toDeptId) }}</td>
           <td>{{ transfer.effectiveDate | date:'mediumDate' }}</td>
@@ -133,8 +133,7 @@
             class="form-select" 
             id="empId" 
             formControlName="empId"
-            [class.is-invalid]="form.get('empId')?.invalid && form.get('empId')?.touched"
-            [disabled]="isLoading">
+            [class.is-invalid]="form.get('empId')?.invalid && form.get('empId')?.touched">
             <option value="" disabled selected>Select Employee</option>
             <option *ngFor="let emp of employees" [value]="emp.employee?.empId">
               {{ formatEmployeeName(emp.employee) }}
@@ -150,16 +149,22 @@
             class="form-select" 
             id="transferTypeId" 
             formControlName="transferTypeId"
+            [compareWith]="compareTransferTypes"
             [class.is-invalid]="form.get('transferTypeId')?.invalid && form.get('transferTypeId')?.touched">
-            <option value="" disabled selected>Select Transfer Type</option>
-            <option *ngFor="let type of transferTypeOptions" [value]="type.id">
+            <option [ngValue]="null" disabled>Select Transfer Type</option>
+            <option *ngFor="let type of transferTypeOptions" [ngValue]="type.id">
               {{ type.name }}
             </option>
           </select>
-          <div class="invalid-feedback">Transfer type is required</div>
+          <div class="invalid-feedback">
+            <span *ngIf="form.get('transferTypeId')?.hasError('required')">Transfer type is required</span>
+          </div>
+          <div class="form-text" *ngIf="form.get('transferTypeId')?.value">
+            Selected: {{ getTransferTypeName(form.get('transferTypeId')?.value) }}
+          </div>
         </div>
 
-        <!-- From Department Details -->
+        <!-- From Department Details (Auto-filled when employee is selected) -->
         <div class="col-md-4">
           <label for="fromDeptId" class="form-label">From Department *</label>
           <select 
@@ -167,12 +172,15 @@
             id="fromDeptId" 
             formControlName="fromDeptId"
             [class.is-invalid]="form.get('fromDeptId')?.invalid && form.get('fromDeptId')?.touched"
-            [disabled]="isLoading">
-            <option value="" disabled selected>Select Department</option>
-            <option *ngFor="let dept of departments" [value]="dept.dept_id">
+            [title]="form.get('fromDeptId')?.value ? 'This field is automatically filled from employee record' : 'Select an employee first'">
+            <option value="" disabled selected>Select Employee First</option>
+            <option *ngFor="let dept of departments" [value]="dept.dept_id" [selected]="dept.dept_id === form.get('fromDeptId')?.value">
               {{ dept.dept_name }}
             </option>
           </select>
+          <div *ngIf="!form.get('empId')?.value" class="form-text text-muted">
+            <i class="bi bi-info-circle me-1"></i> Select an employee to auto-fill this field
+          </div>
           <div *ngIf="isLoading" class="form-text">Loading departments...</div>
           <div class="invalid-feedback">From department is required</div>
         </div>
@@ -184,12 +192,15 @@
             id="fromBranchId" 
             formControlName="fromBranchId"
             [class.is-invalid]="form.get('fromBranchId')?.invalid && form.get('fromBranchId')?.touched"
-            [disabled]="isLoading">
-            <option value="" disabled selected>Select Branch</option>
-            <option *ngFor="let branch of branches" [value]="branch.branchId">
+            [title]="form.get('fromBranchId')?.value ? 'This field is automatically filled from employee record' : 'Select an employee first'">
+            <option value="" disabled selected>Select Employee First</option>
+            <option *ngFor="let branch of branches" [value]="branch.branchId" [selected]="branch.branchId === form.get('fromBranchId')?.value">
               {{ branch.branchName }}
             </option>
           </select>
+          <div *ngIf="!form.get('empId')?.value" class="form-text text-muted">
+            <i class="bi bi-info-circle me-1"></i> Select an employee to auto-fill this field
+          </div>
           <div *ngIf="isLoading" class="form-text">Loading branches...</div>
           <div class="invalid-feedback">From branch is required</div>
         </div>
@@ -201,13 +212,32 @@
             id="fromPositionId" 
             formControlName="fromPositionId"
             [class.is-invalid]="form.get('fromPositionId')?.invalid && form.get('fromPositionId')?.touched"
-            [disabled]="isLoading">
-            <option value="" disabled selected>Select Position</option>
-            <option *ngFor="let position of jobPositions" [value]="position.positionId">
+            [title]="form.get('fromPositionId')?.value ? 'This field is automatically filled from employee record' : 'Select an employee first'">
+            <option value="" disabled selected>Select Employee First</option>
+            <option *ngFor="let position of jobPositions" [value]="position.positionId" [selected]="position.positionId === form.get('fromPositionId')?.value">
               {{ position.positionName }}
             </option>
           </select>
+          <div *ngIf="!form.get('empId')?.value" class="form-text text-muted">
+            <i class="bi bi-info-circle me-1"></i> Select an employee to auto-fill this field
+          </div>
           <div *ngIf="isLoading" class="form-text">Loading positions...</div>
+        </div>
+
+        <!-- Manager Field -->
+        <div class="col-md-4">
+          <label for="fromManagerId" class="form-label">Current Manager</label>
+          <select 
+            class="form-select" 
+            id="fromManagerId" 
+            formControlName="fromManagerId"
+            [class.is-invalid]="form.get('fromManagerId')?.invalid && form.get('fromManagerId')?.touched">
+            <option value="">Select Manager</option>
+            <option *ngFor="let emp of employees" [value]="emp.employee?.empId" [selected]="emp.employee?.empId === form.get('fromManagerId')?.value">
+              {{ formatEmployeeName(emp.employee) }}
+            </option>
+          </select>
+          <div *ngIf="isLoading" class="form-text">Loading managers...</div>
         </div>
 
         <!-- To Department Details -->
@@ -215,19 +245,22 @@
           <label for="toDeptId" class="form-label">To Department *</label>
           <select 
             class="form-select" 
-            id="toDeptId" 
+            id="toDeptId"
             formControlName="toDeptId"
             [class.is-invalid]="form.get('toDeptId')?.invalid && form.get('toDeptId')?.touched"
             [disabled]="isLoading">
-            <option value="" disabled selected>Select Department</option>
-            <option *ngFor="let dept of departments" [value]="dept.dept_id">
+            <option [ngValue]="null" disabled>Select Department</option>
+            <option *ngFor="let dept of departments" [ngValue]="dept.dept_id">
               {{ dept.dept_name }}
             </option>
           </select>
           <div *ngIf="isLoading" class="form-text">Loading departments...</div>
-          <div class="invalid-feedback">To department is required</div>
+          <div class="invalid-feedback">
+            <span *ngIf="form.get('toDeptId')?.hasError('required')">To department is required</span>
+          </div>
         </div>
 
+        <!-- To Branch (Auto-filled when department is selected) -->
         <div class="col-md-4">
           <label for="toBranchId" class="form-label">To Branch *</label>
           <select 
@@ -235,16 +268,37 @@
             id="toBranchId" 
             formControlName="toBranchId"
             [class.is-invalid]="form.get('toBranchId')?.invalid && form.get('toBranchId')?.touched"
-            [disabled]="isLoading">
-            <option value="" disabled selected>Select Branch</option>
-            <option *ngFor="let branch of branches" [value]="branch.branchId">
+            [title]="'This field is automatically filled based on department selection'">
+            <option value="" disabled>Select Department First</option>
+            <option *ngFor="let branch of branches" [ngValue]="branch.branchId">
               {{ branch.branchName }}
             </option>
           </select>
-          <div *ngIf="isLoading" class="form-text">Loading branches...</div>
-          <div class="invalid-feedback">To branch is required</div>
+          <div class="invalid-feedback">Branch is required</div>
         </div>
 
+        <!-- New Manager (Auto-filled when department is selected) -->
+        <div class="col-md-4">
+          <label for="toManagerId" class="form-label">New Manager *</label>
+          <select 
+            class="form-select" 
+            id="toManagerId" 
+            formControlName="toManagerId"
+            [class.is-invalid]="form.get('toManagerId')?.invalid && form.get('toManagerId')?.touched"
+            [title]="'This field is automatically filled with the department head'">
+            <option value="" disabled>Select Department First</option>
+            <option *ngFor="let emp of employees" [ngValue]="emp.employee?.empId">
+              {{ formatEmployeeName(emp.employee) }}
+            </option>
+          </select>
+          <div *ngIf="isLoading" class="form-text">Loading manager...</div>
+          <div class="invalid-feedback">Manager is required</div>
+          <div class="form-text text-muted" *ngIf="form.get('toManagerId')?.value">
+            <i class="bi bi-info-circle me-1"></i> Department head
+          </div>
+        </div>
+
+        <!-- To Position -->
         <div class="col-md-4">
           <label for="toPositionId" class="form-label">To Position</label>
           <select 
@@ -259,37 +313,6 @@
             </option>
           </select>
           <div *ngIf="isLoading" class="form-text">Loading positions...</div>
-        </div>
-
-        <!-- Manager Information -->
-        <div class="col-md-6">
-          <label for="fromManagerId" class="form-label">Current Manager</label>
-          <select 
-            class="form-select" 
-            id="fromManagerId" 
-            formControlName="fromManagerId"
-            [disabled]="isLoading">
-            <option value="" disabled selected>Select Current Manager</option>
-            <option *ngFor="let emp of employees" [value]="emp.employee?.empId">
-              {{ formatEmployeeName(emp.employee) }}
-            </option>
-          </select>
-          <div *ngIf="isLoading" class="form-text">Loading managers...</div>
-        </div>
-
-        <div class="col-md-6">
-          <label for="toManagerId" class="form-label">New Manager</label>
-          <select 
-            class="form-select" 
-            id="toManagerId" 
-            formControlName="toManagerId"
-            [disabled]="isLoading">
-            <option value="" disabled selected>Select New Manager</option>
-            <option *ngFor="let emp of employees" [value]="emp.employee?.empId">
-              {{ formatEmployeeName(emp.employee) }}
-            </option>
-          </select>
-          <div *ngIf="isLoading" class="form-text">Loading managers...</div>
         </div>
 
         <!-- Transfer Details -->
@@ -385,7 +408,6 @@
         <div class="col-md-6">
           <label for="relocationAllowance" class="form-label">Relocation Allowance ($)</label>
           <div class="input-group">
-            <span class="input-group-text">$</span>
             <input 
               type="number" 
               class="form-control" 
@@ -465,10 +487,18 @@
   
     <div class="modal-footer">
       <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Cancel</button>
-      <button type="submit" class="btn btn-primary" [disabled]="form.invalid || isSaving">
-        <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-        {{ isEditMode ? 'Update' : 'Save' }} Transfer
+      <button 
+        type="submit" 
+        class="btn btn-primary"
+        [class.btn-disabled]="isSaving"
+        [title]="isSaving ? 'Saving...' : 'Save transfer'"
+        [disabled]="isSaving">
+        <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        {{ isSaving ? 'Saving...' : 'Save' }}
       </button>
+      <div *ngIf="!form.valid" class="form-text text-danger mt-2">
+        <i class="bi bi-exclamation-triangle me-1"></i> Please fill in all required fields
+      </div>
     </div>
   </form>
 </ng-template>

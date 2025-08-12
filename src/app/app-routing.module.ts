@@ -177,7 +177,11 @@ export const routes: Routes = [
       },
       {
         path: 'emp-transfer',
-        loadComponent: () => import('./demo/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
+        loadComponent: () => import('./demo/Transfer/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
+      },
+      {
+        path: 'emp-type',
+        loadComponent: () => import('./demo/Transfer/emp-type/emp-type.component').then((c) => c.EmpTypeComponent)
       },
       {
         path: 'emp-separation',

@@ -11,124 +11,119 @@
           <i class="ti ti-plus"></i>
           <span>Training</span>
         </button>
-        <button class="add-btn" (click)="openAddModal()">
-            <i class="bi bi-download me-2"></i>
-            <span>Export</span>
-          </button>
+        <button class="add-btn">
+          <i class="bi bi-download me-2"></i>
+          <span>Export</span>
+        </button>
       </div>
     </div>
 
-  <!-- Search and Filter Row -->
-  <div class="search-filter-row">
-    <div class="d-flex justify-content-end w-100">
-      <div class="search-filter-content">
-        <div class="search-input-wrapper">
-          <i class="bi bi-search"></i>
-          <input 
-            type="text" 
-            placeholder="Search..."
-            [(ngModel)]="searchQuery"
-            (input)="applySearch()">
-        </div>
+    <!-- Search and Filter Row -->
+    <div class="search-filter-row">
+      <div class="d-flex justify-content-end w-100">
+        <div class="search-filter-content">
+          <div class="search-input-wrapper">
+            <i class="bi bi-search"></i>
+            <input 
+              type="text" 
+              placeholder="Search..."
+              [(ngModel)]="searchQuery"
+              (input)="applySearch()">
+          </div>
 
-        <div class="filter-container">
-          <button class="filter-icon">
-            <i class="bi bi-funnel"></i>
-            <span>Filters</span>
-          </button>
+          <div class="filter-container">
+            <button class="filter-icon">
+              <i class="bi bi-funnel"></i>
+              <span>Filters</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Training List -->
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
-        <tr>
-          <th class="min-width-200">Programme Name</th>
-          <th class="text-nowrap">Code</th>
-          <th class="text-nowrap">Start Date</th>
-          <th class="text-nowrap">End Date</th>
-          <th class="text-center">Status</th>
-          <th>Location</th>
-          <th>Held By</th>
-          <th class="text-center">Participants</th>
-          <th class="text-end pe-3">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let program of paginatedPrograms" class="table-row">
-          <td class="fw-medium text-truncate" style="max-width: 200px;" title="{{ program.programName }}">
-            {{ program.programName }}
-          </td>
-          <td class="text-nowrap">{{ program.programCode || 'N/A' }}</td>
-          <td class="text-nowrap">{{ program.startDate | date:'mediumDate' }}</td>
-          <td class="text-nowrap">{{ program.endDate | date:'mediumDate' }}</td>
-          <td class="text-center">
-            <span [class.badge]="program.status && program.status.toLowerCase() !== 'no nominations'" 
-                  [ngClass]="getStatusBadgeClass(program.status)">
-              {{ program.status || 'N/A' }}
-            </span>
-          </td>
-          <td class="text-truncate" style="max-width: 150px;" title="{{ program.venue }}">
-            {{ program.venue || 'N/A' }}
-          </td>
-          <td class="text-truncate" style="max-width: 150px;" title="{{ program.heldBy }}">
-            {{ program.heldBy || 'N/A' }}
-          </td>
-          <td class="text-center">{{ program.seatsBooked || 0 }}/{{ program.maxSeats || 0 }}</td>
-          <td class="text-end">
-            <div class="d-flex justify-content-end">
-              <button class="btn btn-sm btn-outline-primary me-2" (click)="openViewModal(program)" title="View">
-                <i class="bi bi-eye"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-secondary me-2" (click)="openEditModal(program)" title="Edit">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" (click)="confirmDelete(program.programId)" title="Delete">
-                <i class="bi bi-trash"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-        <tr *ngIf="filteredPrograms.length === 0">
-          <td colspan="9" class="text-center">
-            <div class="text-muted">
-              <i class="bi bi-inbox"></i>
-              <p class="mb-0">No training programs found</p>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Pagination -->
-  <div class="simple-pagination" *ngIf="filteredPrograms.length > 0">
-    <tr *ngIf="filteredPrograms.length === 0">
-      <td colspan="9" class="text-center">
-        <div class="text-muted">
-          <i class="bi bi-inbox"></i>
-          <p class="mb-0">No training programs found</p>
-        </div>
-      </td>
-    </tr>
-    <button 
-      (click)="onPageChange(currentPage - 1)" 
-      [disabled]="currentPage === 1">
-      <i class="bi bi-chevron-left"></i> Previous
-    </button>
-    
-    <div class="page-info">
-      Page {{ currentPage }} of {{ totalPages }}
+    <!-- Training List -->
+    <div class="attendance-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Programme Name</th>
+            <th>Code</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Status</th>
+            <th>Location</th>
+            <th>Held By</th>
+            <th>Participants</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let program of paginatedPrograms">
+            <td  style="max-width: 200px;" title="{{ program.programName }}">
+              {{ program.programName }}
+            </td>
+            <td>{{ program.programCode || 'N/A' }}</td>
+            <td>{{ program.startDate | date:'mediumDate' }}</td>
+            <td>{{ program.endDate | date:'mediumDate' }}</td>
+            <td>
+              <span class="badge" [ngClass]="getStatusBadgeClass(program.status)">
+                {{ program.status || 'N/A' }}
+              </span>
+            </td>
+            <td class="text-truncate" style="max-width: 150px;" title="{{ program.venue }}">
+              {{ program.venue || 'N/A' }}
+            </td>
+            <td class="text-truncate" style="max-width: 150px;" title="{{ program.heldBy }}">
+              {{ program.heldBy || 'N/A' }}
+            </td>
+            <td>{{ program.seatsBooked || 0 }}/{{ program.maxSeats || 0 }}</td>
+            <td class="text-end">
+              <div class="action-buttons">
+                <button class="view-btn" (click)="openViewModal(program)" title="View">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="edit-btn" (click)="openEditModal(program)" title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="delete-btn" (click)="confirmDelete(program.programId)" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredPrograms.length === 0">
+            <td colspan="9" class="text-center py-4">
+              <div class="text-muted">
+                <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                <p>No training programs found</p>
+                <button class="btn btn-sm btn-outline-primary" (click)="openAddModal()">
+                  <i class="ti ti-plus me-1"></i> Add New Program
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    
-    <button 
-      (click)="onPageChange(currentPage + 1)" 
-      [disabled]="currentPage === totalPages">
-      Next <i class="bi bi-chevron-right"></i>
-    </button>
+
+    <!-- Pagination -->
+    <div class="simple-pagination" *ngIf="filteredPrograms.length > 0">
+      <button 
+        (click)="onPageChange(currentPage - 1)" 
+        [disabled]="currentPage === 1">
+        <i class="bi bi-chevron-left"></i> Previous
+      </button>
+      
+      <div class="page-info">
+        Page {{ currentPage }} of {{ totalPages }}
+      </div>
+      
+      <button 
+        (click)="onPageChange(currentPage + 1)" 
+        [disabled]="currentPage === totalPages">
+        Next <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -389,9 +384,9 @@
 
 <!-- View Training Modal -->
 <ng-template #viewTrainingModal let-modal>
-  <div class="modal-header">
-    <h5 class="modal-title">Training Program Details</h5>
-    <button type="button" class="btn-close" (click)="modal.dismiss()"></button>
+  <div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold">Training Program Details</h5>
+    <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
   </div>
   <div class="modal-body">
     <div class="row">

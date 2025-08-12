@@ -57,7 +57,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let category of paginatedCategories">
-            <td class="fw-medium">
+            <td >
               {{ category.categoryName }}
               <div *ngIf="category.description" class="text-muted small">
                 {{ category.description }}

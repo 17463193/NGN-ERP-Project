@@ -223,12 +223,31 @@ export const NavigationItems: NavigationItem[] = [
       ]
     },
     {
-      id: 'emp-transfer',
-      title: 'Employee Transfer',
-      type: 'item',
+      id: 'transfer-management',
+      title: 'Transfer Management',
+      type: 'collapse',
       classes: 'nav-item',
-      url: '/emp-transfer',
-      icon: 'ti ti-arrows-exchange' 
+      icon: 'ti ti-arrows-exchange' ,
+      children: [
+        {
+          id: 'emp-transfer',
+          title: 'Transfer',
+          type: 'item',
+          url: '/emp-transfer',
+          breadcrumbs: false,
+          icon: 'ti ti-category',
+          classes: 'nav-item'
+        },
+        {
+          id: 'emp-type',
+          title: 'Transfer Type',
+          type: 'item',
+          url: '/emp-type',
+          breadcrumbs: false,
+          icon: 'ti ti-category',
+          classes: 'nav-item'
+        },
+      ]
     },
     {
       id: 'emp-separation',
