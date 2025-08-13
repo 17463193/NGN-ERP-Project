@@ -62,7 +62,17 @@ export interface EmployeeProfile {
   firstName: string;
   middleName: string | null;
   lastName: string;
+  cidNumber: string | null;
   // Other fields as needed
+  dateOfBirth?: string | null;
+  gender?: string;
+  email?: string;
+  phoneNumber?: string;
+  department?: string;
+  position?: string;
+  hireDate?: string | null;
+  employmentStatus?: string;
+  profileImage?: string | null;
 }
 
 export interface EmployeeProfileResponse {
@@ -205,19 +215,49 @@ export class EmployeeTransferService {
     return this.http.get<EmployeeProfileResponse>(url).pipe(
       map(response => {
         if (response && response.employee) {
-          this.employeeCache[response.employee.empId] = response.employee;
-          return response.employee;
+          const employee = response.employee;
+          // Ensure all required fields are present
+          const profile: EmployeeProfile = {
+            empId: employee.empId,
+            firstName: employee.firstName || 'Unknown',
+            middleName: employee.middleName || null,
+            lastName: employee.lastName || 'Employee',
+            cidNumber: employee.cidNumber || null,
+            dateOfBirth: employee.dateOfBirth || null,
+            gender: employee.gender || '',
+            email: employee.email || '',
+            phoneNumber: employee.phoneNumber || '',
+            department: employee.department || '',
+            position: employee.position || '',
+            hireDate: employee.hireDate || null,
+            employmentStatus: employee.employmentStatus || '',
+            profileImage: employee.profileImage || null
+          };
+          this.employeeCache[employee.empId] = profile;
+          return profile;
         }
         throw new Error('Invalid employee data');
       }),
       catchError(error => {
         console.error('Error fetching employee profile:', error);
-        return of({
+        // Return a default profile with required fields when there's an error
+        const defaultProfile: EmployeeProfile = {
           empId,
           firstName: 'Unknown',
           middleName: null,
-          lastName: 'Employee'
-        });
+          lastName: 'Employee',
+          cidNumber: null,
+          dateOfBirth: null,
+          gender: '',
+          email: '',
+          phoneNumber: '',
+          department: '',
+          position: '',
+          hireDate: null,
+          employmentStatus: '',
+          profileImage: null
+        };
+        return of(defaultProfile);
       })
     );
   }

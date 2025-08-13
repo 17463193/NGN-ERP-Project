@@ -81,6 +81,56 @@
 <div class="page-wrapper">
   <div class="card" *ngIf="!loading; else loadingTemplate">
     <div class="card-body">
+      <!-- Compact Holiday Calendar -->
+      <div class="holiday-calendar">
+        <div class="calendar-header">
+          <h5 class="calendar-title">{{ selectedYear }} Holiday Calendar</h5>
+        </div>
+        
+        <div class="calendar-months">
+          <div *ngFor="let monthData of getAllHolidaysByMonth()" class="month-card">
+            <div class="month-header">
+              <span class="month-name">{{ monthData.month.substring(0, 3) }}</span>
+              <span class="year">{{ selectedYear }}</span>
+            </div>
+            
+            <div class="holiday-list">
+              <ng-container *ngFor="let holiday of monthData.public">
+                <div class="holiday-item public-holiday">
+                  <span class="date-badge">
+                    {{ holiday.date }}
+                    <span class="holiday-type">P</span>
+                  </span>
+                  <span class="holiday-name">{{ holiday.name }}</span>
+                </div>
+              </ng-container>
+              <ng-container *ngFor="let holiday of monthData.private">
+                <div class="holiday-item private-holiday">
+                  <span class="date-badge">
+                    {{ holiday.date }}
+                    <span class="holiday-type">R</span>
+                  </span>
+                  <span class="holiday-name">{{ holiday.name }}</span>
+                </div>
+              </ng-container>
+              
+              <div *ngIf="monthData.public.length === 0 && monthData.private.length === 0" class="no-holidays">
+                No holidays
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="getAllHolidaysByMonth().length === 0" class="no-holidays-message">
+          No holidays found for {{ selectedYear }}
+        </div>
+        
+        <div class="calendar-legend">
+          <span class="legend-item"><span class="legend-dot public"></span> Public</span>
+          <span class="legend-item"><span class="legend-dot private"></span> Private</span>
+        </div>
+      </div>
+
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="calendar-info d-flex flex-wrap gap-4">
           <div class="info-item">

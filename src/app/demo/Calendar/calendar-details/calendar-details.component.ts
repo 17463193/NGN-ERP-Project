@@ -671,6 +671,55 @@ export class CalendarDetailsComponent implements OnInit {
     return org ? org.name : 'N/A';
   }
 
+  // Get all holidays grouped by month and type
+  getAllHolidaysByMonth(): {month: string, monthIndex: number, public: any[], private: any[]}[] {
+    const result: {[key: number]: {month: string, monthIndex: number, public: any[], private: any[]}} = {};
+
+    if (!this.originalHolidays || this.originalHolidays.length === 0) {
+      return [];
+    }
+
+    // Initialize all months with empty arrays
+    this.months.forEach((month, index) => {
+      result[index] = {
+        month: month,
+        monthIndex: index,
+        public: [],
+        private: []
+      };
+    });
+
+    // Group holidays by month and type
+    this.originalHolidays.forEach(holiday => {
+      const date = new Date(holiday.holidayDate);
+      const monthIndex = date.getMonth();
+      
+      const holidayData = {
+        name: holiday.holidayName,
+        date: date.getDate(),
+        month: this.months[monthIndex],
+        type: holiday.leaveDayType?.toLowerCase().includes('half') ? 'half' : 'full',
+        isOptional: holiday.isOptional
+      };
+
+      if (holiday.holidayType?.toLowerCase() === 'private') {
+        result[monthIndex].private.push(holidayData);
+      } else {
+        result[monthIndex].public.push(holidayData);
+      }
+    });
+
+    // Convert to array, sort by month index, and filter out months with no holidays
+    return Object.values(result)
+      .filter(monthData => monthData.public.length > 0 || monthData.private.length > 0)
+      .sort((a, b) => a.monthIndex - b.monthIndex)
+      .map(monthData => ({
+        ...monthData,
+        public: monthData.public.sort((a, b) => a.date - b.date),
+        private: monthData.private.sort((a, b) => a.date - b.date)
+      }));
+  }
+
   private updateLocalHoliday(holidayData: any) {
     const dateParts = holidayData.holidayDate.split('-');
     const year = parseInt(dateParts[0], 10);
