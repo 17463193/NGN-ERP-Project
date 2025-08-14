@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
-import { Observable, throwError, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { Observable, throwError, of, BehaviorSubject } from 'rxjs';
+import { map, catchError, switchMap, tap } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { AuthService } from '../core/services/auth.service';
 
@@ -21,7 +21,8 @@ export interface SeparationType {
 export interface SeparationResponse {
   separationId: string;
   empId: string;
-  separationType: SeparationType;
+  separationType: SeparationType | null;
+  separationTypeId?: string;
   initiatedBy: string | null;
   initiationDate: string;
   lastWorkingDate: string;
@@ -100,7 +101,7 @@ export interface Separation {
   employeeName: string;
   department: string;
   position: string;
-  separationType: SeparationType;
+  separationType: SeparationType | null;
   separationTypeId?: string;
   initiatedBy?: string | null;
   initiatedByName?: string;
@@ -138,11 +139,19 @@ export class SeparationService {
   empUrl = `${environment.apiUrl}/api/v1/employees`;
   sepTypeUrl = `${environment.apiUrl}/api/separation-types`;
   orgUrl = `${environment.apiUrl}/api/v1/organizations`;
+  
+  // Cache separation types
+  private separationTypesSubject = new BehaviorSubject<SeparationType[]>([]);
+  public separationTypes$ = this.separationTypesSubject.asObservable();
+  private separationTypesMap: { [key: string]: SeparationType } = {};
 
   constructor(
     private http: HttpClient,
     private authService: AuthService
-  ) { }
+  ) { 
+    // Load separation types on service initialization
+    this.loadSeparationTypes();
+  }
 
   private getAuthHeaders(): HttpHeaders {
     const user = this.authService.currentUserValue;
@@ -153,13 +162,40 @@ export class SeparationService {
       });
     }
     
-    const headers = new HttpHeaders({
+    return new HttpHeaders({
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${user.accessToken}`
     });
-    
-    console.log('Auth headers created:', headers.keys());
-    return headers;
+  }
+
+  private createDefaultSeparationType(): SeparationType {
+    return {
+      separationTypeId: 'default',
+      orgId: '',
+      separationName: 'N/A',
+      separationCode: 'DEFAULT',
+      category: 'Unknown',
+      noticePeriodDays: 0,
+      exitInterviewRequired: false,
+      rehireEligible: false,
+      createdDate: new Date().toISOString(),
+      modifiedDate: new Date().toISOString()
+    };
+  }
+
+  private loadSeparationTypes(): void {
+    this.getSeparationTypes().subscribe({
+      next: (types) => {
+        this.separationTypesSubject.next(types);
+        this.separationTypesMap = {};
+        types.forEach(type => {
+          this.separationTypesMap[type.separationTypeId] = type;
+        });
+      },
+      error: (error) => {
+        console.error('Failed to load separation types:', error);
+      }
+    });
   }
 
   getSeparationTypes(): Observable<SeparationType[]> {
@@ -174,7 +210,14 @@ export class SeparationService {
           console.warn('Received empty response body from separation types endpoint');
           return [];
         }
-        return response.body;
+        const types = response.body;
+        // Update the cached types
+        this.separationTypesSubject.next(types);
+        this.separationTypesMap = {};
+        types.forEach(type => {
+          this.separationTypesMap[type.separationTypeId] = type;
+        });
+        return types;
       }),
       catchError((error: HttpErrorResponse) => {
         console.error('Error loading separation types:', error);
@@ -204,16 +247,31 @@ export class SeparationService {
           }
         ];
         
-        console.warn('Falling back to mock separation types due to error');
+        this.separationTypesSubject.next(mockTypes);
+        this.separationTypesMap = {};
+        mockTypes.forEach(type => {
+          this.separationTypesMap[type.separationTypeId] = type;
+        });
         return of(mockTypes);
       })
     );
   }
 
   getSeparationTypeById(id: string): Observable<SeparationType> {
+    // First check cache
+    if (this.separationTypesMap[id]) {
+      return of(this.separationTypesMap[id]);
+    }
+    
     const url = `${this.sepTypeUrl}/${id}`;
     return this.http.get<SeparationType>(url, { headers: this.getAuthHeaders() })
-      .pipe(catchError(this.handleError));
+      .pipe(
+        tap(type => {
+          // Cache the type
+          this.separationTypesMap[id] = type;
+        }),
+        catchError(this.handleError)
+      );
   }
 
   getAllEmployees(): Observable<Employee[]> {
@@ -262,21 +320,10 @@ export class SeparationService {
     );
   }
 
-  private mapToSeparation(response: SeparationResponse): Separation {
+  private mapToSeparation(response: SeparationResponse, requestedTypeId?: string): Separation {
     if (!response) {
       const now = new Date().toISOString();
-      const defaultSeparationType: SeparationType = {
-        separationTypeId: 'default',
-        orgId: '',
-        separationName: 'Voluntary',
-        separationCode: 'VOL',
-        category: 'Voluntary',
-        noticePeriodDays: 30,
-        exitInterviewRequired: true,
-        rehireEligible: true,
-        createdDate: now,
-        modifiedDate: now
-      };
+      const defaultSeparationType = this.createDefaultSeparationType();
 
       return {
         id: '',
@@ -312,6 +359,52 @@ export class SeparationService {
       };
     }
 
+    // Try to extract separationTypeId from multiple sources
+    let separationTypeId = response.separationTypeId || requestedTypeId;
+    
+    // If no separationTypeId but separationType exists with an ID, use that
+    if (!separationTypeId && response.separationType && typeof response.separationType === 'object' && response.separationType.separationTypeId) {
+      separationTypeId = response.separationType.separationTypeId;
+    }
+    
+    // If separationType is a string (might be the ID itself), use it
+    if (!separationTypeId && response.separationType && typeof response.separationType === 'string') {
+      separationTypeId = response.separationType as any;
+    }
+    
+    // Try to find the separation type from cache
+    let separationType: SeparationType | null = null;
+    
+    if (separationTypeId && separationTypeId !== 'default') {
+      separationType = this.separationTypesMap[separationTypeId] || null;
+      if (separationType) {
+        console.log(`Found separation type in cache for ID ${separationTypeId}:`, separationType.separationName);
+      } else {
+        console.warn(`Separation type not found in cache for ID: ${separationTypeId}`);
+      }
+    }
+    
+    // If still no separation type found, check if it came in the response as an object
+    if (!separationType && response.separationType && typeof response.separationType === 'object') {
+      separationType = response.separationType as SeparationType;
+      // Cache it for future use
+      if (separationType.separationTypeId) {
+        this.separationTypesMap[separationType.separationTypeId] = separationType;
+        if (!separationTypeId) {
+          separationTypeId = separationType.separationTypeId;
+        }
+      }
+    }
+    
+    // If still no separation type, create default
+    if (!separationType) {
+      console.warn(`Using default separation type. ID: ${separationTypeId}, Response:`, response);
+      separationType = this.createDefaultSeparationType();
+      if (!separationTypeId) {
+        separationTypeId = 'default';
+      }
+    }
+
     return {
       id: response.separationId,
       separationId: response.separationId,
@@ -319,8 +412,8 @@ export class SeparationService {
       employeeName: '',
       department: '',
       position: 'Not specified',
-      separationType: response.separationType,
-      separationTypeId: response.separationType.separationTypeId,
+      separationType: separationType,
+      separationTypeId: separationTypeId,
       initiatedBy: response.initiatedBy || 'System',
       initiationDate: response.initiationDate,
       lastWorkingDate: response.lastWorkingDate,
@@ -347,51 +440,48 @@ export class SeparationService {
   }
 
   getSeparations(): Observable<Separation[]> {
-    return this.http.get<SeparationResponse[]>(this.apiUrl, { 
-      headers: this.getAuthHeaders(),
-      observe: 'response'
-    }).pipe(
-      map(response => {
-        if (!response.body) {
-          throw new Error('Empty response body from server');
-        }
-        return response.body.map(item => this.mapToSeparation(item));
+    const headers = this.getAuthHeaders();
+    
+    // Ensure separation types are loaded first
+    return this.getSeparationTypes().pipe(
+      switchMap(types => {
+        return this.http.get<SeparationResponse[]>(this.apiUrl, { 
+          headers,
+          observe: 'response'
+        }).pipe(
+          map(response => {
+            if (!response.body || !Array.isArray(response.body)) {
+              return [];
+            }
+            
+            return response.body.map(item => {
+              try {
+                // Map the response and ensure proper separation type mapping
+                const separation = this.mapToSeparation(item);
+                
+                // Additional check: if separationType is still null/default but we have an ID
+                // Try to fetch it from our cache one more time
+                if ((!separation.separationType || separation.separationType.separationTypeId === 'default') 
+                    && item.separationTypeId) {
+                  const cachedType = this.separationTypesMap[item.separationTypeId];
+                  if (cachedType) {
+                    separation.separationType = cachedType;
+                    separation.separationTypeId = item.separationTypeId;
+                  }
+                }
+                
+                return separation;
+              } catch (error) {
+                console.error('Error mapping separation item:', item, error);
+                return this.mapToSeparation(null as any);
+              }
+            }).filter(separation => separation.separationId);
+          })
+        );
       }),
       catchError((error: HttpErrorResponse) => {
-        console.error('Error loading separations:', {
-          status: error.status,
-          statusText: error.statusText,
-          error: error.error,
-          url: error.url
-        });
-        
-        let errorMessage = 'Failed to load separation data';
-        if (error.status === 0) {
-          errorMessage += ' - No response from server. Please check your network connection.';
-        } else if (error.status === 401) {
-          errorMessage = 'Authentication required. Please log in again.';
-        } else if (error.status === 403) {
-          errorMessage = 'You do not have permission to view this data.';
-        } else if (error.status === 404) {
-          errorMessage = 'The requested resource was not found. Please check the API URL.';
-        } else if (error.status >= 500) {
-          errorMessage = 'Server error. Please try again later.';
-        }
-        
-        return throwError(() => new Error(errorMessage));
-      })
-    );
-  }
-
-  deleteSeparation(id: string): Observable<void> {
-    const url = `${this.apiUrl}/${id}`;
-    return this.http.delete<void>(url, { headers: this.getAuthHeaders() }).pipe(
-      catchError((error: HttpErrorResponse) => {
-        console.error('Error deleting separation:', error);
-        if (error.status === 403) {
-          console.error('Authentication failed. Please check if you are logged in and your session is valid.');
-        }
-        return throwError(() => error);
+        console.error('Error loading separations:', error);
+        return throwError(() => new Error('Failed to load separations'));
       })
     );
   }
@@ -403,7 +493,13 @@ export class SeparationService {
       return throwError(() => new Error('No user is currently logged in'));
     }
   
-    const employeeId = currentUser.userId || currentUser.empId;
+    // Try to get employee ID from different user properties
+    let employeeId = currentUser.empId || currentUser.userId;
+    
+    // Use roleBasedId getter if available
+    if (this.authService.roleBasedId) {
+      employeeId = this.authService.roleBasedId;
+    }
     
     if (!employeeId) {
       return throwError(() => new Error('No employee ID found'));
@@ -411,13 +507,15 @@ export class SeparationService {
   
     return this.getEmployeeById(employeeId).pipe(
       catchError((error: HttpErrorResponse) => {
+        // Create a fallback employee object
         const emptyEmployee: Employee = {
           empId: employeeId,
-          empCode: '',
+          empCode: currentUser.username || '',
           firstName: currentUser.username || 'User',
           lastName: '',
           email: currentUser.email || ''
         };
+        console.warn('Failed to fetch employee details, using fallback:', emptyEmployee);
         return of(emptyEmployee);
       })
     );
@@ -433,6 +531,7 @@ export class SeparationService {
       return throwError(() => new Error('No user ID found for current user.'));
     }
 
+    // Validation
     if (!separation.empId) {
       return throwError(() => new Error('Employee ID is required'));
     }
@@ -446,6 +545,7 @@ export class SeparationService {
       return throwError(() => new Error('Separation reason is required'));
     }
 
+    // Format date
     let formattedDate: string;
     try {
       const date = new Date(separation.lastWorkingDate);
@@ -464,14 +564,16 @@ export class SeparationService {
       separationTypeId: separation.separationTypeId,
       initiatedBy: currentUser.userId,
       lastWorkingDate: formattedDate,
-      noticePeriodServed: Number(separation.noticePeriodServed) || '',
+      noticePeriodServed: Number(separation.noticePeriodServed) || 0,
       separationReason: separation.separationReason,
       resignationLetterPath: separation.resignationLetterPath || '',
       rehireEligible: Boolean(separation.rehireEligible),
       rehireNotes: separation.rehireNotes || ''
     };
 
-    console.log('Creating separation with payload:', requestPayload);
+    console.log('=== CREATE SEPARATION REQUEST ===');
+    console.log('Sending payload to API:', requestPayload);
+    console.log('SeparationTypeId being sent:', requestPayload.separationTypeId);
 
     return this.http.post<SeparationResponse>(
       this.apiUrl,
@@ -482,20 +584,30 @@ export class SeparationService {
       }
     ).pipe(
       map((response: HttpResponse<SeparationResponse>) => {
-        console.log('Separation created successfully:', response);
         if (!response.body) {
           throw new Error('Empty response body');
         }
-        return this.mapToSeparation(response.body);
+        
+        console.log('=== CREATE SEPARATION RESPONSE ===');
+        console.log('Raw API response:', response.body);
+        
+        // Map the response, passing the requested type ID
+        const mappedSeparation = this.mapToSeparation(response.body, separation.separationTypeId);
+        
+        // Ensure we have the correct separation type from our cache
+        if (separation.separationTypeId && this.separationTypesMap[separation.separationTypeId]) {
+          console.log('Setting separation type from cache for ID:', separation.separationTypeId);
+          mappedSeparation.separationType = this.separationTypesMap[separation.separationTypeId];
+          mappedSeparation.separationTypeId = separation.separationTypeId;
+        }
+        
+        console.log('Final mapped separation:', mappedSeparation);
+        
+        return mappedSeparation;
       }),
       catchError((error: HttpErrorResponse) => {
-        console.error('Error creating separation:', {
-          status: error.status,
-          statusText: error.statusText,
-          error: error.error,
-          url: error.url,
-          message: error.message
-        });
+        console.error('Error creating separation:', error);
+        console.error('Error response body:', error.error);
         
         let errorMessage = 'Failed to create separation. Please try again.';
         
@@ -508,8 +620,6 @@ export class SeparationService {
           errorMessage = validationErrors.join('\n');
         } else if (error.error?.message) {
           errorMessage = error.error.message;
-        } else if (error.message) {
-          errorMessage = error.message;
         }
         
         return throwError(() => new Error(errorMessage));
@@ -530,6 +640,7 @@ export class SeparationService {
     const payload = {
       separationStatus: status,
       approvedBy: currentUser.userId,
+      approvalDate: new Date().toISOString().split('T')[0],
       approvalNotes: approvalNotes
     };
 
@@ -552,14 +663,15 @@ export class SeparationService {
     return throwError(() => new Error(errorMessage));
   }
 
-  deleteSeparationType(id: string): Observable<void> {
-    const headers = this.getAuthHeaders();
-    return this.http.delete<void>(`${this.sepTypeUrl}/${id}`, { headers });
-  }
-
   createSeparationType(separationType: Omit<SeparationType, 'separationTypeId' | 'createdDate' | 'modifiedDate'>): Observable<SeparationType> {
     const headers = this.getAuthHeaders();
     return this.http.post<SeparationType>(this.sepTypeUrl, separationType, { headers }).pipe(
+      tap(newType => {
+        // Add to cache
+        this.separationTypesMap[newType.separationTypeId] = newType;
+        // Reload types
+        this.loadSeparationTypes();
+      }),
       catchError((error: HttpErrorResponse) => {
         console.error('Error creating separation type:', error);
         return throwError(() => new Error('Failed to create separation type. Please try again.'));
@@ -570,6 +682,12 @@ export class SeparationService {
   updateSeparationType(id: string, separationType: Partial<SeparationType>): Observable<SeparationType> {
     const headers = this.getAuthHeaders();
     return this.http.put<SeparationType>(`${this.sepTypeUrl}/${id}`, separationType, { headers }).pipe(
+      tap(updatedType => {
+        // Update cache
+        this.separationTypesMap[id] = updatedType;
+        // Reload types
+        this.loadSeparationTypes();
+      }),
       catchError((error: HttpErrorResponse) => {
         console.error('Error updating separation type:', error);
         return throwError(() => new Error('Failed to update separation type. Please try again.'));
@@ -582,5 +700,15 @@ export class SeparationService {
       map(employee => `${employee.firstName} ${employee.lastName}`),
       catchError(() => of('Unknown Employee'))
     );
+  }
+
+  // Helper method to get cached separation types
+  getCachedSeparationTypes(): SeparationType[] {
+    return this.separationTypesSubject.value;
+  }
+
+  // Helper method to get a specific cached separation type
+  getCachedSeparationType(id: string): SeparationType | null {
+    return this.separationTypesMap[id] || null;
   }
 }

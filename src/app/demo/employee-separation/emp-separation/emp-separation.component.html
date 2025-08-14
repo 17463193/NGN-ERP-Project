@@ -10,7 +10,7 @@
         <i class="ti ti-plus"></i>
         <span>New Separation</span>
       </button>
-      <button class="add-btn" (click)="exportSeparations()">
+      <button class="add-btn">
         <i class="bi bi-download me-2"></i>
         <span>Export</span>
       </button>
@@ -23,7 +23,11 @@
       <div class="search-filter-content">
         <div class="search-input-wrapper">
           <i class="bi bi-search"></i>
-          <input type="text" placeholder="Search..." [(ngModel)]="searchQuery" (input)="applySearch()">
+          <input 
+            type="text" 
+            placeholder="Search..."
+            [(ngModel)]="searchQuery"
+            (input)="applySearch()">
         </div>
 
         <div class="filter-container">
@@ -47,16 +51,16 @@
   <!-- Separation List -->
   <div class="transfer-table" style="overflow-x: auto;" *ngIf="!isLoading">
     <table>
-      <thead class="table-dark">
+      <thead>
         <tr>
-          <th><strong>Employee Name</strong></th>
-          <th><strong>Separation Type</strong></th>
-          <th><strong>Initiation Date</strong></th>
-          <th><strong>Last Working Date</strong></th>
-          <th><strong>Notice Period</strong></th>
-          <th><strong>Separation Reason</strong></th>
-          <th><strong>Status</strong></th>
-          <th style="text-align: right;"><strong>Actions</strong></th>
+          <th>Employee Name</th>
+          <th>Separation Type</th>
+          <th>Initiation Date</th>
+          <th>Last Working Date</th>
+          <th>Separation Reason</th>
+          <th>Notice Period</th>
+          <th>Status</th>
+          <th style="text-align: right;">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -66,20 +70,16 @@
               <div>{{ separation.employeeName || 'Loading...' }}</div>
             </div>
           </td>
-          <td>{{ separation.separationType.separationName || 'N/A' }}</td>
-          <td>{{ separation.initiationDate | date:'yyyy-MM-dd' }}</td>
-          <td>{{ separation.lastWorkingDate | date:'yyyy-MM-dd' }}</td>
+           <td>{{ getSeparationTypeName(separation.separationType) }}</td>
+          <td>{{ separation.initiationDate | date:'mediumDate' }}</td>
+          <td>{{ separation.lastWorkingDate | date:'mediumDate' }}</td>
           <td>
-            <span class="badge bg-info text-dark">{{ separation.noticePeriodServed }} days</span>
+            <button class="btn btn-sm btn-link p-0" (click)="viewReason(separation.separationReason)">
+           View Reason
+            </button>
           </td>
           <td>
-            <div class="d-flex align-items-center">
-              <button class="btn btn-link btn-sm p-0 text-primary"
-                      (click)="viewSeparationReason(separation.separationReason)"
-                      title="View reason">
-                    View Reason
-              </button>
-            </div>
+            <span class="badge bg-info text-dark">{{ separation.noticePeriodServed }} days</span>
           </td>
           <td>
             <span class="badge" [ngClass]="getStatusBadgeClass(separation.status)">
@@ -94,12 +94,9 @@
               <button class="edit-btn" (click)="openStatusModal(separation)">
                 <i class="bi bi-pencil"></i>
               </button>
-              <button class="delete-btn" (click)="confirmDelete(separation.id!)" title="Delete">
+              <button class="delete-btn" title="Delete">
                 <i class="bi bi-trash"></i>
               </button>
-              <!-- <button class="btn btn-sm btn-outline-primary ms-2" (click)="openStatusModal(separation)">
-                <i class="bi bi-pencil-square"></i> Update Status
-              </button> -->
             </div>
           </td>
         </tr>
@@ -114,70 +111,27 @@
             </div>
           </td>
         </tr>
-        <tr *ngIf="filteredSeparations.length === 0 && !isLoading">
-          <td colspan="8" class="text-center py-4">
-            <div class="text-muted">
-              <i class="bi bi-inbox fs-1"></i>
-              <p class="mb-0 mt-2">No separations found</p>
-              <small *ngIf="searchQuery">Try adjusting your search criteria</small>
-            </div>
-          </td>
-        </tr>
       </tbody>
     </table>
-    
-    <!-- Pagination -->
-    <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="filteredSeparations.length > 0">
-      <div class="text-muted">
-        Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to 
-        {{ currentPage * itemsPerPage > filteredSeparations.length ? filteredSeparations.length : currentPage * itemsPerPage }}
-        of {{ filteredSeparations.length }} entries
-      </div>
-      <ngb-pagination
-        [collectionSize]="filteredSeparations.length"
-        [(page)]="currentPage"
-        [pageSize]="itemsPerPage"
-        [maxSize]="5"
-        [rotate]="true"
-        [ellipses]="true"
-        [boundaryLinks]="true"
-        size="sm"
-        class="d-flex justify-content-end"
-      ></ngb-pagination>
-    </div>
   </div>
 
   <!-- Pagination -->
   <div class="simple-pagination" *ngIf="filteredSeparations.length > 0 && !isLoading">
-    <button (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 1">
+    <button 
+      (click)="onPageChange(currentPage - 1)" 
+      [disabled]="currentPage === 1">
       <i class="bi bi-chevron-left"></i> Previous
     </button>
-
-    <div class="text-muted" *ngIf="filteredSeparations.length > 0">
-      Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
-      {{ getMathMin(currentPage * itemsPerPage, filteredSeparations.length) }} of
-      {{ filteredSeparations.length }} entries
+    
+    <div class="page-info">
+      Page {{ currentPage }} of {{ totalPages }}
     </div>
-    <nav *ngIf="totalPages > 1">
-      <ul class="pagination mb-0">
-        <li class="page-item" [class.disabled]="currentPage === 1">
-          <a class="page-link" href="#" (click)="onPageChange(currentPage - 1); $event.preventDefault()">
-            <i class="bi bi-chevron-left"></i>
-          </a>
-        </li>
-        <li class="page-item" *ngFor="let page of [].constructor(totalPages); let i = index"
-          [class.active]="i + 1 === currentPage">
-          <a class="page-link" href="#" (click)="onPageChange(i + 1); $event.preventDefault()">
-            {{ i + 1 }}
-          </a>
-        </li>
-        <li class="page-item" [class.disabled]="currentPage === totalPages">
-          <a class="page-link" href="#" (click)="onPageChange(currentPage + 1); $event.preventDefault()">
-            <i class="bi bi-chevron-right"></i>
-          </a>
-        </li>
-      </ul>
-    </nav>
+    
+    <button 
+      (click)="onPageChange(currentPage + 1)" 
+      [disabled]="currentPage === totalPages">
+      Next <i class="bi bi-chevron-right"></i>
+    </button>
   </div>
 </div>
 
@@ -190,44 +144,52 @@
     </div>
     <div class="modal-body">
       <div class="row g-3">
-
+        
         <!-- Employee Search Dropdown -->
         <div class="col-12">
           <label for="empName" class="form-label">Employee *</label>
           <div class="position-relative employee-search-container">
-
+            
             <!-- Search Input -->
-            <input type="text" class="form-control employee-search-input" id="empName" formControlName="empName"
-              placeholder="Type to search employee by name, code, or ID..." (input)="onEmployeeSearch($event)"
-              (focus)="onEmployeeFocus()" (keydown)="onEmployeeKeydown($event)"
+            <input 
+              type="text" 
+              class="form-control employee-search-input" 
+              id="empName"
+              formControlName="empName"
+              placeholder="Type to search employee by name, code, or ID..."
+              (input)="onEmployeeSearch($event)"
+              (focus)="onEmployeeFocus()"
+              (keydown)="onEmployeeKeydown($event)"
               [class.is-invalid]="(form.get('empName')?.invalid || form.get('empId')?.invalid) && form.get('empName')?.touched"
               autocomplete="off">
-
+            
             <!-- Search Icon -->
             <div class="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted">
               <i class="bi bi-search"></i>
             </div>
-
+            
             <!-- Loading Spinner -->
             <div *ngIf="isLoadingEmployees" class="position-absolute top-50 end-0 translate-middle-y me-3">
               <div class="spinner-border spinner-border-sm text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
               </div>
             </div>
-
+            
             <!-- Clear Button -->
-            <button *ngIf="selectedEmployee && !isLoadingEmployees" type="button"
+            <button 
+              *ngIf="selectedEmployee && !isLoadingEmployees" 
+              type="button" 
               class="btn btn-sm btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-1 clear-btn"
-              (click)="clearEmployeeSelection($event)" title="Clear selection">
+              (click)="clearEmployeeSelection($event)"
+              title="Clear selection">
               <i class="bi bi-x"></i>
             </button>
-
+            
             <!-- Employee Dropdown -->
-            <div
-              *ngIf="showEmployeeDropdown && (isLoadingEmployees || filteredEmployees.length > 0 || employeeSearchTerm.length >= 2)"
-              class="dropdown-menu show w-100 shadow-lg border-0 employee-dropdown"
-              style="max-height: 300px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
-
+            <div *ngIf="showEmployeeDropdown && (isLoadingEmployees || filteredEmployees.length > 0 || employeeSearchTerm.length >= 2)" 
+                 class="dropdown-menu show w-100 shadow-lg border-0 employee-dropdown" 
+                 style="max-height: 300px; overflow-y: auto; z-index: 1050; top: 100%; left: 0;">
+              
               <!-- Search Header -->
               <div class="dropdown-header bg-light sticky-top">
                 <div class="d-flex align-items-center justify-content-between">
@@ -240,7 +202,7 @@
                   </small>
                 </div>
               </div>
-
+              
               <!-- Loading State -->
               <div *ngIf="isLoadingEmployees" class="dropdown-item text-center py-3">
                 <div class="d-flex align-items-center justify-content-center">
@@ -248,14 +210,17 @@
                   <span class="text-muted">Searching employees...</span>
                 </div>
               </div>
-
+              
               <!-- Employee Options -->
               <ng-container *ngIf="!isLoadingEmployees">
-                <button *ngFor="let employee of filteredEmployees; trackBy: trackByEmployeeId; let i = index"
+                <button 
+                  *ngFor="let employee of filteredEmployees; trackBy: trackByEmployeeId; let i = index" 
                   type="button"
                   class="dropdown-item employee-option d-flex justify-content-between align-items-start py-3 border-bottom"
-                  (click)="selectEmployee(employee)" [class.active]="selectedEmployee?.empId === employee.empId"
-                  [class.highlighted]="selectedEmployeeIndex === i" [id]="'employee-option-' + i">
+                  (click)="selectEmployee(employee)"
+                  [class.active]="selectedEmployee?.empId === employee.empId"
+                  [class.highlighted]="selectedEmployeeIndex === i"
+                  [id]="'employee-option-' + i">
                   <div class="flex-grow-1">
                     <div class="d-flex align-items-center mb-1">
                       <strong class="employee-name me-2">{{ employee.firstName }} {{ employee.lastName }}</strong>
@@ -271,24 +236,23 @@
                       </span>
                     </div>
                   </div>
-                  <i class="bi bi-check-circle text-success ms-2"
-                    *ngIf="selectedEmployee?.empId === employee.empId"></i>
+                  <i class="bi bi-check-circle text-success ms-2" *ngIf="selectedEmployee?.empId === employee.empId"></i>
                 </button>
               </ng-container>
-
+              
               <!-- No Results -->
-              <div *ngIf="!isLoadingEmployees && filteredEmployees.length === 0 && employeeSearchTerm.length >= 2"
-                class="dropdown-item text-center py-4">
+              <div *ngIf="!isLoadingEmployees && filteredEmployees.length === 0 && employeeSearchTerm.length >= 2" 
+                   class="dropdown-item text-center py-4">
                 <div class="text-muted">
                   <i class="bi bi-search display-6 d-block mb-2 text-muted"></i>
                   <div class="fw-medium">No employees found</div>
                   <small class="d-block mt-1">Try searching with different keywords</small>
                 </div>
               </div>
-
+              
               <!-- Initial State -->
-              <div *ngIf="!isLoadingEmployees && filteredEmployees.length === 0 && employeeSearchTerm.length < 2"
-                class="dropdown-item text-center py-4">
+              <div *ngIf="!isLoadingEmployees && filteredEmployees.length === 0 && employeeSearchTerm.length < 2" 
+                   class="dropdown-item text-center py-4">
                 <div class="text-muted">
                   <i class="bi bi-keyboard display-6 d-block mb-2 text-muted"></i>
                   <div class="fw-medium">Start typing to search</div>
@@ -297,7 +261,7 @@
               </div>
             </div>
           </div>
-
+          
           <!-- Selected Employee Display -->
           <div *ngIf="selectedEmployee" class="mt-3 selected-employee-card">
             <div class="card border-success">
@@ -314,41 +278,47 @@
                       ID: {{ selectedEmployee.empId }}
                       <span *ngIf="selectedEmployee.department"> | Dept: {{ selectedEmployee.department }}</span>
                       <span *ngIf="selectedEmployee.position"> | {{ selectedEmployee.position }}</span>
-                    </div>
+                    </div> 
                   </div>
-                  <button type="button" class="btn btn-sm btn-outline-danger ms-2"
-                    (click)="clearEmployeeSelection($event)" title="Clear selection">
+                  <button 
+                    type="button" 
+                    class="btn btn-sm btn-outline-danger ms-2"
+                    (click)="clearEmployeeSelection($event)"
+                    title="Clear selection">
                     <i class="bi bi-x"></i>
                   </button>
                 </div>
               </div>
             </div>
           </div>
-
+          
           <!-- Validation Error -->
-          <div *ngIf="(form.get('empId')?.invalid || form.get('empName')?.invalid) && form.get('empName')?.touched"
-            class="invalid-feedback d-block">
+          <div *ngIf="(form.get('empId')?.invalid || form.get('empName')?.invalid) && form.get('empName')?.touched" class="invalid-feedback d-block">
             <i class="bi bi-exclamation-triangle me-1"></i>
             Please select an employee from the dropdown
           </div>
-
+          
           <!-- Helper Text -->
           <small class="form-text text-muted mt-1">
             <i class="bi bi-info-circle me-1"></i>
             Type at least 2 characters to search for employees
           </small>
         </div>
-
+        
         <!-- Separation Type -->
         <div class="col-md-6">
           <label for="separationTypeId" class="form-label">Separation Type *</label>
           <div class="position-relative" *ngIf="!isLoading; else loadingTemplate">
-            <select class="form-select" id="separationTypeId" formControlName="separationTypeId"
+            <select 
+              class="form-select" 
+              id="separationTypeId" 
+              formControlName="separationTypeId"
               [class.is-invalid]="form.get('separationTypeId')?.invalid && form.get('separationTypeId')?.touched"
               required>
               <option value="" disabled>-- Select Separation Type --</option>
-              <option *ngFor="let type of separationTypes" [ngValue]="type.separationTypeId"
-                [disabled]="!type.separationTypeId">
+              <option *ngFor="let type of separationTypes" 
+                      [ngValue]="type.separationTypeId"
+                      [disabled]="!type.separationTypeId">
                 {{ type.separationName }}
               </option>
             </select>
@@ -365,13 +335,12 @@
               <span>Loading separation types...</span>
             </div>
           </ng-template>
-          <div *ngIf="form.get('separationTypeId')?.invalid && form.get('separationTypeId')?.touched"
-            class="invalid-feedback">
+          <div *ngIf="form.get('separationTypeId')?.invalid && form.get('separationTypeId')?.touched" class="invalid-feedback">
             <i class="bi bi-exclamation-triangle me-1"></i>
             Please select a separation type
           </div>
         </div>
-
+        
         <!-- Initiated By (Display Only) -->
         <div class="col-md-6">
           <label class="form-label">Initiated By</label>
@@ -384,58 +353,82 @@
             Automatically set to current user (ID: {{ getCurrentUserEmpId() }})
           </small>
         </div>
-
+        
         <!-- Last Working Date -->
         <div class="col-md-6">
           <label for="lastWorkingDate" class="form-label">Last Working Date *</label>
-          <input type="date" class="form-control" id="lastWorkingDate" formControlName="lastWorkingDate"
+          <input 
+            type="date" 
+            class="form-control" 
+            id="lastWorkingDate"
+            formControlName="lastWorkingDate"
             [class.is-invalid]="form.get('lastWorkingDate')?.invalid && form.get('lastWorkingDate')?.touched">
-          <div *ngIf="form.get('lastWorkingDate')?.invalid && form.get('lastWorkingDate')?.touched"
+          <div 
+            *ngIf="form.get('lastWorkingDate')?.invalid && form.get('lastWorkingDate')?.touched" 
             class="invalid-feedback">
             <i class="bi bi-exclamation-triangle me-1"></i>
             Last working date is required
           </div>
         </div>
-
+        
         <!-- Notice Period -->
         <div class="col-md-6">
           <label for="noticePeriodServed" class="form-label">Notice Period (Days) *</label>
-          <input type="number" class="form-control" id="noticePeriodServed" formControlName="noticePeriodServed" min="0"
+          <input 
+            type="number" 
+            class="form-control" 
+            id="noticePeriodServed"
+            formControlName="noticePeriodServed"
+            min="0"
             placeholder="Enter notice period in days"
             [class.is-invalid]="form.get('noticePeriodServed')?.invalid && form.get('noticePeriodServed')?.touched">
-          <div *ngIf="form.get('noticePeriodServed')?.invalid && form.get('noticePeriodServed')?.touched"
+          <div 
+            *ngIf="form.get('noticePeriodServed')?.invalid && form.get('noticePeriodServed')?.touched" 
             class="invalid-feedback">
             <i class="bi bi-exclamation-triangle me-1"></i>
             Notice period is required and must be 0 or greater
           </div>
         </div>
-
+        
         <!-- Separation Reason -->
         <div class="col-12">
           <label for="separationReason" class="form-label">Separation Reason *</label>
-          <textarea class="form-control" id="separationReason" rows="3" formControlName="separationReason"
+          <textarea 
+            class="form-control" 
+            id="separationReason" 
+            rows="3"
+            formControlName="separationReason"
             placeholder="Provide detailed reason for separation..."
             [class.is-invalid]="form.get('separationReason')?.invalid && form.get('separationReason')?.touched"></textarea>
-          <div *ngIf="form.get('separationReason')?.invalid && form.get('separationReason')?.touched"
+          <div 
+            *ngIf="form.get('separationReason')?.invalid && form.get('separationReason')?.touched" 
             class="invalid-feedback">
             <i class="bi bi-exclamation-triangle me-1"></i>
             Separation reason is required
           </div>
         </div>
-
+        
         <!-- Resignation Letter Path -->
         <div class="col-md-6">
           <label for="resignationLetterPath" class="form-label">Resignation Letter Path</label>
-          <input type="text" class="form-control" id="resignationLetterPath" formControlName="resignationLetterPath"
+          <input 
+            type="text" 
+            class="form-control" 
+            id="resignationLetterPath"
+            formControlName="resignationLetterPath"
             placeholder="Path to resignation letter (optional)">
           <small class="form-text text-muted">Optional: Provide file path or URL to resignation letter</small>
         </div>
-
+        
         <!-- Rehire Eligible -->
         <div class="col-md-6">
           <label class="form-label">Rehire Eligibility</label>
           <div class="form-check mt-2">
-            <input class="form-check-input" type="checkbox" id="rehireEligible" formControlName="rehireEligible">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="rehireEligible"
+              formControlName="rehireEligible">
             <label class="form-check-label fw-medium" for="rehireEligible">
               <i class="bi bi-arrow-repeat me-1"></i>
               Eligible for Rehire
@@ -443,11 +436,15 @@
           </div>
           <small class="form-text text-muted">Check if employee is eligible for future rehire</small>
         </div>
-
+        
         <!-- Rehire Notes -->
         <div class="col-12">
           <label for="rehireNotes" class="form-label">Rehire Notes</label>
-          <textarea class="form-control" id="rehireNotes" rows="2" formControlName="rehireNotes"
+          <textarea 
+            class="form-control" 
+            id="rehireNotes" 
+            rows="2"
+            formControlName="rehireNotes"
             placeholder="Add any notes regarding rehire eligibility (optional)"></textarea>
         </div>
       </div>
@@ -457,7 +454,10 @@
         <i class="bi bi-x-circle me-1"></i>
         Cancel
       </button>
-      <button type="submit" class="btn btn-primary" [disabled]="form.invalid || isLoading || !selectedEmployee">
+      <button 
+        type="submit" 
+        class="btn btn-primary" 
+        [disabled]="form.invalid || isLoading || !selectedEmployee">
         <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
         <i *ngIf="!isLoading" class="bi bi-check-circle me-1"></i>
         {{ isLoading ? 'Creating Separation...' : 'Create Separation' }}
@@ -519,7 +519,8 @@
               {{ option.label }}
             </option>
           </select>
-          <div *ngIf="statusForm.get('status')?.invalid && statusForm.get('status')?.touched" class="invalid-feedback">
+          <div *ngIf="statusForm.get('status')?.invalid && statusForm.get('status')?.touched" 
+               class="invalid-feedback">
             Please select a status
           </div>
         </div>
@@ -527,7 +528,8 @@
         <!-- Notes -->
         <div class="col-12">
           <label for="notes" class="form-label">Notes</label>
-          <textarea class="form-control" id="notes" rows="3" formControlName="notes"
+          <textarea class="form-control" id="notes" rows="3"
+            formControlName="notes"
             placeholder="Enter notes about this status change..."></textarea>
         </div>
       </div>
@@ -561,21 +563,21 @@
           Employee Information
         </h6>
       </div>
-
+      
       <div class="col-md-6">
         <h6 class="text-muted mb-1">Employee Name</h6>
         <p class="mb-3 fw-medium">{{ currentSeparation.employeeName || 'N/A' }}</p>
         <h6 class="text-muted mb-1">Employee ID</h6>
         <p class="mb-3 text-muted small">{{ currentSeparation.employeeId }}</p>
       </div>
-
+      
       <div class="col-md-6">
         <h6 class="text-muted mb-1">Department</h6>
         <p class="mb-3">{{ currentSeparation.department || 'N/A' }}</p>
         <h6 class="text-muted mb-1">Position</h6>
         <p class="mb-3">{{ currentSeparation.position || 'N/A' }}</p>
       </div>
-
+      
       <!-- Separation Information Section -->
       <div class="col-12">
         <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">
@@ -583,7 +585,7 @@
           Separation Information
         </h6>
       </div>
-
+      
       <div class="col-md-6">
         <h6 class="text-muted mb-1">Separation Type</h6>
         <p class="mb-3 fw-medium">{{ currentSeparation.separationType.separationName || 'N/A' }}</p>
@@ -595,7 +597,7 @@
           ID: {{ currentSeparation.initiatedBy }}
         </small>
       </div>
-
+      
       <div class="col-md-6">
         <h6 class="text-muted mb-1">Initiation Date</h6>
         <p class="mb-3">{{ currentSeparation.initiationDate | date:'mediumDate' }}</p>
@@ -604,7 +606,7 @@
         <h6 class="text-muted mb-1">Last Working Date</h6>
         <p class="mb-3">{{ currentSeparation.lastWorkingDate | date:'mediumDate' }}</p>
       </div>
-
+      
       <div class="col-md-6">
         <h6 class="text-muted mb-1">Notice Period</h6>
         <p class="mb-3">
@@ -619,7 +621,7 @@
           </span>
         </p>
       </div>
-
+      
       <div class="col-12">
         <h6 class="text-muted mb-1">Reason for Separation</h6>
         <div class="card bg-light">
@@ -628,21 +630,20 @@
           </div>
         </div>
       </div>
-
+      
       <!-- Additional Information Section -->
-      <div class="col-12"
-        *ngIf="currentSeparation.exitInterviewDate || currentSeparation.approvedBy || currentSeparation.rehireEligible">
+      <div class="col-12" *ngIf="currentSeparation.exitInterviewDate || currentSeparation.approvedBy || currentSeparation.rehireEligible">
         <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">
           <i class="bi bi-info-circle me-2"></i>
           Additional Information
         </h6>
       </div>
-
+      
       <div class="col-md-6" *ngIf="currentSeparation.exitInterviewDate">
         <h6 class="text-muted mb-1">Exit Interview Date</h6>
         <p class="mb-3">{{ currentSeparation.exitInterviewDate | date:'mediumDate' }}</p>
       </div>
-
+      
       <div class="col-md-6">
         <h6 class="text-muted mb-1">Clearance Status</h6>
         <p class="mb-3">
@@ -651,7 +652,7 @@
           </span>
         </p>
       </div>
-
+      
       <div class="col-12" *ngIf="currentSeparation.exitInterviewNotes">
         <h6 class="text-muted mb-1">Exit Interview Notes</h6>
         <div class="card bg-light">
@@ -660,29 +661,28 @@
           </div>
         </div>
       </div>
-
+      
       <div class="col-md-6" *ngIf="currentSeparation.approvedBy">
         <h6 class="text-muted mb-1">Approved By</h6>
         <p class="mb-3 fw-medium">{{ getApproverName(currentSeparation) }}</p>
         <small class="text-muted">ID: {{ currentSeparation.approvedBy }}</small>
       </div>
-
+      
       <div class="col-md-6" *ngIf="currentSeparation.approvalDate">
         <h6 class="text-muted mb-1">Approval Date</h6>
         <p class="mb-3">{{ currentSeparation.approvalDate | date:'mediumDate' }}</p>
       </div>
-
+      
       <div class="col-md-6">
         <h6 class="text-muted mb-1">Rehire Eligible</h6>
         <p class="mb-3">
           <span class="badge" [ngClass]="currentSeparation.rehireEligible ? 'bg-success' : 'bg-danger'">
-            <i class="bi" [ngClass]="currentSeparation.rehireEligible ? 'bi-check-circle' : 'bi-x-circle'"
-              class="me-1"></i>
+            <i class="bi" [ngClass]="currentSeparation.rehireEligible ? 'bi-check-circle' : 'bi-x-circle'" class="me-1"></i>
             {{ currentSeparation.rehireEligible ? 'Yes' : 'No' }}
           </span>
         </p>
       </div>
-
+      
       <div class="col-12" *ngIf="currentSeparation.rehireNotes">
         <h6 class="text-muted mb-1">Rehire Notes</h6>
         <div class="card bg-light">
