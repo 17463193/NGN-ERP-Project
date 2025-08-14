@@ -93,5 +93,6 @@ export class DepartmentService {
   // Update department
   updateDepartment(deptId: string, departmentData: any): Observable<DepartmentResponse> {
     return this.http.put<DepartmentResponse>(`${this.apiUrl}/${deptId}`, departmentData);
+
   }
 }

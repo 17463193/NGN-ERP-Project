@@ -25,12 +25,20 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        redirectTo: '/default',
+        redirectTo: '/guest/login',
         pathMatch: 'full'
+      },
+      {
+        path: 'dashboard',
+        loadChildren: () => import('./demo/dashboard/dashboard.module').then(m => m.DashboardModule)
       },
       {
         path: 'default',
         loadComponent: () => import('./demo/dashboard/default/default.component').then((c) => c.DefaultComponent)
+      },
+      {
+        path: 'employees',
+        loadChildren: () => import('./demo/dashboard/dashboard.module').then(m => m.DashboardModule)
       },
       {
         path: 'attendence',
@@ -134,18 +142,7 @@ export const routes: Routes = [
             title: 'Calendar Overview',
             loadComponent: () => import('./demo/Calendar/calendar-overview/calendar-overview.component').then((c) => c.CalendarOverviewComponent)
           },
-          // Add New Calendar
-          {
-            path: 'add',
-            title: 'Add New Calendar',
-            loadComponent: () => import('./demo/Calendar/add-calendar/add-calendar.component').then((c) => c.AddCalendarComponent)
-          },
-          // Edit Existing Calendar (with full parameters)
-          {
-            path: 'edit/:id/:org/:branch/:year',
-            title: 'Edit Calendar',
-            loadComponent: () => import('./demo/Calendar/edit-calendar/edit-calendar.component').then((c) => c.EditCalendarComponent)
-          },
+      
           // View Calendar Details (with full parameters)
           {
             path: 'details/:id/:branchId/:year',
@@ -207,10 +204,25 @@ export const routes: Routes = [
         loadComponent: () => import('./demo/Transfer/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
       },
       {
+        path: 'emp-type',
+        loadComponent: () => import('./demo/Transfer/emp-type/emp-type.component').then((c) => c.EmpTypeComponent)
+      },
+      {
         path: 'emp-separation',
-        loadComponent: () => import('./demo/emp-separation/emp-separation.component').then((c) => c.EmpSeparationComponent)
-      }
-
+          loadComponent: () => import('./demo/employee-separation/emp-separation/emp-separation.component').then((c) => c.EmpSeparationComponent)
+        },
+      {
+        path: 'separation-type',
+        loadComponent: () => import('./demo/employee-separation/separation-type/separation-type.component').then((c) => c.SeparationTypeComponent)
+      },
+      {
+        path: 'emp-transfer',
+        loadComponent: () => import('./demo/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
+      },
+      // {
+      //   path: 'emp-separation',
+      //   loadComponent: () => import('./demo/emp-separation/emp-separation.component').then((c) => c.EmpSeparationComponent)
+      // }
     ]
   },
   {

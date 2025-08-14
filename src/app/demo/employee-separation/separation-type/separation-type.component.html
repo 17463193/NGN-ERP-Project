@@ -1,0 +1,325 @@
+<div class="separation-type-container">
+  <!-- Header Section -->
+  <div class="header">
+    <div class="title">
+      <h2>Separation Types</h2>
+      <p>View different types of employee separations in your organization.</p>
+    </div>
+    <div class="controls">
+      <button class="add-btn" (click)="openAddModal()" [disabled]="isLoading">
+        <i class="ti ti-plus"></i>
+        <span>Add Type</span>
+      </button>
+      <button class="add-btn" (click)="exportToExcel()" [disabled]="isLoading">
+        <i class="bi bi-download me-2"></i>
+        <span>Export</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div *ngIf="isLoading" class="text-center p-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2 text-muted">Loading data...</p>
+  </div>
+
+  <!-- Search and Filter Row -->
+  <div class="search-filter-row" *ngIf="!isLoading">
+    <div class="d-flex justify-content-end w-100">
+      <div class="search-filter-content">
+        <div class="search-input-wrapper">
+          <i class="bi bi-search"></i>
+          <input type="text" placeholder="Search..." [(ngModel)]="searchQuery" (input)="applySearch()"
+            [disabled]="isLoading">
+        </div>
+
+        <div class="filter-container">
+          <button class="filter-icon" [disabled]="isLoading">
+            <i class="bi bi-funnel"></i>
+            <span>Filters</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Separation Types List Table-->
+  <div class="transfer-table" style="overflow-x: auto;" *ngIf="!isLoading">
+    <table>
+      <thead>
+        <tr>
+          <!-- <th>Organization Name</th> -->
+          <th>Category</th>
+          <th>Separation Code</th>
+          <th>Separation Name</th>
+          <th>Notice Period</th>
+          <th>Exit Interview</th>
+          <th>Rehire Eligible</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let type of paginatedTypes">
+          <!-- <td>{{ getOrgName(type.orgId) }}</td> -->
+          <td>{{ type.category || 'N/A' }}</td>
+          <td>{{ type.separationCode || 'N/A' }}</td>
+          <td>
+            {{ type.separationName || 'N/A' }}
+          </td>
+          <td>{{ type.noticePeriodDays || 0 }} days</td>
+          <td>
+            <span class="badge" [ngClass]="type.exitInterviewRequired ? 'bg-success' : 'bg-secondary'">
+              {{ type.exitInterviewRequired ? 'Required' : 'Not Required' }}
+            </span>
+          </td>
+          <td>
+            <span class="badge" [ngClass]="type.rehireEligible ? 'bg-success' : 'bg-secondary'">
+              {{ type.rehireEligible ? 'Yes' : 'No' }}
+            </span>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="view-btn" (click)="openViewModal(type)" title="View" [disabled]="isLoading">
+                <i class="bi bi-eye"></i>
+              </button>
+              <button class="edit-btn" (click)="openEditModal(type)" title="Edit" [disabled]="isLoading">
+                <i class="bi bi-pencil"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="filteredTypes.length === 0 && !isLoading">
+          <td colspan="8" class="text-center py-4">
+            <div class="text-muted">
+              <i class="bi bi-inbox fs-1"></i>
+              <p class="mb-0 mt-2">No separation types found</p>
+              <small *ngIf="searchQuery">Try adjusting your search criteria</small>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="filteredTypes.length > 0 && !isLoading">
+    <div class="text-muted">
+      Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
+      {{ getMathMin(currentPage * itemsPerPage, filteredTypes.length) }} of
+      {{ filteredTypes.length }} entries
+    </div>
+    <nav *ngIf="totalPages > 1">
+      <ul class="pagination mb-0">
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <a class="page-link" href="#" (click)="changePage(currentPage - 1); $event.preventDefault()">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        <li class="page-item" *ngFor="let page of [].constructor(totalPages); let i = index"
+          [class.active]="i + 1 === currentPage">
+          <a class="page-link" href="#" (click)="changePage(i + 1); $event.preventDefault()">
+            {{ i + 1 }}
+          </a>
+        </li>
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <a class="page-link" href="#" (click)="changePage(currentPage + 1); $event.preventDefault()">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<!-- Add/Edit Separation Type Modal -->
+<ng-template #addEditModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title fw-bold">{{ isEditMode ? 'Edit' : 'Add' }} Separation Type</h5>
+    <button type="button" class="btn-close" (click)="modal.dismiss()" aria-label="Close"></button>
+  </div>
+  <div class="modal-body">
+    <form [formGroup]="typeForm" (ngSubmit)="onSubmit()" novalidate>
+      <div class="row g-3">
+        <!-- Organization Selection -->
+        <div class="col-md-12">
+          <label class="form-label">Organization <span class="text-danger">*</span></label>
+          <select class="form-select" formControlName="orgId"
+            [class.is-invalid]="f['orgId']?.invalid && (f['orgId']?.dirty || f['orgId']?.touched)">
+            <option value="" disabled>Select Organization</option>
+            <option *ngFor="let org of organizations" [value]="org.orgId">
+              {{ org.orgName }}
+            </option>
+          </select>
+          <div *ngIf="f['orgId']?.invalid && (f['orgId']?.dirty || f['orgId']?.touched)" class="invalid-feedback">
+            <div *ngIf="f['orgId']?.errors?.['required']">Organization is required</div>
+          </div>
+          <div *ngIf="organizations.length === 0" class="form-text text-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            No organizations available. Please check your API configuration.
+          </div>
+        </div>
+
+        <!-- Separation Name -->
+        <div class="col-md-6">
+          <label class="form-label">Separation Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" formControlName="separationName" placeholder="Enter separation name"
+            [class.is-invalid]="f['separationName']?.invalid && (f['separationName']?.dirty || f['separationName']?.touched)">
+          <div *ngIf="f['separationName']?.invalid && (f['separationName']?.dirty || f['separationName']?.touched)"
+            class="invalid-feedback">
+            <div *ngIf="f['separationName']?.errors?.['required']">Separation name is required</div>
+            <div *ngIf="f['separationName']?.errors?.['maxlength']">Name must be less than 100 characters</div>
+          </div>
+        </div>
+
+        <!-- Separation Code -->
+        <div class="col-md-6">
+          <label class="form-label">Separation Code <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" formControlName="separationCode" placeholder="Enter separation code"
+            [class.is-invalid]="f['separationCode']?.invalid && (f['separationCode']?.dirty || f['separationCode']?.touched)">
+          <div *ngIf="f['separationCode']?.invalid && (f['separationCode']?.dirty || f['separationCode']?.touched)"
+            class="invalid-feedback">
+            <div *ngIf="f['separationCode']?.errors?.['required']">Separation code is required</div>
+            <div *ngIf="f['separationCode']?.errors?.['maxlength']">Code must be less than 20 characters</div>
+          </div>
+        </div>
+
+        <!-- Category -->
+        <div class="col-md-6">
+          <label class="form-label">Category <span class="text-danger">*</span></label>
+          <select class="form-select" formControlName="category"
+            [class.is-invalid]="f['category']?.invalid && (f['category']?.dirty || f['category']?.touched)">
+            <option value="" disabled selected>Select a category</option>
+            <option *ngFor="let category of categories" [value]="category">
+              {{ category }}
+            </option>
+          </select>
+          <div *ngIf="f['category']?.invalid && (f['category']?.dirty || f['category']?.touched)"
+            class="invalid-feedback">
+            <div *ngIf="f['category']?.errors?.['required']">Category is required</div>
+          </div>
+        </div>
+
+        <!-- Notice Period -->
+        <div class="col-md-6">
+          <label class="form-label">Notice Period (Days) <span class="text-danger">*</span></label>
+          <input type="number" class="form-control" formControlName="noticePeriodDays" min="0" placeholder="0"
+            [class.is-invalid]="f['noticePeriodDays']?.invalid && (f['noticePeriodDays']?.dirty || f['noticePeriodDays']?.touched)">
+          <div
+            *ngIf="f['noticePeriodDays']?.invalid && (f['noticePeriodDays']?.dirty || f['noticePeriodDays']?.touched)"
+            class="invalid-feedback">
+            <div *ngIf="f['noticePeriodDays']?.errors?.['required']">Notice period is required</div>
+            <div *ngIf="f['noticePeriodDays']?.errors?.['min']">Notice period cannot be negative</div>
+          </div>
+        </div>
+
+        <!-- Exit Interview Required -->
+        <div class="col-md-6">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" formControlName="exitInterviewRequired"
+              id="exitInterviewCheckbox">
+            <label class="form-check-label" for="exitInterviewCheckbox">Exit Interview Required</label>
+          </div>
+        </div>
+
+        <!-- Rehire Eligible -->
+        <div class="col-md-6">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" formControlName="rehireEligible" id="rehireEligibleCheckbox">
+            <label class="form-check-label" for="rehireEligibleCheckbox">Rehire Eligible</label>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()" [disabled]="isLoading">Cancel</button>
+    <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="typeForm.invalid || isLoading">
+      <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1"></span>
+      {{ isEditMode ? 'Update' : 'Save' }}
+    </button>
+  </div>
+</ng-template>
+
+<!-- View Separation Type Modal -->
+<ng-template #viewModal let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title fw-bold">Separation Type Details</h5>
+    <button type="button" class="btn-close" (click)="modal.dismiss()" aria-label="Close"></button>
+  </div>
+  <div class="modal-body">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-body">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h6 class="text-muted">Separation Name</h6>
+                <p class="mb-0">{{ currentType?.separationName || 'N/A' }}</p>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-muted">Code</h6>
+                <p class="mb-0">{{ currentType?.separationCode || 'N/A' }}</p>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h6 class="text-muted">Category</h6>
+                <p class="mb-0">{{ currentType?.category || 'N/A' }}</p>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-muted">Organization</h6>
+                <p class="mb-0">{{ getOrgName(currentType?.orgId || '') }}</p>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h6 class="text-muted">Notice Period</h6>
+                <p class="mb-0">{{ currentType?.noticePeriodDays || 0 }} days</p>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-muted">Separation Type ID</h6>
+                <p class="mb-0">{{ currentType?.separationTypeId || 'N/A' }}</p>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="text-muted">Exit Interview</h6>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" [checked]="currentType?.exitInterviewRequired" disabled>
+                  <label class="form-check-label">
+                    {{ currentType?.exitInterviewRequired ? 'Required' : 'Not Required' }}
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-muted">Rehire Eligible</h6>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" [checked]="currentType?.rehireEligible" disabled>
+                  <label class="form-check-label">
+                    {{ currentType?.rehireEligible ? 'Yes' : 'No' }}
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="row mt-3" *ngIf="currentType?.createdDate">
+              <div class="col-md-12">
+                <h6 class="text-muted">Created Date</h6>
+                <p class="mb-0">{{ currentType?.createdDate | date:'medium' }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Close</button>
+    <button type="button" class="btn btn-primary" (click)="openEditModal(currentType!); modal.dismiss()"
+      *ngIf="currentType">
+      <i class="bi bi-pencil me-1"></i>
+      Edit
+    </button>
+  </div>
+</ng-template>

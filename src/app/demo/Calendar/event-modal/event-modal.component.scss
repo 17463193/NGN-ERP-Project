@@ -127,6 +127,11 @@
         transition: all 0.15s ease;
       }
 
+      .existing-holiday {
+        border: 2px solid #17a2b8 !important;
+        box-shadow: 0 0 0 1px #fff;
+      }
+
       span {
         cursor: pointer;
         height: 32px;
@@ -162,6 +167,48 @@
         color: #6c757d;
         font-size: 0.8rem;
         font-style: italic;
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+
+      .calendar-legend {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+
+          .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+
+            &.full-day {
+              background: #1abc9c;
+            }
+
+            &.half-day {
+              background: #e74c3c;
+            }
+
+            &.existing-holiday {
+              background: #17a2b8;
+              border: 1px solid #17a2b8;
+            }
+          }
+
+          small {
+            font-size: 0.7rem;
+            color: #6c757d;
+            margin: 0;
+          }
+        }
       }
     }
 
@@ -425,11 +472,39 @@
 
   .event-header {
     margin-bottom: 1rem;
+    position: relative;
 
     h4 {
       margin: 0 0 0.75rem 0;
       color: #333;
       font-size: 1.05rem;
+    }
+
+    .existing-badge {
+      position: absolute;
+      top: 0;
+      right: 0;
+      
+      .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        background-color: #17a2b8;
+        color: white;
+        font-weight: 500;
+      }
+    }
+  }
+
+  // Style for existing holidays
+  &.existing-holiday {
+    border-left: 4px solid #17a2b8;
+    background-color: #f8f9fa;
+    
+    .event-header {
+      h4 {
+        color: #495057;
+      }
     }
   }
 }

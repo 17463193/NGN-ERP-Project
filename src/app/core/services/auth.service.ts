@@ -19,6 +19,7 @@ export interface User {
   userId: string;
   empId: string;
   ctoId?: string;
+  hrId?: string;
   username: string;
   email: string;
   accountStatus: string;
@@ -76,11 +77,12 @@ export class AuthService {
     return user.roleName === 'CTO'
       ? (user.ctoId || user.userId)
       : (user.empId || user.userId);
+      
   }
 
   // Define role constants
-  readonly ADMIN_ROLE = 'Admin';
-  readonly CTO_ROLE = 'CTO';
+  ADMIN_ROLE = 'admin';
+  CTO_ROLE = 'CTO';
   readonly EMPLOYEE_ROLE = 'Employee';
 
   constructor(private router: Router, private http: HttpClient) {
@@ -106,7 +108,7 @@ export class AuthService {
 
   public get isAdminOrCTO(): boolean {
     const user = this.currentUserValue;
-    return user ? ['Admin', 'CTO'].includes(user.roleName) : false;
+    return user ? ['admin', 'CTO'].includes(user.roleName) : false;
   }
   getEmployeeByEmpId(empId: string): Observable<any> {
   return this.http.get(`${environment.apiUrl}/api/v1/employees/${empId}`).pipe(
@@ -124,6 +126,7 @@ updateCurrentUser(user: User): void {
     this.permissionsSubject.next(user.permissions);
   }
 }
+
   login(username: string, password: string): Observable<boolean> {
   const url = `${environment.apiUrl}/api/auth/login`;
 
@@ -174,6 +177,53 @@ updateCurrentUser(user: User): void {
           this.permissionsSubject.next(permissions);
         }),
         map(() => true)
+      
+      // First, get the role details from the API
+      return this.http.get<any>(
+        `${environment.apiUrl}/api/v1/user-roles/${userData.roleId}`
+      ).pipe(
+        switchMap(roleResponse => {
+          // Now we have the role details
+          const roleName = roleResponse.roleName;
+          const roleCode = roleResponse.roleCode;
+
+          // Create the base user object with role-based ID handling
+          const baseUser: User = {
+            userId: userData.userId,
+            empId: roleName === 'Employee' ? userData.empId : undefined,
+            ctoId: roleName === 'CTO' ? (userData.ctoId || userData.userId) : undefined,
+            username: userData.username,
+            email: userData.email,
+            accountStatus: userData.accountStatus,
+            roleId: userData.roleId,
+            roleName: roleName,
+            roleCode: roleCode,
+            mustChangePassword: userData.mustChangePassword,
+            accessToken: loginResponse.data.accessToken,
+            refreshToken: loginResponse.data.refreshToken,
+            getRoleBasedId: function() {
+              return this.roleName === 'CTO' 
+                ? (this.ctoId || this.userId) 
+                : (this.empId || this.userId);
+            }
+          };
+
+          // Then get the permissions for this role
+          return this.http.get<Permission[]>(
+            `${environment.apiUrl}/api/v1/role-permissions/role/${userData.roleId}/permissions`
+          ).pipe(
+            tap(permissions => {
+              const completeUser = {
+                ...baseUser,
+                permissions: permissions
+              };
+              localStorage.setItem('currentUser', JSON.stringify(completeUser));
+              this.currentUserSubject.next(completeUser);
+              this.permissionsSubject.next(permissions);
+            }),
+            map(() => true)
+          );
+        })
       );
     }),
     catchError(error => {

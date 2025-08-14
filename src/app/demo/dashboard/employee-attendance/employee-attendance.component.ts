@@ -2,11 +2,24 @@ import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Subject, of, throwError } from 'rxjs';
-import { debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
+import { Subject, of, throwError, forkJoin, map } from 'rxjs';
+import { debounceTime, distinctUntilChanged, catchError, finalize } from 'rxjs/operators';
 import { SharedModule } from 'src/app/theme/shared/shared.module';
-import { HttpClient, HttpClientModule, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpClientModule, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { AuthService } from 'src/app/core/services/auth.service';
+
+interface AttendanceApiResponse {
+  content: any[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
 
 interface EmployeeAttendance {
   id?: string;
@@ -31,35 +44,32 @@ interface EmployeeAttendance {
   overTime?: string;
 }
 
-// Fix the Department interface to match all properties you're using
 interface Department {
-  id?: string;  // Add this
+  id?: string;
   dept_id: string;
   dept_name: string;
   dept_code: string;
   org_name: string;
   branch_name: string;
-  branchId?: string; // Add this if needed
-  name?: string;     // Add this if needed
-  code?: string;     // Add this if needed
-  isMainBranch?: boolean; // Add this
+  branchId?: string;
+  name?: string;
+  code?: string;
+  isMainBranch?: boolean;
   budget_allocation: number;
   sub_departments_count: number;
 }
 
-// Fix the Branch interface
 interface Branch {
-  id?: string;       // Add this
+  id?: string;
   branchId: string;
   branchName: string;
-  name?: string;     // Add this if needed
+  name?: string;
   branchCode: string;
   dzongkhag: string;
   thromde: string;
   operationalStatus: boolean;
   organizationName: string;
 }
-
 
 @Component({
   selector: 'app-employee-attendance',
@@ -96,6 +106,13 @@ export class EmployeeAttendanceComponent implements OnInit {
   deptApiUrl = `${environment.apiUrl}/api/v1/departments`;
   branchApiUrl = `${environment.apiUrl}/api/v1/branches`;
 
+  // Date filter properties
+  dateFilterForm: FormGroup;
+  showDateFilter = false;
+  currentFilterDate: string | null = null;
+  minDate: Date;
+  maxDate: Date;
+
   httpOptions = {
     headers: new HttpHeaders({
       'Content-Type': 'application/json'
@@ -103,48 +120,156 @@ export class EmployeeAttendanceComponent implements OnInit {
   };
 
   private departmentMap: { [key: string]: string } = {}
-  constructor(private http: HttpClient) { }
+
+  constructor(private http: HttpClient, 
+    private fb: FormBuilder, 
+    private authService: AuthService
+  ) { 
+    this.dateFilterForm = this.fb.group({
+      filterDate: [null]
+    });
+  }
 
   ngOnInit(): void {
+    this.initDateFilter();
+    
     this.loadBranches()
       .then(() => {
-        console.log('Branches loaded:', this.branches); // Debug logging
+        console.log('Branches loaded:', this.branches);
         return this.loadDepartments();
       })
       .then(() => {
-        console.log('Initial departments loaded'); // Debug logging
+        console.log('Initial departments loaded');
         return this.loadAttendanceData();
       })
       .catch(error => {
         console.error('Initialization error:', error);
         this.errorMessage = 'Failed to initialize data. Please refresh the page.';
       });
-    this.loadBranches().then(() => {
-      this.loadDepartments();
-      this.loadAttendanceData();
-    });
 
+    // Setup search with debouncing - when search changes, reload data with all filters
     this.searchSubject.pipe(
       debounceTime(300),
       distinctUntilChanged()
     ).subscribe((query) => {
       this.searchQuery = query;
       this.currentPage = 1;
-      this.showEmptyStateIfNeeded();
+      this.updateFilterCount();
+      
+      console.log('Search filter changed to:', query);
+      // Apply search filter on top of all existing filters
+      this.loadAttendanceData();
     });
+  }
+
+  private initDateFilter(): void {
+    const today = new Date();
+    this.maxDate = new Date(today);
+    this.minDate = new Date(today);
+    this.minDate.setMonth(today.getMonth() - 3); // Allow filtering up to 3 months back
+    
+    this.dateFilterForm = this.fb.group({
+      filterDate: [null]
+    });
+  }
+
+  toggleDateFilter(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.showDateFilter = !this.showDateFilter;
+    if (this.showDateFilter) {
+      // Reset form when opening
+      this.dateFilterForm.reset();
+      // Set default date to today if no date is selected
+      if (this.currentFilterDate) {
+        this.dateFilterForm.patchValue({
+          filterDate: this.formatDateForInput(this.currentFilterDate)
+        });
+      }
+    }
+  }
+
+ 
+
+
+
+  private formatDate(date: Date | string): string {
+    if (!date) return '--';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return '--';
+    
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Format date for input field (YYYY-MM-DD)
+  private formatDateForInput(date: string | Date): string {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return '';
+    
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Check if any filters have been applied
+  hasAppliedFilters(): boolean {
+    return this.currentFilterDate !== null || 
+           this.selectedBranchId !== '' ||
+           this.activeTab !== 'All Employee' ||
+           this.searchQuery.trim() !== '';
+  }
+
+  // Get department name for display
+  getDepartmentName(dept: string | Department): string {
+    if (typeof dept === 'string') {
+      return dept === 'All Employee' ? 'All Departments' : dept;
+    }
+    return dept.dept_name || dept.name || '--';
+  }
+
+  // Get employee's full name from the data
+  getEmployeeFullName(emp: any): string {
+    if (!emp) return '--';
+    // If name is already combined, return as is
+    if (emp.name) return emp.name;
+    // Otherwise combine first and last names if they exist
+    const firstName = emp.firstName || '';
+    const lastName = emp.lastName || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName || '--';
+  }
+
+  // Get department display name for an employee
+  getDepartmentDisplayName(emp: any): string {
+    if (!emp) return 'Unassigned';
+    // First try displayDepartment, then department, then departmentId
+    return emp.displayDepartment || emp.department || emp.departmentId || 'Unassigned';
   }
 
   get emptyStateMessage(): string {
     if (this.errorMessage) return '';
     if (this.isLoading) return '';
 
-    if (this.searchQuery || this.selectedDivision !== 'All Employee' || this.selectedStatus !== 'All Employee' || this.selectedBranch !== 'All Branches') {
-      // return 'No records match your search!';
-    }
-    return 'No employee records found.';
-  }
+    // More descriptive messages based on applied filters
+    const filtersApplied = [];
+    if (this.selectedBranchId !== '') filtersApplied.push('branch');
+    if (this.activeTab !== 'All Employee') filtersApplied.push('department');
+    if (this.selectedStatus !== 'All Employee') filtersApplied.push('status');
+    if (this.currentFilterDate) filtersApplied.push('date');
+    if (this.searchQuery.trim() !== '') filtersApplied.push('search');
 
-  private showEmptyStateIfNeeded(): void { }
+    if (filtersApplied.length > 0) {
+      return `No employees found matching the applied ${filtersApplied.join(', ')} filter(s).`;
+    }
+    
+    return 'No employee attendance records found.';
+  }
 
   private safeString(value: any): string {
     if (value === null || value === undefined) return '';
@@ -166,11 +291,9 @@ export class EmployeeAttendanceComponent implements OnInit {
           })
         ).toPromise();
 
-      // Handle response with proper typing
       this.branches = (Array.isArray(response) ? response : response?.data || []).map((branch: any) => ({
         id: branch.id || branch.branchId,
         name: branch.name || branch.branchName,
-        // Include optional properties if needed
         branchId: branch.branchId,
         branchName: branch.branchName
       }));
@@ -187,7 +310,7 @@ export class EmployeeAttendanceComponent implements OnInit {
     return new Promise((resolve, reject) => {
       let url = this.deptApiUrl;
       if (branchId) {
-        url = `${this.deptApiUrl}/branch/${branchId}`;  // Fixed string interpolation
+        url = `${this.deptApiUrl}/branch/${branchId}`;
       }
 
       this.http.get<{ success: boolean, message: string, data: Department[] }>(url, this.httpOptions)
@@ -206,7 +329,6 @@ export class EmployeeAttendanceComponent implements OnInit {
               this.filteredDepartments = [...response.data];
               this.departmentMap = {};
 
-              // Update tabDepartments with department names
               this.tabDepartments = [
                 'All Employee',
                 ...response.data.map(dept => dept.dept_name)
@@ -227,17 +349,31 @@ export class EmployeeAttendanceComponent implements OnInit {
         });
     });
   }
-  onBranchChange(): void {
+
+  onBranchChange(event?: Event): void {
+    if (event) {
+      const selectElement = event.target as HTMLSelectElement;
+      this.selectedBranchId = selectElement.value;
+    }
+    
     this.currentPage = 1;
+    this.updateFilterCount();
+    
     const branchIdToLoad = this.selectedBranchId && this.selectedBranchId !== 'undefined'
       ? this.selectedBranchId
       : undefined;
 
-    console.log('Branch changed to:', branchIdToLoad); // Debug logging
+    console.log('Branch filter changed to:', branchIdToLoad);
 
+    // Load departments for the selected branch first
     this.loadDepartments(branchIdToLoad)
       .then(() => {
-        console.log('Departments loaded, now loading attendance data');
+        console.log('Departments loaded for branch, now applying filters sequentially');
+        // Reset department filter when branch changes (optional - remove if you want to keep department selection)
+        // this.activeTab = 'All Employee';
+        // this.selectedDivision = 'All Employee';
+        
+        // Load data with the new branch filter
         this.loadAttendanceData();
       })
       .catch(error => {
@@ -245,54 +381,83 @@ export class EmployeeAttendanceComponent implements OnInit {
         this.errorMessage = 'Failed to load department data. Please try again.';
       });
   }
+
   loadAttendanceData(): void {
     this.isLoading = true;
     this.errorMessage = '';
-
-    let url = this.apiUrl;
-    const params = new URLSearchParams();
-    params.append('page', '0');
-    params.append('size', '100'); // Increase size to get more records
-
-    if (this.selectedBranchId) {
-      params.append('branchId', this.selectedBranchId);
+    
+    // Build query parameters based on applied filters
+    const params: any = {
+      page: (this.currentPage - 1).toString(),
+      size: this.itemsPerPage.toString()
+    };
+    
+    // Determine which API endpoint to use based on whether we have a date filter
+    let url: string;
+    if (this.currentFilterDate) {
+      url = `${environment.apiUrl}/api/v1/employee-attendance/date/${this.currentFilterDate}`;
+    } else {
+      url = this.apiUrl;
     }
 
-    url = `${url}?${params.toString()}`;
-    console.log('Fetching attendance data from:', url);
+    // Apply filters in sequence: Branch -> Department -> Status -> Search -> Date
+    
+    // 1. Branch filter (if selected)
+    if (this.selectedBranchId && this.selectedBranchId !== '') {
+      params.branchId = this.selectedBranchId;
+    }
+    
+    // 2. Department filter (if selected)
+    if (this.activeTab !== 'All Employee') {
+      params.department = this.activeTab;
+    }
+    
+    // 3. Status filter (if selected)
+    if (this.selectedStatus !== 'All Employee') {
+      params.status = this.selectedStatus;
+    }
+    
+    // 4. Search filter (if applied)
+    if (this.searchQuery && this.searchQuery.trim() !== '') {
+      if (this.currentFilterDate) {
+        params.employeeId = this.searchQuery.trim();
+      } else {
+        params.search = this.searchQuery.trim();
+      }
+    }
 
-    this.http.get<any>(url).pipe(
-      catchError(error => {
-        this.errorMessage = 'Failed to load attendance data. Please try again later.';
-        this.isLoading = false;
-        console.error('API Error:', error);
-        return of({ content: [], totalElements: 0 });
-      })
-    ).subscribe({
-      next: (response) => {
-        console.log('API Response:', response);
+    console.log('Loading attendance data with filters:', params);
 
-        // Handle paginated response structure
-        if (response && response.content && Array.isArray(response.content)) {
-          this.attendanceData = this.validateAttendanceData(response.content);
-          console.log('Processed attendance data:', this.attendanceData);
-        } else if (Array.isArray(response)) {
-          // Fallback for direct array response
-          this.attendanceData = this.validateAttendanceData(response);
-        } else {
-          console.warn('Unexpected response structure:', response);
+    this.http.get<any>(url, { params })
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          console.error('Error loading attendance data:', error);
+          this.errorMessage = 'Failed to load attendance data. Please try again later.';
+          return of({ content: [] });
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          // Handle both response formats: array for old endpoint, paginated for new
+          const data = response.content !== undefined ? response.content : response;
+          this.attendanceData = this.validateAttendanceData(Array.isArray(data) ? data : []);
+          
+          // Update pagination info if available
+          if (response.totalElements !== undefined) {
+            this.itemsPerPage = response.size || this.itemsPerPage;
+            this.currentPage = (response.number || 0) + 1;
+          }
+          
+          console.log('Loaded attendance data:', this.attendanceData.length, 'records');
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error in subscription:', error);
+          this.isLoading = false;
+          this.errorMessage = 'An error occurred while processing the data.';
           this.attendanceData = [];
         }
-
-        this.attendanceData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        this.isLoading = false;
-      },
-      error: (error) => {
-        this.errorMessage = 'Failed to connect to the server. Please check your network.';
-        this.isLoading = false;
-        console.error('Connection Error:', error);
-      }
-    });
+      });
   }
 
   private validateAttendanceData(data: any[]): EmployeeAttendance[] {
@@ -302,9 +467,8 @@ export class EmployeeAttendanceComponent implements OnInit {
       let displayDepartment = 'Unassigned';
       let branchId = '';
       let branchName = '';
-      // Handle department parsing from the API response
+      
       if (item?.department && typeof item.department === 'string') {
-        // Parse department string like "All Departments>E-CENTRIC"
         const deptParts = item.department.split('>');
         if (deptParts.length > 1) {
           departmentName = deptParts[deptParts.length - 1].trim();
@@ -322,6 +486,7 @@ export class EmployeeAttendanceComponent implements OnInit {
           displayDepartment = foundDept.dept_name;
         }
       }
+      
       const processedItem = {
         ...item,
         empCode: Number(item?.empCode) || 0,
@@ -343,32 +508,67 @@ export class EmployeeAttendanceComponent implements OnInit {
         totalDuration: this.formatDuration(item?.totalDuration),
         overTime: this.calculateOvertime(item)
       };
+      
       console.log('Processed item:', processedItem);
       return processedItem;
     });
   }
 
   private determineStatus(item: any): string {
+    // If no check-in time, mark as Absent
+    if (!item.actualCheckInTime || item.actualCheckInTime === '00:00:00') {
+      return 'Absent';
+    }
+
     const requiredIn = item.requiredCheckInTime;
     let requiredOut = item.requiredCheckOutTime;
     const day = (item.dayOfWeek || '').toLowerCase();
 
+    // Special case for Saturday
     if (day === 'saturday') {
       requiredOut = '13:00:00';
     }
 
-    const isRequiredInEmpty = !requiredIn || requiredIn.trim() === '' || requiredIn === '00:00:00';
-    const isRequiredOutEmpty = !requiredOut || requiredOut.trim() === '' || requiredOut === '00:00:00';
-
-    if (isRequiredInEmpty && isRequiredOutEmpty) {
-      return 'Absent';
+    // If no required check-in/out times, mark as Present as a fallback
+    if (!requiredIn || requiredIn.trim() === '' || requiredIn === '00:00:00' ||
+        !requiredOut || requiredOut.trim() === '' || requiredOut === '00:00:00') {
+      return 'Present';
     }
 
-    if (isRequiredInEmpty || isRequiredOutEmpty) {
-      return 'Leave';
+    // Check for late check-in
+    const actualIn = this.timeToMinutes(item.actualCheckInTime);
+    const requiredInTime = this.timeToMinutes(requiredIn);
+    
+    if (actualIn > requiredInTime) {
+      return 'Late';
     }
 
+    // Check for early departure if check-out time exists
+    if (item.actualCheckOutTime && item.actualCheckOutTime !== '00:00:00') {
+      const actualOut = this.timeToMinutes(item.actualCheckOutTime);
+      const requiredOutTime = this.timeToMinutes(requiredOut);
+      
+      if (actualOut < requiredOutTime) {
+        return 'Early Departure';
+      }
+    }
+
+    // Default to Present if no other conditions met
     return 'Present';
+  }
+
+  // Helper method to convert time string to minutes since midnight
+  private timeToMinutes(timeStr: string): number {
+    if (!timeStr) return 0;
+    
+    // Handle formats like '09:00:00' or '09:00'
+    const timeParts = timeStr.split(':');
+    if (timeParts.length >= 2) {
+      const hours = parseInt(timeParts[0], 10) || 0;
+      const minutes = parseInt(timeParts[1], 10) || 0;
+      return hours * 60 + minutes;
+    }
+    return 0;
   }
 
   private calculateOvertime(item: any): string {
@@ -402,73 +602,33 @@ export class EmployeeAttendanceComponent implements OnInit {
 
   selectTab(dept: string): void {
     this.activeTab = dept;
-    this.currentPage = 1;
-
-    if (dept === 'All Employee') {
-      this.selectedDivision = 'All Employee';
-    } else {
-      const foundDept = this.divisions.find(d =>
-        d.name === dept || d.code === dept
-      );
-      this.selectedDivision = foundDept ? (foundDept.isMainBranch ? foundDept.name : foundDept.code) : dept;
-    }
-
-    this.showEmptyStateIfNeeded();
-  }
-
-  setBranchFilter(branchId: string): void {
-    this.selectedBranchId = branchId;
-    this.selectedBranch = branchId === '' ? 'All Branches' :
-      this.branches.find(b => b.id === branchId)?.name || 'All Branches';
+    this.selectedDivision = dept;
     this.currentPage = 1;
     this.updateFilterCount();
-    this.onBranchChange(); // This will trigger department and data reload
+    
+    console.log('Department filter changed to:', dept);
+    // Apply department filter on top of existing branch filter
+    this.loadAttendanceData();
   }
-  applyFilters(): void {
+
+  setStatusFilter(status: string): void {
+    this.selectedStatus = status;
     this.currentPage = 1;
-    this.showEmptyStateIfNeeded();
+    this.updateFilterCount();
+    
+    console.log('Status filter changed to:', status);
+    // Apply status filter on top of existing branch and department filters
+    this.loadAttendanceData();
   }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
+  }
+
   get filteredAttendance(): EmployeeAttendance[] {
+    // Return data as-is since filtering is now handled by the backend API
     if (!this.attendanceData?.length) return [];
-
-    const query = this.safeLowerString(this.searchQuery);
-    const status = this.safeLowerString(this.selectedStatus);
-    const branch = this.safeLowerString(this.selectedBranch);
-
-    return this.attendanceData.filter(emp => {
-      if (this.selectedDivision !== 'All Employee') {
-        const foundDept = this.divisions.find(d =>
-          (d.isMainBranch ? d.name : d.code) === this.selectedDivision
-        );
-        if (!foundDept || emp.departmentId !== foundDept.id) {
-          return false;
-        }
-      }
-
-      if (status !== 'all employee') {
-        const empStatus = this.safeLowerString(emp.status);
-        if (empStatus !== status) return false;
-      }
-
-      if (branch !== 'all branches') {
-        const empBranch = this.safeLowerString(emp.branchId);
-        if (!empBranch.includes(branch)) return false;
-      }
-
-      if (query) {
-        const empName = this.safeLowerString(emp.name);
-        const empId = this.safeString(emp.employeeId);
-        const empDept = this.safeLowerString(emp.department);
-
-        if (!empName.includes(query) &&
-          !empId.includes(query) &&
-          !empDept.includes(query)) {
-          return false;
-        }
-      }
-
-      return true;
-    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    return this.attendanceData;
   }
 
   get totalPages(): number {
@@ -483,40 +643,24 @@ export class EmployeeAttendanceComponent implements OnInit {
   previousPage(): void {
     if (this.currentPage > 1) {
       this.currentPage--;
+      this.loadAttendanceData();
     }
   }
 
   nextPage(): void {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
+      this.loadAttendanceData();
     }
-  }
-
-  toggleFilters(): void {
-    this.showFilters = !this.showFilters;
-  }
-
-  setDivisionFilter(departmentName: string): void {
-    this.selectedDivision = departmentName;
-    this.currentPage = 1;
-    this.updateFilterCount();
-    this.showFilters = false;
-    this.showEmptyStateIfNeeded();
-  }
-
-  setStatusFilter(status: string): void {
-    this.selectedStatus = status;
-    this.currentPage = 1;
-    this.updateFilterCount();
-    this.showFilters = false;
-    this.showEmptyStateIfNeeded();
   }
 
   private updateFilterCount(): void {
     this.filterCount =
-      (this.selectedDivision !== 'All Employee' ? 1 : 0) +
+      (this.activeTab !== 'All Employee' ? 1 : 0) +
       (this.selectedStatus !== 'All Employee' ? 1 : 0) +
-      (this.selectedBranch !== 'All Branches' ? 1 : 0);
+      (this.selectedBranchId !== '' ? 1 : 0) +
+      (this.currentFilterDate ? 1 : 0) +
+      (this.searchQuery.trim() !== '' ? 1 : 0);
   }
 
   onSearchInput(event: Event): void {
@@ -524,7 +668,93 @@ export class EmployeeAttendanceComponent implements OnInit {
     this.searchSubject.next(value);
   }
 
-  formatDate(dateString: string): string {
+  applyDateFilter(): void {
+    const selectedDate = this.dateFilterForm.get('filterDate')?.value;
+    if (selectedDate) {
+      // Convert to YYYY-MM-DD format string for the API
+      this.currentFilterDate = this.formatDate(new Date(selectedDate));
+      this.showDateFilter = false;
+      this.currentPage = 1;
+      this.updateFilterCount();
+      
+      console.log('Date filter applied:', this.currentFilterDate);
+      // Apply date filter on top of all existing filters
+      this.loadAttendanceData();
+    }
+  }
+
+  clearDateFilter(): void {
+    this.currentFilterDate = null;
+    this.dateFilterForm.reset();
+    this.showDateFilter = false;
+    this.currentPage = 1;
+    this.updateFilterCount();
+    this.loadAttendanceData()
+
+    console.log('Date filter cleared');
+    // Reload data without date filter but keep other filters
+    this.loadAttendanceData();
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.searchSubject.next('');
+    console.log('Search filter cleared');
+    // Reload data without search but keep other filters
+    this.loadAttendanceData();
+  }
+
+  clearAllFilters(): void {
+    console.log('Clearing all filters');
+    this.selectedBranchId = '';
+    this.activeTab = 'All Employee';
+    this.selectedDivision = 'All Employee';
+    this.selectedStatus = 'All Employee';
+    this.currentFilterDate = null;
+    this.dateFilterForm.reset();
+    this.searchQuery = '';
+    this.currentPage = 1;
+    this.updateFilterCount();
+    
+    // Reload departments for all branches
+    this.loadDepartments()
+      .then(() => {
+        // Reload data without any filters
+        this.loadAttendanceData();
+      })
+      .catch(error => {
+        console.error('Error loading departments:', error);
+        this.loadAttendanceData();
+      });
+  }
+
+  clearBranchFilter(): void {
+    console.log('Clearing branch filter');
+    this.selectedBranchId = '';
+    this.onBranchChange();
+  }
+
+  getBranchDisplayName(): string {
+    const branch = this.branches.find(b => b.branchId === this.selectedBranchId);
+    return branch?.branchName || 'Unknown';
+  }
+
+  onItemsPerPageChange(): void {
+    this.currentPage = 1;
+    this.loadAttendanceData();
+  }
+
+  goToFirstPage(): void {
+    this.currentPage = 1;
+    this.loadAttendanceData();
+  }
+
+  goToLastPage(): void {
+    this.currentPage = this.totalPages;
+    this.loadAttendanceData();
+  }
+
+  formatDateForDisplay(dateString: string): string {
     try {
       const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
       return new Date(dateString).toLocaleDateString(undefined, options);
@@ -537,10 +767,19 @@ export class EmployeeAttendanceComponent implements OnInit {
     const doc = new jsPDF({ orientation: 'landscape' });
 
     let title = 'Employee Attendance Report';
-    if (this.selectedDivision !== 'All Employee') title += ` - ${this.selectedDivision}`;
+    if (this.activeTab !== 'All Employee') title += ` - ${this.activeTab}`;
     if (this.selectedStatus !== 'All Employee') title += ` (${this.selectedStatus})`;
-    if (this.selectedBranch !== 'All Branches') title += ` [Branch: ${this.selectedBranch}]`;
+    if (this.selectedBranchId !== '') {
+      const branchName = this.branches.find(b => b.branchId === this.selectedBranchId)?.branchName || 'Unknown Branch';
+      title += ` [Branch: ${branchName}]`;
+    }
     if (this.searchQuery) title += ` [Search: "${this.searchQuery}"]`;
+    if (this.currentFilterDate) {
+      const filterDate = new Date(this.currentFilterDate);
+      const monthName = filterDate.toLocaleString('default', { month: 'long' });
+      const year = filterDate.getFullYear();
+      title += ` [${monthName} ${year}]`;
+    }
 
     doc.setFontSize(18);
     doc.text(title, 14, 15);
@@ -571,7 +810,7 @@ export class EmployeeAttendanceComponent implements OnInit {
         nameWithDept: `${item.name || 'Unknown'}`,
         displayDepartment: item.displayDepartment || item.department || 'Unassigned',
         branchName: branchName,
-        attendanceDate: this.formatDate(item.attendanceDate) || '--',
+        attendanceDate: item.attendanceDate ? this.formatDateForDisplay(item.attendanceDate) : '--',
         timePeriod: String(item.timePeriod || '--'),
         status: String(item.status || '--'),
         actualCheckInTime: String(item.actualCheckInTime || '--'),
@@ -627,20 +866,34 @@ export class EmployeeAttendanceComponent implements OnInit {
     });
 
     let filename = 'Employee_Attendance';
-    if (this.selectedDivision !== 'All Employee') filename += `_${this.selectedDivision.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    if (this.activeTab !== 'All Employee') filename += `_${this.activeTab.replace(/[^a-zA-Z0-9]/g, '_')}`;
     if (this.selectedStatus !== 'All Employee') filename += `_${this.selectedStatus.replace(/[^a-zA-Z0-9]/g, '_')}`;
-    if (this.selectedBranch !== 'All Branches') filename += `_Branch_${this.selectedBranch.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    if (this.selectedBranchId !== '') {
+      const branchName = this.branches.find(b => b.branchId === this.selectedBranchId)?.branchName || 'Branch';
+      filename += `_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    }
     if (this.searchQuery) filename += `_Search_${this.searchQuery.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '_')}`;
+    if (this.currentFilterDate) {
+      const filterDate = new Date(this.currentFilterDate);
+      const year = filterDate.getFullYear();
+      const month = (filterDate.getMonth() + 1).toString().padStart(2, '0');
+      filename += `_${year}_${month}`;
+    }
     filename += `_${new Date().toISOString().slice(0, 10)}.pdf`;
 
     doc.save(filename);
   }
 
   @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
+  onDocumentClick(event: MouseEvent) {
+    // Close date filter when clicking outside
     const target = event.target as HTMLElement;
-    if (!target.closest('.filter-section') && !target.closest('.filter-toggle')) {
-      this.showFilters = false;
+    const dateFilterButton = document.querySelector('.date-filter-button');
+    const dateFilterDropdown = document.querySelector('.date-filter-dropdown');
+    
+    if (dateFilterButton && !dateFilterButton.contains(target) && 
+        dateFilterDropdown && !dateFilterDropdown.contains(target)) {
+      this.showDateFilter = false;
     }
   }
 }

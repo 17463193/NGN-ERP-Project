@@ -37,8 +37,7 @@ export class CalendarOverviewComponent implements OnInit {
   // Holiday modal state
   selectedHolidays: Holiday[] = [];
 
-  // Add this property to track the currently edited month/year
-  editingMonthYear: { month: number, year: number } | null = null;
+
 
   constructor(
     private router: Router,
@@ -219,61 +218,7 @@ export class CalendarOverviewComponent implements OnInit {
     this.selectedHolidays = [];
   }
   
-  // Navigate to edit calendar view
-  editCalendar(branch: any) {
-    if (!branch) return;
-    
-    // Use branch ID if available, otherwise fall back to branch name
-    const branchIdentifier = branch.branchId || encodeURIComponent(branch.branch);
-    const orgName = branch.branch.split(' - ')[0];
-    
-    if (branch.id && branchIdentifier) {
-      this.router.navigate(['/calendar', 'edit', branch.id, orgName, branchIdentifier, this.selectedYear]);
-    }
-  }
 
-  // Call this when starting to edit
-  startEdit(branchData: any) {
-    if (!branchData.holidays?.length) return;
-    // Use the first holiday's date to determine the month/year
-    const firstHoliday = branchData.holidays[0];
-    const date = new Date(firstHoliday.holidayDate);
-    this.editingMonthYear = { month: date.getMonth(), year: date.getFullYear() };
-    this.editCalendar(branchData); // existing navigation
-  }
-
-  // Call this when done editing (after save/cancel)
-  clearEdit() {
-    this.editingMonthYear = null;
-  }
-
-  // Helper to check if edit should be disabled for a branch
-  isEditDisabled(branchData: any): boolean {
-    if (!this.editingMonthYear) return false;
-    if (!branchData.holidays?.length) return false;
-    const date = new Date(branchData.holidays[0].holidayDate);
-    return (
-      date.getMonth() === this.editingMonthYear.month &&
-      date.getFullYear() === this.editingMonthYear.year
-    );
-  }
   
-  // Navigate to calendar details view
-  viewDetails(branch: any) {
-    if (!branch) return;
-    
-    // Use branch ID if available, otherwise fall back to branch name
-    const branchIdentifier = branch.branchId || encodeURIComponent(branch.branch);
-    
-    if (branch.id && branchIdentifier) {
-      this.router.navigate(['/calendar', 'details', branch.id, branchIdentifier, this.selectedYear]);
-    }
-  }
-  
-  // Delete a calendar entry
-  deleteRow(index: number) {
-    if (confirm('Are you sure you want to delete this calendar?')) {
-      this.calendarData.splice(index, 1);
-    }
-  }
+
 }

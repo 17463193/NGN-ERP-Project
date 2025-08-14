@@ -48,6 +48,7 @@
           <tr>
             <th>Category Name</th>
             <th>Code</th>
+            <th>Organization</th>
             <th>Status</th>
             <th>Created Date</th>
             <th>Modified Date</th>
@@ -56,13 +57,14 @@
         </thead>
         <tbody>
           <tr *ngFor="let category of paginatedCategories">
-            <td class="fw-medium">
+            <td >
               {{ category.categoryName }}
               <div *ngIf="category.description" class="text-muted small">
                 {{ category.description }}
               </div>
             </td>
             <td>{{ category.categoryCode }}</td>
+            <td>{{ category.organizationName || 'N/A' }}</td>
             <td>
               <span class="badge" [ngClass]="getStatusBadgeClass(category.isActive)">
                 {{ getStatusText(category.isActive) }}
@@ -85,7 +87,7 @@
             </td>
           </tr>
           <tr *ngIf="filteredCategories.length === 0">
-            <td colspan="6" class="text-center py-4">
+            <td colspan="7" class="text-center py-4">
               <div class="text-muted">
                 <i class="bi bi-inbox display-6 d-block mb-2"></i>
                 <p>No training categories found</p>
@@ -128,6 +130,25 @@
       </div>
       <div class="modal-body">
         <div class="row g-3">
+          <div class="col-12">
+            <label for="organizationId" class="form-label">Organization *</label>
+            <select 
+              class="form-select" 
+              id="organizationId" 
+              formControlName="organizationId"
+              [class.is-invalid]="form.get('organizationId')?.invalid && form.get('organizationId')?.touched">
+              <option value="">Select Organization</option>
+              <option *ngFor="let org of organizations" [value]="org.orgId">
+                {{ org.orgName }}
+              </option>
+            </select>
+            <div 
+              *ngIf="form.get('organizationId')?.invalid && form.get('organizationId')?.touched" 
+              class="invalid-feedback">
+              Organization is required
+            </div>
+          </div>
+
           <div class="col-md-6">
             <label for="categoryName" class="form-label">Category Name *</label>
             <input 
@@ -159,17 +180,7 @@
           </div>
           
           <div class="col-12">
-            <label for="description" class="form-label">Description</label>
-            <textarea 
-              class="form-control" 
-              id="description" 
-              rows="3"
-              formControlName="description"
-              placeholder="Optional description for the category"></textarea>
-          </div>
-          
-          <div class="col-md-6">
-            <label for="status" class="form-label">Status *</label>
+            <label class="form-label">Status *</label>
             <div class="form-check form-check-inline">
               <label class="form-check-label" for="statusActive">
                 <input class="form-check-input" type="radio" formControlName="status" id="statusActive" value="true" [checked]="isEditMode ? currentCategory?.isActive : true">

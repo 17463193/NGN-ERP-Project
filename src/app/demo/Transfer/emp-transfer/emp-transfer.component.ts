@@ -410,18 +410,16 @@ export class EmpTransferComponent implements OnInit, OnDestroy {
   private loadAllTransferTypes(): void {
     this.isLoading = true;
     this.transferService.getTransferTypes().subscribe({
-      next: (response: any) => {
-        if (response && Array.isArray(response)) {
-          // If response is already an array, use it directly
-          this.transferTypes = response;
-        } else if (response && response.data && Array.isArray(response.data)) {
-          // If response has a data property that's an array, use that
-          this.transferTypes = response.data;
-        } else {
+
+
+      next: (transferTypes: TransferType[]) => {
+        if (!Array.isArray(transferTypes)) {
           this.errorMessage = 'Unexpected response format for transfer types';
-          console.error('Unexpected transfer types format:', response);
+          console.error('Expected an array of transfer types, got:', transferTypes);
           return;
         }
+        
+        this.transferTypes = transferTypes;
         
         // Update the transfer types map for quick lookup
         this.transferTypesMap = {}; // Reset the map
@@ -598,8 +596,11 @@ export class EmpTransferComponent implements OnInit, OnDestroy {
     this.transferService.getAllTransfers()
       .pipe(finalize(() => this.isLoading = false))
       .subscribe({
-        next: async (response) => {
-          this.transfers = response.data || [];
+
+        next: async (transfers: EmployeeTransfer[]) => {
+          this.transfers = transfers || [];
+
+
           
           // Get all unique employee IDs (both requester and approver)
           const allEmployeeIds = new Set<string>();
@@ -742,30 +743,45 @@ private async loadEmployeeNames(empIds: string[]): Promise<void> {
   }
 
   private initForm(): FormGroup {
-    const formGroup = this.fb.group({
-      // Required fields
-      empId: ['', Validators.required],
-      transferTypeId: [null, Validators.required],
+
+    return this.fb.group({
+      // Employee and transfer type
+      empId: [''],
+      transferTypeId: [null],
+      
+      // From department details
       fromDeptId: [{value: '', disabled: true}],
-      toDeptId: [null, Validators.required],
       fromBranchId: [{value: '', disabled: true}],
       fromPositionId: [{value: '', disabled: true}],
       fromManagerId: [{value: '', disabled: true}],
+      
+      // To department details
+      toDeptId: [null]
       toBranchId: [{value: '', disabled: true}],
       toPositionId: [{value: '', disabled: false}],
       toManagerId: [{value: '', disabled: true}],
       
       // Transfer details
+
       transferReason: ['', [Validators.required, Validators.minLength(10)]],
       effectiveDate: [null, Validators.required],
       transferStatus: [null, Validators.required],
+
+      transferReason: [''],
+      effectiveDate: [null],
+      transferStatus: [null],
+
       
       // Other fields
       isTemporary: [false],
       temporaryEndDate: [null],
       probationApplicable: [false],
       probationEndDate: [null],
-      relocationAllowance: [0, [Validators.required, Validators.min(0)]],
+
+
+      relocationAllowance: [0],
+
+
       employeeConsent: [false],
       notes: [''],
       consentDate: [null],
@@ -776,6 +792,12 @@ private async loadEmployeeNames(empIds: string[]): Promise<void> {
       initiationDate: [null],
       createdDate: [null],
       modifiedDate: [null]
+
+    });
+  }
+
+  // Validation has been removed as per requirements
+
     }, { 
       validators: [
         this.validateForm,
@@ -1130,4 +1152,8 @@ private async loadEmployeeNames(empIds: string[]): Promise<void> {
       showConfirmButton: false
     });
   }
+
+
 }
+
+
