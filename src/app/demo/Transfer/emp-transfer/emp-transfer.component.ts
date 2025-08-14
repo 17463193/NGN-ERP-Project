@@ -411,6 +411,7 @@ export class EmpTransferComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.transferService.getTransferTypes().subscribe({
 
+
       next: (transferTypes: TransferType[]) => {
         if (!Array.isArray(transferTypes)) {
           this.errorMessage = 'Unexpected response format for transfer types';
@@ -595,8 +596,10 @@ export class EmpTransferComponent implements OnInit, OnDestroy {
     this.transferService.getAllTransfers()
       .pipe(finalize(() => this.isLoading = false))
       .subscribe({
+
         next: async (transfers: EmployeeTransfer[]) => {
           this.transfers = transfers || [];
+
 
           
           // Get all unique employee IDs (both requester and approver)
@@ -760,6 +763,10 @@ private async loadEmployeeNames(empIds: string[]): Promise<void> {
       
       // Transfer details
 
+      transferReason: ['', [Validators.required, Validators.minLength(10)]],
+      effectiveDate: [null, Validators.required],
+      transferStatus: [null, Validators.required],
+
       transferReason: [''],
       effectiveDate: [null],
       transferStatus: [null],
@@ -771,7 +778,9 @@ private async loadEmployeeNames(empIds: string[]): Promise<void> {
       probationApplicable: [false],
       probationEndDate: [null],
 
+
       relocationAllowance: [0],
+
 
       employeeConsent: [false],
       notes: [''],
@@ -855,7 +864,6 @@ private async loadEmployeeNames(empIds: string[]): Promise<void> {
     }
     return null;
   }
-
 
   departmentValidator(group: AbstractControl): { [key: string]: boolean } | null {
     const currentDept = group.get('currentDepartment')?.value;
@@ -1144,6 +1152,8 @@ private async loadEmployeeNames(empIds: string[]): Promise<void> {
       showConfirmButton: false
     });
   }
+
+
 }
 
 

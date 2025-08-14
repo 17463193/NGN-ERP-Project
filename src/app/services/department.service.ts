@@ -67,7 +67,6 @@ export class DepartmentService {
 
   constructor(private http: HttpClient) { }
 
-
   getDepartments(): Observable<DepartmentListResponse> {
     return this.http.get<DepartmentListResponse>(this.apiUrl);
   }
@@ -95,8 +94,5 @@ export class DepartmentService {
   updateDepartment(deptId: string, departmentData: any): Observable<DepartmentResponse> {
     return this.http.put<DepartmentResponse>(`${this.apiUrl}/${deptId}`, departmentData);
 
-  // Update department
-  updateDepartment(deptId: string, departmentData: any): Observable<DepartmentResponse> {
-    return this.http.put<DepartmentResponse>(`${this.apiUrl}/${deptId}`, departmentData);
   }
 }

@@ -20,7 +20,6 @@ export interface User {
   empId: string;
   ctoId?: string;
   hrId?: string;
-
   username: string;
   email: string;
   accountStatus: string;
@@ -111,7 +110,6 @@ export class AuthService {
     const user = this.currentUserValue;
     return user ? ['admin', 'CTO'].includes(user.roleName) : false;
   }
-
   getEmployeeByEmpId(empId: string): Observable<any> {
   return this.http.get(`${environment.apiUrl}/api/v1/employees/${empId}`).pipe(
     catchError(error => {
@@ -139,6 +137,46 @@ updateCurrentUser(user: User): void {
       }
 
       const userData = loginResponse.data.user;
+      const roleId = userData.role.roleId; // Get roleId from nested role object
+      const roleName = userData.role.roleName; // Already available in response
+      const roleCode = userData.role.roleCode; // Already available in response
+
+      // Create the base user object with role-based ID handling
+      const baseUser: User = {
+        userId: userData.userId,
+        empId: roleName === 'Employee' ? userData.empId : undefined,
+        ctoId: roleName === 'CTO' ? (userData.ctoId || userData.userId) : undefined,
+        username: userData.username,
+        email: userData.email,
+        accountStatus: userData.accountStatus,
+        roleId: roleId,
+        roleName: roleName,
+        roleCode: roleCode,
+        mustChangePassword: userData.mustChangePassword,
+        accessToken: loginResponse.data.accessToken,
+        refreshToken: loginResponse.data.refreshToken,
+        getRoleBasedId: function() {
+          return this.roleName === 'CTO' 
+            ? (this.ctoId || this.userId) 
+            : (this.empId || this.userId);
+        }
+      };
+
+      // Since we already have role info, we can skip the first role fetch
+      // Just get permissions for this role
+      return this.http.get<Permission[]>(
+        `${environment.apiUrl}/api/v1/role-permissions/role/${roleId}/permissions`
+      ).pipe(
+        tap(permissions => {
+          const completeUser = {
+            ...baseUser,
+            permissions: permissions
+          };
+          localStorage.setItem('currentUser', JSON.stringify(completeUser));
+          this.currentUserSubject.next(completeUser);
+          this.permissionsSubject.next(permissions);
+        }),
+        map(() => true)
       
       // First, get the role details from the API
       return this.http.get<any>(
@@ -186,7 +224,6 @@ updateCurrentUser(user: User): void {
             map(() => true)
           );
         })
-
       );
     }),
     catchError(error => {

@@ -202,7 +202,9 @@ export class NavigationService {
     return menuItems.map(menu => this.mapMenuItemToNavigationItem(menu));
   }
 
+
   private getIconClass(menuIndication: string): string {
+
     // If menuIndication is already a valid icon class, return it directly
     if (menuIndication && menuIndication.startsWith('ti ti-')) {
       return menuIndication;
@@ -212,8 +214,8 @@ export class NavigationService {
     if (menuIndication && menuIndication.startsWith('icon-')) {
       return `ti ti-${menuIndication.substring(5)}`; // removes 'icon-' and adds 'ti ti-'
     }
-    
-    // Default icon if no valid indication is provided
-    return 'ti ti-circle';
+
+return menuIndication || '';
+
   }
 }
