@@ -2,12 +2,14 @@
 
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormArray, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
 import { catchError, throwError, tap, of } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AuthService } from 'src/app/core/services/auth.service';
+
 
 
 // =============================================
@@ -251,7 +253,8 @@ selectedOrgId: string = '';
     private fb: FormBuilder,
     private http: HttpClient,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private authService: AuthService 
   ) {
     this.initializeForm();
   }
@@ -297,11 +300,11 @@ selectedOrgId: string = '';
       accountType: [''],
 
       // Education
-      institutionName: [''],
-      degreeName: [''],
-      specialization: [''],
-      yearOfCompletion: [0],
-
+     institutionName: [''],
+    degreeName: [''],
+    specialization: [''],
+    yearOfCompletion: [0],
+educations: this.fb.array([]),
       // Address
       addressType: ['Permanent', Validators.required],
       addressLine1: ['', Validators.required],
@@ -310,7 +313,71 @@ selectedOrgId: string = '';
       dzongkhag: ['']
     });
   }
+get educations(): FormArray {
+  return this.employeeForm.get('educations') as FormArray;
+}
+addEducation(): void {
+  // First, save the main education if it has values
+  if (this.hasMainEducationValues()) {
+    this.saveMainEducationToArray();
+  }
+  
+  // Add a new empty education form group
+  this.educations.push(this.createEducationFormGroup());
+  
+  // Clear the main form
+  this.clearMainEducationForm();
+}
 
+// Check if main education form has values
+private hasMainEducationValues(): boolean {
+  return !!this.employeeForm.get('institutionName')?.value ||
+         !!this.employeeForm.get('degreeName')?.value ||
+         !!this.employeeForm.get('specialization')?.value ||
+         !!this.employeeForm.get('yearOfCompletion')?.value;
+}
+
+// Save main education to the educations array
+private saveMainEducationToArray(): void {
+  const mainEducation: Qualification = {
+    institutionName: this.employeeForm.get('institutionName')?.value,
+    degreeName: this.employeeForm.get('degreeName')?.value,
+    specialization: this.employeeForm.get('specialization')?.value,
+    yearOfCompletion: this.employeeForm.get('yearOfCompletion')?.value
+  };
+  
+  this.educations.insert(0, this.createEducationFormGroup(mainEducation));
+}
+
+// Clear main education form
+private clearMainEducationForm(): void {
+  this.employeeForm.patchValue({
+    institutionName: '',
+    degreeName: '',
+    specialization: '',
+    yearOfCompletion: 0
+  });
+}
+
+// Create education form group
+private createEducationFormGroup(education?: Qualification): FormGroup {
+  return this.fb.group({
+    qualificationId: [education?.qualificationId || ''],
+    institutionName: [education?.institutionName || '', Validators.required],
+    degreeName: [education?.degreeName || '', Validators.required],
+    specialization: [education?.specialization || ''],
+    yearOfCompletion: [education?.yearOfCompletion || null, [
+      Validators.required, 
+      Validators.min(1900), 
+      Validators.max(new Date().getFullYear())
+    ]]
+  });
+}
+
+// Remove education entry
+removeEducation(index: number): void {
+  this.educations.removeAt(index);
+}
   // =============================================
   // DATA LOADING METHODS
   // =============================================
@@ -594,33 +661,82 @@ clearAllFilters(): void {
    * Load employee data
    */
   private loadEmployees(): void {
-    this.isLoading = true;
-    this.errorMessage = '';
+  this.isLoading = true;
+  this.errorMessage = '';
 
-    this.http.get<ApiEmployeeResponse[]>(this.apiUrl, this.httpOptions)
-      .pipe(
-        catchError((error: HttpErrorResponse) => {
-          this.isLoading = false;
-          if (error.status === 404) {
-            this.errorMessage = 'API endpoint not found. Check if the server is running.';
-          } else if (error.status === 0) {
-            this.errorMessage = 'Failed to connect to server. Check your network.';
-          } else {
-            this.errorMessage = 'An unexpected error occurred.';
-          }
-          return throwError(() => error);
-        })
-      )
-      .subscribe({
-        next: (apiEmployees) => {
-          this.employees = apiEmployees.map(emp => this.mapApiEmployee(emp));
-          this.applyFilters();
-          this.isLoading = false;
-        },
-        error: () => this.isLoading = false
-      });
+  const currentUser = this.authService.currentUserValue;
+  const isAdmin = currentUser?.roleCode === 'ROLE_ADMIN';
+  const isEmployee = currentUser?.roleCode === 'ROLE_EMPLOYEE';
+  const isCTO = currentUser?.roleCode === 'ROLE_CTO';
+
+  let apiUrl = this.apiUrl;
+  
+  // If user is employee, only fetch their own data
+  if (isEmployee && currentUser?.empId) {
+    apiUrl = `${this.apiUrl}/${currentUser.empId}`;
+  }
+  // If user is CTO, maybe fetch employees in their department
+  else if (isCTO && currentUser?.ctoId) {
+    apiUrl = `${this.apiUrl}/cto/${currentUser.ctoId}`;
   }
 
+  this.http.get<ApiEmployeeResponse[] | ApiEmployeeResponse>(apiUrl, this.httpOptions)
+    .pipe(
+      catchError((error: HttpErrorResponse) => {
+        this.isLoading = false;
+        this.handleError(error);
+        return throwError(() => error);
+      })
+    )
+    .subscribe({
+      next: (response) => {
+        if (isEmployee || isCTO) {
+          // Handle single employee/limited response
+          const singleResponse = response as ApiEmployeeResponse;
+          this.employees = [this.mapApiEmployee(singleResponse)];
+        } else {
+          // Handle array response for admin
+          const arrayResponse = response as ApiEmployeeResponse[];
+          this.employees = arrayResponse.map(emp => this.mapApiEmployee(emp));
+        }
+        
+        this.applyFilters();
+        this.isLoading = false;
+      },
+      error: () => this.isLoading = false
+    });
+}
+private handleError(error: HttpErrorResponse): void {
+  if (error.status === 404) {
+    this.errorMessage = 'API endpoint not found. Check if the server is running.';
+  } else if (error.status === 0) {
+    this.errorMessage = 'Failed to connect to server. Check your network.';
+  } else if (error.status === 403) {
+    this.errorMessage = 'You do not have permission to access this resource.';
+  } else {
+    this.errorMessage = 'An unexpected error occurred.';
+  }
+}
+// user permission
+canAddEmployee(): boolean {
+  return this.authService.hasPermission('EMP_CREATE') || 
+         this.authService.currentUserValue?.roleCode === 'ROLE_ADMIN';
+}
+
+canEditEmployee(): boolean {
+  return this.authService.hasPermission('EMP_EDIT') || 
+         this.authService.currentUserValue?.roleCode === 'ROLE_ADMIN';
+}
+
+canDeleteEmployee(): boolean {
+  return this.authService.hasPermission('EMP_DELETE') || 
+         this.authService.currentUserValue?.roleCode === 'ROLE_ADMIN';
+}
+
+canExport(): boolean {
+  return this.authService.hasPermission('EMP_EXPORT') || 
+         this.authService.currentUserValue?.roleCode === 'ROLE_ADMIN';
+}
     /**
    * Map API response to local employee structure
    */
@@ -909,6 +1025,25 @@ onOrganizationChange(): void {
     if (emp.gradeId) {
       this.fetchSalaryStructure(emp.gradeId);
     }
+    while (this.educations.length) {
+    this.educations.removeAt(0);
+  }
+    if (emp.qualifications && emp.qualifications.length > 0) {
+    // Set first qualification in main form
+    const [firstQualification, ...additionalQualifications] = emp.qualifications;
+    
+    this.employeeForm.patchValue({
+      institutionName: firstQualification.institutionName,
+      degreeName: firstQualification.degreeName,
+      specialization: firstQualification.specialization,
+      yearOfCompletion: firstQualification.yearOfCompletion
+    });
+    
+    // Add remaining qualifications to educations array
+    additionalQualifications.forEach(qual => {
+      this.educations.push(this.createEducationFormGroup(qual));
+    });
+  }
   }
 
   // =============================================
@@ -924,6 +1059,9 @@ onOrganizationChange(): void {
       this.employeeForm.markAllAsTouched();
       return;
     }
+    if (this.hasMainEducationValues()) {
+    this.saveMainEducationToArray();
+  }
 
     this.isSaving = true;
     this.errorMessage = '';
@@ -984,13 +1122,16 @@ onOrganizationChange(): void {
           country: 'Bhutan',
           isCurrent: true
         }],
-        qualifications: [{
-          qualificationId: existingQualification?.qualificationId || undefined,
-          institutionName: formValue.institutionName,
-          degreeName: formValue.degreeName,
-          specialization: formValue.specialization,
-          yearOfCompletion: formValue.yearOfCompletion
-        }],
+        qualifications: [
+      // Include all educations from the array
+      ...this.educations.controls.map(control => ({
+        qualificationId: control.value.qualificationId || undefined,
+        institutionName: control.value.institutionName,
+        degreeName: control.value.degreeName,
+        specialization: control.value.specialization,
+        yearOfCompletion: control.value.yearOfCompletion
+      }))
+    ],
         bankDetails: [{
           bankDetailId: existingBankDetail?.bankDetailId || undefined,
           bankName: formValue.bankName,

@@ -41,6 +41,7 @@
     "ng-apexcharts": "1.11.0",
     "ngx-doc-viewer": "^15.0.1",
     "ngx-scrollbar": "16.1.1",
+    "ngx-toastr": "^19.0.0",
     "papaparse": "^5.5.3",
     "rxjs": "~7.8.1",
     "sweetalert2": "^11.6.13",

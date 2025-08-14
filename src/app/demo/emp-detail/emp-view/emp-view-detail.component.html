@@ -13,8 +13,17 @@
 
   <!-- Main Content -->
   <div *ngIf="employee && !isLoading">
-    <h1 class="profile-title">Employee Profile</h1>
-    
+  <h1 class="profile-title">
+    Employee Profile
+    <div class="button-group">
+      <button class="export-btn" (click)="openEditModal()">
+        <i class="fa fa-edit"></i> Edit
+      </button>
+      <button class="export-btn" (click)="exportToPDF()">
+        <i class="fa fa-download"></i> Export
+      </button>
+    </div>
+  </h1>
     <!-- Tab Navigation -->
     <div class="tab-navigation">
       <ul class="tab-list">
@@ -62,47 +71,49 @@
       <div class="overview-card">
          <div class="profile-header-container">
     <!-- Status Badge -->
-    <div class="status-badge" >
-      {{ employee.employmentStatus || '-' }}
-    </div>
+   <div *ngIf="employee">
+  <div class="status-badge" *ngIf="employee.employmentStatus">
+    {{ employee.employmentStatus || '-' }}
+  </div>
+</div>
+   
          </div>
         <!-- Profile Image -->
-        <div class="profile-image-section">
-          <div class="profile-image-wrapper">
-        
-            <div class="profile-image-placeholder" *ngIf="!profileImageUrl && !employee.profileImage">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <img *ngIf="profileImageUrl || employee.profileImage" 
-                 [src]="profileImageUrl || employee.profileImage"
-                 class="profile-image" 
-                 alt="Profile Photo">
-            <!-- Camera Icon for Upload -->
-            <div class="camera-icon-overlay">
-              <input type="file" id="profileUpload" accept="image/*" 
-                     (change)="onFileSelected($event)" style="display: none;">
-              <label for="profileUpload" class="camera-icon">
-                <i class="fa fa-camera"></i>
-              </label>
-            </div>
-          </div>
-          
-          <!-- Upload Save Button -->
-          <button *ngIf="selectedFile" 
-                  class="save-photo-btn" 
-                  (click)="uploadPhoto()"
-                  [disabled]="isUploading">
-            <span *ngIf="!isUploading">Save</span>
-            <span *ngIf="isUploading" class="spinner-sm"></span>
-          </button>
-        </div>
+<div class="profile-image-section" *ngIf="employee">
+  <div class="profile-image-wrapper">
+    <div class="profile-image-placeholder" *ngIf="!profileImageUrl && !employee.profileImage">
+      <i class="fa-solid fa-user"></i>
+    </div>
+    <img *ngIf="profileImageUrl || employee.profileImage" 
+         [src]="profileImageUrl || employee.profileImage"
+         class="profile-image" 
+         alt="Profile Photo">
+    <!-- Camera Icon for Upload -->
+    <div class="camera-icon-overlay">
+      <input type="file" id="profileUpload" accept="image/*" 
+             (change)="onFileSelected($event)" style="display: none;">
+      <label for="profileUpload" class="camera-icon">
+        <i class="fa fa-camera"></i>
+      </label>
+    </div>
+  </div>
+  
+  <!-- Upload Save Button -->
+  <button *ngIf="selectedFile" 
+          class="save-photo-btn" 
+          (click)="uploadPhoto()"
+          [disabled]="isUploading">
+    <span *ngIf="!isUploading">Save</span>
+    <span *ngIf="isUploading" class="spinner-sm"></span>
+  </button>
+</div>
 
 
-        <!-- Employee Name -->
-        <div class="employee-name-section">
-          <h2 class="employee-name">{{ employee.firstName || 'Dorji' }} {{ employee.lastName || 'Penjor' }}</h2>
-          <p class="employee-position">{{ employee.positionName || 'Programmer' }}</p>
-        </div>
+       <!-- Employee Name Section -->
+<div class="employee-name-section" *ngIf="employee">
+  <h2 class="employee-name">{{ employee?.firstName || 'N/A' }} {{ employee?.lastName || 'N/A' }}</h2>
+  <p class="employee-position">{{ employee?.positionName || 'N/A' }}</p>
+</div>
 
         <!-- Quick Info Cards -->
         <div class="quick-info-section">
@@ -110,7 +121,7 @@
             <i class="fa-regular fa-address-card info-icon"></i>
             <div class="info-content">
               <span class="info-label">Employee ID</span>
-              <span class="info-value">{{ employee.empCode || 'EMP010' }}</span>
+              <span class="info-value">{{ employee?.empCode || '-' }}</span>
             </div>
           </div>
 
@@ -118,7 +129,7 @@
             <i class="fa fa-building-user info-icon"></i>
             <div class="info-content">
               <span class="info-label">Department</span>
-              <span class="info-value">{{ employee.department || 'Ecentric' }}</span>
+              <span class="info-value">{{ employee?.department || 'Ecentric' }}</span>
             </div>
           </div>
 
@@ -126,7 +137,7 @@
             <i class="fa-regular fa-calendar-days info-icon"></i>
             <div class="info-content">
               <span class="info-label">Hire Date</span>
-              <span class="info-value">{{ formatDate(employee.hireDate) || '10 June 2025' }}</span>
+              <span class="info-value">{{ formatDate(employee?.hireDate) || '10 June 2025' }}</span>
             </div>
           </div>
 
@@ -134,7 +145,7 @@
             <i class="fa-solid fa-user-tie info-icon"></i>
             <div class="info-content">
               <span class="info-label">Position</span>
-              <span class="info-value">{{ employee.positionName || 'Backend Developer' }}</span>
+              <span class="info-value">{{ employee?.positionName || 'Backend Developer' }}</span>
             </div>
           </div>
         </div>
@@ -150,15 +161,15 @@
             <div class="content-header">
               <div class="content-badges">
                 <span class="content-badge badge-blue">
-                  <i class="fa-regular fa-address-card"></i> {{ employee.empCode || 'Not Specified' }}
+                  <i class="fa-regular fa-address-card"></i> {{ employee?.empCode || 'Not Specified' }}
                 </span>
                 <span class="content-badge badge-purple">
-                  <i class="fa fa-user-tie"></i> {{ employee.positionName || 'Not Specified' }}
+                  <i class="fa fa-user-tie"></i> {{ employee?.positionName || 'Not Specified' }}
                 </span>
               </div>
-              <button class="export-btn" (click)="exportToPDF()">
+              <!-- <button class="export-btn" (click)="exportToPDF()">
                 <i class="fa fa-download"></i> Export
-              </button>
+              </button> -->
             </div>
 
             <!-- Basic Information -->
@@ -167,31 +178,31 @@
               <div class="detail-grid">
                 <div class="detail-item">
                   <label>Full Name</label>
-                  <p>{{ (employee.firstName || 'Not Specified') + ' ' + (employee.lastName || 'Not Specified') }}</p>
+                  <p>{{ (employee?.firstName || 'Not Specified') + ' ' + (employee?.lastName || 'Not Specified') }}</p>
                 </div>
                 <div class="detail-item">
                   <label>Date of Birth</label>
-                  <p>{{ formatDate(employee.dateOfBirth) || 'Not Specified' }}</p>
+                  <p>{{ formatDate(employee?.dateOfBirth) || 'Not Specified' }}</p>
                 </div>
                 <div class="detail-item">
                   <label>Gender</label>
-                  <p>{{ employee.gender || 'Not Specified' }}</p>
+                  <p>{{ employee?.gender || 'Not Specified' }}</p>
                 </div>
                 <div class="detail-item">
                   <label>Marital Status</label>
-                  <p>{{ employee.maritalStatus || 'Not Specified' }}</p>
+                  <p>{{ employee?.maritalStatus || 'Not Specified' }}</p>
                 </div>
                 <div class="detail-item">
                   <label>Nationality</label>
-                  <p>{{ employee.nationality || 'Not Specified' }}</p>
+                  <p>{{ employee?.nationality || 'Not Specified' }}</p>
                 </div>
                 <div class="detail-item">
                   <label>CID Number</label>
-                  <p>{{ employee.cidNumber || 'Not Specified' }}</p>
+                  <p>{{ employee?.cidNumber || 'Not Specified' }}</p>
                 </div>
                 <div class="detail-item">
   <label>Organization</label>
-  <p>{{ employee.orgName || 'Not Specified' }}</p>
+  <p>{{ employee?.orgName || 'Not Specified' }}</p>
 </div>
               </div>
             </div>
@@ -202,15 +213,13 @@
             <div class="content-header">
               <div class="content-badges">
                 <span class="content-badge badge-blue">
-                  <i class="fa fa-building-user"></i> {{ employee.department || 'Not Specified' }}
+                  <i class="fa fa-building-user"></i> {{ employee?.department || 'Not Specified' }}
                 </span>
                 <span class="content-badge badge-purple">
-                  <i class="fa fa-medal"></i> {{ employee.gradeName || 'Not Specified' }}
+                  <i class="fa fa-medal"></i> {{ employee?.gradeName || 'Not Specified' }}
                 </span>
               </div>
-              <button class="export-btn" (click)="exportToPDF()">
-                <i class="fa fa-download"></i> Export
-              </button>
+              
             </div>
 
             <div class="content-section">
@@ -218,19 +227,19 @@
               <div class="detail-grid">
                 <div class="detail-item">
                   <label>Department</label>
-                  <p>{{ employee.department || 'Not Specified' }}</p>
+                  <p>{{ employee?.department || 'Not Specified' }}</p>
                 </div>
                 <div class="detail-item">
                   <label>Position</label>
-                  <p>{{ employee.positionName || 'Not Specified' }}</p>
+                  <p>{{ employee?.positionName || 'Not Specified' }}</p>
                 </div>
                 <div class="detail-item">
                   <label>Employment Type</label>
-                  <p>{{ employee.employmentType || 'Not Specified' }}</p>
+                  <p>{{ employee?.employmentType || 'Not Specified' }}</p>
                 </div>
                 <div class="detail-item">
                   <label>Location</label>
-                  <p>{{ employee.location || 'Not Specified' }}</p>
+                  <p>{{ employee?.location || 'Not Specified' }}</p>
                 </div>
               </div>
             </div>
@@ -241,8 +250,8 @@
                 <div class="detail-item">
                   <label>Grade</label>
                   <p>
-                    {{ employee.gradeName || 'Not Specified' }}
-                    <span *ngIf="employee.gradeCode" class="grade-code">({{ employee.gradeCode }})</span>
+                    {{ employee?.gradeName || 'Not Specified' }}
+                    <span *ngIf="employee.gradeCode" class="grade-code">({{ employee?.gradeCode }})</span>
                   </p>
                 </div>
                 <div class="detail-item">
@@ -274,9 +283,7 @@
                   <i class="fa fa-phone"></i> {{ employee.contact?.phonePrimary || 'Not Specified' }}
                 </span>
               </div>
-              <button class="export-btn" (click)="exportToPDF()">
-                <i class="fa fa-download"></i> Export
-              </button>
+              
             </div>
 
             <div class="content-section">
@@ -353,9 +360,7 @@
                   <i class="fa fa-user-gear"></i> {{ employee.bankDetail?.accountNumber || 'Not Specified' }}
                 </span>
               </div>
-              <button class="export-btn" (click)="exportToPDF()">
-                <i class="fa fa-download"></i> Export
-              </button>
+              
             </div>
 
             <div class="content-section">
@@ -383,42 +388,439 @@
           </div>
 
           <!-- Education Tab -->
-          <div *ngIf="activeTab === 'education'" class="tab-panel">
-            <div class="content-header">
-              <div class="content-badges">
-                <span class="content-badge badge-blue">
-                  <i class="fa fa-university"></i> {{ employee.qualification?.institutionName || 'Not Specified' }}
-                </span>
-                <span class="content-badge badge-purple">
-                  <i class="fa fa-graduation-cap"></i> {{ employee.qualification?.degreeName || 'Not Specified' }}
-                </span>
+          <!-- Education Tab -->
+<div *ngIf="activeTab === 'education'" class="tab-panel">
+  <div class="content-header">
+    <div class="content-badges">
+      <span class="content-badge badge-blue">
+        <i class="fa fa-university"></i> Education Details
+      </span>
+    </div>
+  </div>
+
+  <div class="content-section">
+    <h3 class="section-title">Education History</h3>
+    
+    <!-- Main Education Table -->
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Institution</th>
+            <th>Degree</th>
+            <th>Specialization</th>
+            <th>Year</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Display main education if exists -->
+          <tr *ngIf="employee?.qualification?.institutionName">
+            <td>{{ employee.qualification.institutionName || 'Not Specified' }}</td>
+            <td>{{ employee.qualification.degreeName || 'Not Specified' }}</td>
+            <td>{{ employee.qualification.specialization || 'Not Specified' }}</td>
+            <td>{{ employee.qualification.yearOfCompletion || 'Not Specified' }}</td>
+          </tr>
+          
+          <!-- Display additional educations if they exist -->
+          <tr *ngFor="let edu of employee?.additionalEducations">
+            <td>{{ edu.institutionName || 'Not Specified' }}</td>
+            <td>{{ edu.degreeName || 'Not Specified' }}</td>
+            <td>{{ edu.specialization || 'Not Specified' }}</td>
+            <td>{{ edu.yearOfCompletion || 'Not Specified' }}</td>
+          </tr>
+          
+          <!-- Empty state if no education data -->
+          <tr *ngIf="!employee?.qualification?.institutionName && (!employee?.additionalEducations || employee.additionalEducations.length === 0)">
+            <td colspan="4" class="text-center text-muted">No education records found</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- Edit Employee Modal -->
+<div class="emp-det-modal modal fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="emp-det-modal-content modal-content border-0 shadow">
+      <div class="emp-det-modal-header modal-header text-white border-0">
+        <h5 class="modal-title fw-bold">
+          Edit Employee
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeEditModal()"></button>
+      </div>
+
+      <div class="emp-det-modal-body modal-body p-4">
+        <form [formGroup]="employeeForm" (ngSubmit)="saveEmployee()">
+          <div *ngIf="errorMessage" class="alert alert-danger mb-4">
+            {{ errorMessage }}
+          </div>
+
+          <!-- Modal Tab Navigation -->
+          <div class="emp-det-tabs mb-4">
+            <ul class="nav nav-tabs">
+              <li class="nav-item">
+                <a class="nav-link" [class.active]="isModalTabActive('basic')" (click)="selectModalTab('basic')">
+                  <i class="fas fa-user-circle mr-2"></i>Basic Info
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" [class.active]="isModalTabActive('employment')"
+                  (click)="selectModalTab('employment')">
+                  <i class="fas fa-briefcase mr-2"></i>Employment
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" [class.active]="isModalTabActive('contact-bank')"
+                  (click)="selectModalTab('contact-bank')">
+                  <i class="fas fa-address-card mr-2"></i>Contact & Bank
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" [class.active]="isModalTabActive('education')"
+                  (click)="selectModalTab('education')">
+                  <i class="fas fa-graduation-cap mr-2"></i>Education
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" [class.active]="isModalTabActive('address')" (click)="selectModalTab('address')">
+                  <i class="fas fa-map-marker-alt mr-2"></i>Address
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Modal Tab Content -->
+          <div class="emp-det-tab-content">
+            <!-- Basic Info Tab -->
+            <div *ngIf="isModalTabActive('basic')" class="tab-pane active">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Employee Code</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="empCode"
+                     placeholder="Employee code">
+                    <div *ngIf="employeeForm.get('empCode')?.invalid && employeeForm.get('empCode')?.touched"
+  class="emp-det-form-error text-danger small mt-1">
+  Employee code is required (alphanumeric characters only)
+</div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">First Name</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="firstName"
+                    placeholder="Enter first name">
+                  <div *ngIf="employeeForm.get('firstName')?.invalid && employeeForm.get('firstName')?.touched"
+                    class="emp-det-form-error text-danger small mt-1">
+                    First name is required (max 50 characters)
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Middle Name</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="middleName"
+                    placeholder="Enter middle name">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Last Name</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="lastName"
+                    placeholder="Enter last name">
+                  <div *ngIf="employeeForm.get('lastName')?.invalid && employeeForm.get('lastName')?.touched"
+                    class="emp-det-form-error text-danger small mt-1">
+                    Last name is required (max 50 characters)
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Date of Birth</label>
+                  <input type="date" class="emp-det-form-input form-control" formControlName="dateOfBirth">
+                  <div *ngIf="employeeForm.get('dateOfBirth')?.invalid && employeeForm.get('dateOfBirth')?.touched"
+                    class="emp-det-form-error text-danger small mt-1">
+                    Date of birth is required
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Gender</label>
+                  <select class="emp-det-form-select form-select" formControlName="gender">
+                    <option value="" disabled selected>Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Marital Status</label>
+                  <select class="emp-det-form-select form-select" formControlName="maritalStatus">
+                    <option value="" disabled selected>Select Marital Status</option>
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Divorced">Divorced</option>
+                    <option value="Widowed">Widowed</option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Nationality</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="nationality"
+                    placeholder="Enter nationality">
+                  <div *ngIf="employeeForm.get('nationality')?.invalid && employeeForm.get('nationality')?.touched"
+                    class="emp-det-form-error text-danger small mt-1">
+                    Nationality is required
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">CID Number</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="cidNumber"
+                    placeholder="Enter CID number">
+                  <div *ngIf="employeeForm.get('cidNumber')?.invalid && employeeForm.get('cidNumber')?.touched"
+                    class="emp-det-form-error text-danger small mt-1">
+                    CID number is required (numbers only)
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Organization</label>
+                  <select class="emp-det-form-select form-select" formControlName="organization" 
+                          (change)="onOrganizationChange()">
+                    <option value="" disabled selected>Select Organization</option>
+                    <option *ngFor="let org of organizations" [value]="org.orgId">
+                      {{ org.orgName }}
+                    </option>
+                  </select>
+                </div>
               </div>
-              <button class="export-btn" (click)="exportToPDF()">
-                <i class="fa fa-download"></i> Export
-              </button>
             </div>
 
-            <div class="content-section">
-              <h3 class="section-title">Education</h3>
-              <div class="table-responsive">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>College / Institution</th>
-                      <th>Major</th>
-                      <th>Specialization</th>
-                      <th>Year of Completion</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>{{ employee.qualification?.institutionName || 'Not Specified' }}</td>
-                      <td>{{ employee.qualification?.degreeName || 'Not Specified' }}</td>
-                      <td>{{ employee.qualification?.specialization || 'Not Specified' }}</td>
-                      <td>{{ employee.qualification?.yearOfCompletion || 'Not Specified' }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+            <!-- Employment Tab -->
+            <div *ngIf="isModalTabActive('employment')" class="tab-pane">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Hire Date</label>
+                  <input type="date" class="emp-det-form-input form-control" formControlName="hireDate">
+                  <div *ngIf="employeeForm.get('hireDate')?.invalid && employeeForm.get('hireDate')?.touched"
+                    class="emp-det-form-error text-danger small mt-1">
+                    Hire date is required
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Employment Status</label>
+                  <select class="emp-det-form-select form-select" formControlName="employmentStatus">
+                    <option value="" disabled selected>Select Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="On Leave">On Leave</option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Employment Type</label>
+                  <select class="emp-det-form-select form-select" formControlName="employmentType">
+                    <option value="" disabled selected>Select Employment Type</option>
+                    <option value="Regular">Regular</option>
+                    <option value="Contract">Contract</option>
+                    <option value="Temporary">Temporary</option>
+                    <option value="Probation">Probation</option>
+                    <option value="Intern">Intern</option>
+                    <option value="Consultant">Consultant</option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Branch</label>
+                  <select class="emp-det-form-select form-select" formControlName="location" 
+                          (change)="onBranchChangeInForm()">
+                    <option value="" disabled selected>Select Branch</option>
+                    <option *ngFor="let branch of branches" [value]="branch.branchName">
+                      {{ branch.branchName }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Department</label>
+                  <select class="emp-det-form-select form-select" formControlName="department"
+                          (change)="onDepartmentChange()" [disabled]="!employeeForm.get('location')?.value">
+                    <option value="" disabled selected>Select Department</option>
+                    <option *ngFor="let dept of formDepartments" [value]="dept.dept_id">
+                      {{ dept.dept_name }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Position</label>
+                  <select class="emp-det-form-select form-select" formControlName="position"
+                    [disabled]="!employeeForm.get('department')?.value">
+                    <option value="" disabled selected>Select Position</option>
+                    <option *ngFor="let pos of filteredPositions" [value]="pos.positionId">
+                      {{ pos.positionName }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Grade</label>
+                  <select class="emp-det-form-select form-select" formControlName="grade"
+                    (change)="onGradeChange($event)">
+                    <option value="" disabled selected>Select Grade</option>
+                    <option *ngFor="let grade of grades" [value]="grade.gradeId">
+                      {{ grade.gradeName }} ({{ grade.gradeCode }})
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Basic Salary</label>
+                  <input type="number" class="emp-det-form-input form-control" formControlName="basicSalary" readonly>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Max Salary</label>
+                  <input type="number" class="emp-det-form-input form-control" formControlName="maxSalary" readonly>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="isModalTabActive('contact-bank')" class="tab-pane">
+              <div class="row g-3">
+                <!-- Contact Section -->
+                <div class="col-12">
+                  <h6 class="fw-bold border-bottom pb-2 mb-3">Contact Information</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Email</label>
+                  <input type="email" class="emp-det-form-input form-control" formControlName="email"
+                    placeholder="Enter Your Email">
+                  <div *ngIf="employeeForm.get('email')?.invalid && employeeForm.get('email')?.touched"
+                    class="emp-det-form-error text-danger small mt-1">
+                    <span *ngIf="employeeForm.get('email')?.errors?.['required']">Email is required</span>
+                    <span *ngIf="employeeForm.get('email')?.errors?.['email']">Please enter a valid email
+                      address</span>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Phone Number</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="phonePrimary"
+                    placeholder="Enter phone number">
+                  <div *ngIf="employeeForm.get('phonePrimary')?.invalid && employeeForm.get('phonePrimary')?.touched"
+                    class="emp-det-form-error text-danger small mt-1">
+                    Phone number is required (numbers only)
+                  </div>
+                </div>
+
+                <!-- Bank Section -->
+                <div class="col-12 mt-4">
+                  <h6 class="fw-bold border-bottom pb-2 mb-3">Bank Details</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Bank Name</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="bankName"
+                    placeholder="Enter bank name">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Branch Name</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="branchName"
+                    placeholder="Enter branch name">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Account Number</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="accountNumber"
+                    placeholder="Enter account number">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Account Type</label>
+                  <select class="emp-det-form-select form-select" formControlName="accountType">
+                    <option value="" disabled selected>Select Account Type</option>
+                    <option value="Savings">Savings</option>
+                    <option value="Current">Current</option>
+                    <option value="Fixed Deposit">Fixed Deposit</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Education Tab -->
+          <!-- Education Tab in Edit Modal -->
+<div *ngIf="isModalTabActive('education')" class="tab-pane">
+  <div class="education-container">
+    <!-- Main Education Form -->
+    <div class="education-form">
+      <h5>Primary Education</h5>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="emp-det-form-label form-label fw-medium">Institution Name</label>
+          <input type="text" class="emp-det-form-input form-control" formControlName="institutionName"
+            placeholder="Enter institution name">
+        </div>
+
+        <div class="col-md-6">
+          <label class="emp-det-form-label form-label fw-medium">Degree Name</label>
+          <input type="text" class="emp-det-form-input form-control" formControlName="degreeName"
+            placeholder="Enter degree name">
+        </div>
+
+        <div class="col-md-6">
+          <label class="emp-det-form-label form-label fw-medium">Specialization</label>
+          <input type="text" class="emp-det-form-input form-control" formControlName="specialization"
+            placeholder="Enter specialization">
+        </div>
+
+        <div class="col-md-6">
+          <label class="emp-det-form-label form-label fw-medium">Year of Completion</label>
+          <input type="number" class="emp-det-form-input form-control" formControlName="yearOfCompletion"
+            placeholder="Enter year">
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Educations -->
+    <div class="additional-educations mt-4">
+      <h5>Additional Education</h5>
+      
+      <div class="add-more-container mb-3">
+        <button type="button" class="btn btn-sm btn-primary" (click)="addEducation()">
+          <i class="bi bi-plus"></i> Add Education
+        </button>
+      </div>
+
+      <div formArrayName="educations">
+        <div *ngFor="let education of educations.controls; let i = index" [formGroupName]="i" class="education-entry card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Education #{{i + 1}}</h6>
+            <button type="button" class="btn btn-sm btn-danger" (click)="removeEducation(i)">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="emp-det-form-label form-label fw-medium">Institution Name</label>
+                <input type="text" class="emp-det-form-input form-control" formControlName="institutionName">
+              </div>
+
+              <div class="col-md-6">
+                <label class="emp-det-form-label form-label fw-medium">Degree Name</label>
+                <input type="text" class="emp-det-form-input form-control" formControlName="degreeName">
+              </div>
+
+              <div class="col-md-6">
+                <label class="emp-det-form-label form-label fw-medium">Specialization</label>
+                <input type="text" class="emp-det-form-input form-control" formControlName="specialization">
+              </div>
+
+              <div class="col-md-6">
+                <label class="emp-det-form-label form-label fw-medium">Year of Completion</label>
+                <input type="number" class="emp-det-form-input form-control" formControlName="yearOfCompletion">
               </div>
             </div>
           </div>
@@ -426,4 +828,69 @@
       </div>
     </div>
   </div>
+</div>
+
+            <!-- Address Tab -->
+            <div *ngIf="isModalTabActive('address')" class="tab-pane">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Address Type</label>
+                  <select class="emp-det-form-select form-select" formControlName="addressType">
+                    <option value="" disabled selected>Select Address Type</option>
+                    <option value="Permanent">Permanent</option>
+                    <option value="Temporary">Temporary</option>
+                    <option value="Correspondence">Correspondence</option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Address Line 1</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="addressLine1"
+                    placeholder="Enter address line 1">
+                  <div *ngIf="employeeForm.get('addressLine1')?.invalid && employeeForm.get('addressLine1')?.touched"
+                    class="emp-det-form-error text-danger small mt-1">
+                    Address line 1 is required
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Address Line 2</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="addressLine2"
+                    placeholder="Enter address line 2">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Thromde</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="thromde"
+                    placeholder="Enter thromde">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="emp-det-form-label form-label fw-medium">Dzongkhag</label>
+                  <input type="text" class="emp-det-form-input form-control" formControlName="dzongkhag"
+                    placeholder="Enter dzongkhag">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="emp-det-modal-footer modal-footer border-0 p-4 pt-0">
+            <button type="button" class="emp-det-cancel-btn btn btn-outline-dark" (click)="closeEditModal()">
+              Cancel
+            </button>
+            <button type="button" class="emp-det-save-btn btn" [disabled]="employeeForm.invalid || isSaving"
+              (click)="saveEmployee()">
+              <span *ngIf="!isSaving">Update Employee</span>
+              <span *ngIf="isSaving" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="emp-det-modal-backdrop modal-backdrop fade" [class.show]="showEditModal"
+  [style.display]="showEditModal ? 'block' : 'none'" (click)="closeEditModal()">
 </div>

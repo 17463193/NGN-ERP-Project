@@ -20,6 +20,7 @@ export interface User {
   empId: string;
   ctoId?: string;
   hrId?: string;
+
   username: string;
   email: string;
   accountStatus: string;
@@ -111,6 +112,23 @@ export class AuthService {
     return user ? ['Admin', 'CTO'].includes(user.roleName) : false;
   }
 
+  getEmployeeByEmpId(empId: string): Observable<any> {
+  return this.http.get(`${environment.apiUrl}/api/v1/employees/${empId}`).pipe(
+    catchError(error => {
+      console.error('Error fetching employee:', error);
+      return throwError(() => error);
+    })
+  );
+}
+// auth.service.ts
+updateCurrentUser(user: User): void {
+  localStorage.setItem('currentUser', JSON.stringify(user));
+  this.currentUserSubject.next(user);
+  if (user.permissions) {
+    this.permissionsSubject.next(user.permissions);
+  }
+}
+
   login(username: string, password: string): Observable<boolean> {
   const url = `${environment.apiUrl}/api/auth/login`;
 
@@ -168,6 +186,7 @@ export class AuthService {
             map(() => true)
           );
         })
+
       );
     }),
     catchError(error => {
