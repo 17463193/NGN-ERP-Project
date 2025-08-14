@@ -1,5 +1,4 @@
 import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
 import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -24,13 +23,13 @@ interface AttendanceRecord {
 }
 
 @Component({
-  selector: 'app-attendance-sheet',
-  templateUrl: './attendance-sheet.component.html',
-  styleUrls: ['./attendance-sheet.component.scss'],
+  selector: 'app-view-employee',
+  templateUrl: './view-employee.component.html',
+  styleUrls: ['./view-employee.component.scss'],
   standalone: true,
   imports: [CommonModule, FormsModule]
 })
-export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestroy {
+export class ViewEmployeeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('attendanceChart', { static: false }) chartRef!: ElementRef<HTMLCanvasElement>;
   private chart: Chart | null = null;
   private subscription: Subscription = new Subscription();
@@ -64,7 +63,7 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
 
   // Pagination properties
   currentPage: number = 1;
-  itemsPerPage: number = 6;
+  itemsPerPage: number = 4;
   totalItems: number = 0;
   pageSizeOptions: number[] = [4, 10, 25, 50];
   
@@ -84,7 +83,7 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
   public dynamicDayHeaders: string[] = [];
   public currentDate = new Date();
 
-  constructor(private attendanceService: AttendanceSheetService, private router: Router) { }
+  constructor(private attendanceService: AttendanceSheetService) { }
 
   ngOnInit(): void {
     this.initializeFilters();
@@ -163,24 +162,6 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     this.selectedMonth = currentDate.getMonth() + 1;
     this.selectedDepartment = 'All';
     this.onFilterChange();
-  }
-
-  // Navigate to employee details view
-  viewEmployeeDetails(): void {
-    this.router.navigate(['/dashboard/employees']);
-  }
-
-  // Navigate to individual employee view
-  viewEmployee(empId: string): void {
-    if (empId) {
-      this.router.navigate(['/dashboard/employees', empId], {
-        queryParams: {
-          year: this.selectedYear,
-          month: this.selectedMonth,
-          department: this.selectedDepartment === 'All' ? undefined : this.selectedDepartment
-        }
-      });
-    }
   }
 
   ngAfterViewInit() {
@@ -809,10 +790,8 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     const total = this.totalPages;
     const current = this.currentPage;
     
-    // Always show first page if there are pages
-    if (total > 0) {
-      pages.push(1);
-    }
+    // Always show first page
+    pages.push(1);
     
     // Add ellipsis if needed before current page
     if (current > 3) {
@@ -828,7 +807,7 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     
     // Add ellipsis if needed after current page
     if (current < total - 2) {
-      pages.push(-1);
+      pages.push(-1); // -1 represents ellipsis
     }
     
     // Always show last page if there is more than one page
@@ -858,19 +837,13 @@ export class AttendanceSheetComponent implements OnInit, AfterViewInit, OnDestro
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
-    
     return pages;
   }
 
-  // Implement OnDestroy interface
-  ngOnDestroy(): void {
-    // Clean up chart instance
+  ngOnDestroy() {
     if (this.chart) {
       this.chart.destroy();
-      this.chart = null;
     }
-    
-    // Unsubscribe from all subscriptions
     if (this.subscription) {
       this.subscription.unsubscribe();
     }

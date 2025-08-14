@@ -25,12 +25,20 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        redirectTo: '/default',
+        redirectTo: '/guest/login',
         pathMatch: 'full'
+      },
+      {
+        path: 'dashboard',
+        loadChildren: () => import('./demo/dashboard/dashboard.module').then(m => m.DashboardModule)
       },
       {
         path: 'default',
         loadComponent: () => import('./demo/dashboard/default/default.component').then((c) => c.DefaultComponent)
+      },
+      {
+        path: 'employees',
+        loadChildren: () => import('./demo/dashboard/dashboard.module').then(m => m.DashboardModule)
       },
       {
         path: 'attendence',
@@ -201,9 +209,20 @@ export const routes: Routes = [
       },
       {
         path: 'emp-separation',
-        loadComponent: () => import('./demo/emp-separation/emp-separation.component').then((c) => c.EmpSeparationComponent)
-      }
-
+          loadComponent: () => import('./demo/employee-separation/emp-separation/emp-separation.component').then((c) => c.EmpSeparationComponent)
+        },
+      {
+        path: 'separation-type',
+        loadComponent: () => import('./demo/employee-separation/separation-type/separation-type.component').then((c) => c.SeparationTypeComponent)
+      },
+      {
+        path: 'emp-transfer',
+        loadComponent: () => import('./demo/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
+      },
+      // {
+      //   path: 'emp-separation',
+      //   loadComponent: () => import('./demo/emp-separation/emp-separation.component').then((c) => c.EmpSeparationComponent)
+      // }
     ]
   },
   {

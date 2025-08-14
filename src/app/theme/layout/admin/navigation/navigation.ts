@@ -188,6 +188,14 @@ export const NavigationItems: NavigationItem[] = [
       url: '/document-archival',
       icon: 'ti ti-archive' // Fixed icon - 'ti ti-document-archival' doesn't exist
     },
+    // {
+    //   id: 'emp-training',
+    //   title: 'Employee Training', // Fixed title casing
+    //   type: 'item',
+    //   classes: 'nav-item', // Fixed class name
+    //   url: '/emp-training',
+    //   icon: 'ti ti-book' 
+    // },
         {
       id: 'training-management',
       title: 'Training Management',
@@ -252,15 +260,36 @@ export const NavigationItems: NavigationItem[] = [
         },
       ]
     },
-    {
-      id: 'emp-separation',
-      title: 'Employee Separation',
-      type: 'item',
-      classes: 'nav-item',
-      url: '/emp-separation',
-      icon: 'ti ti-logout' 
-    }
-  ]
+  ],
+},
+{
+  id: 'employee-separation',
+  title: 'Employee Separation',
+  type: 'collapse',
+  icon: 'ti ti-certificate',
+  classes: 'nav-item',
+  children: [
+{
+  id: 'emp-separation',
+  title: 'Emp.. Separation',
+  type: 'item',
+  classes: 'nav-item',
+  url: '/emp-separation',
+  icon: 'ti ti-logout' ,
+  breadcrumbs: false,
+  active:true
+},
+{
+  id: 'separation-type',
+  title: 'Separation Type',
+  type: 'item',
+  classes: 'nav-item',
+  url: '/separation-type',
+  icon: 'ti ti-logout' ,
+  breadcrumbs: false,
+  // active: true
+}
+]
 }
  // {
       //   id: 'Authentication',

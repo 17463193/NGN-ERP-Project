@@ -8,7 +8,7 @@ import { EmployeeViewComponent } from './emp-view/emp-view-detail.component';
 // Import Angular modules
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
-import { NgbNavModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbNavModule, NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmployeeRoutingModule } from './employee-routing.module';
 
 @NgModule({
@@ -16,6 +16,7 @@ import { EmployeeRoutingModule } from './employee-routing.module';
   imports: [
     CommonModule,
     NgbNavModule,
+    NgbModule,
     FormsModule,
     ReactiveFormsModule,
     HttpClientModule,

@@ -82,8 +82,8 @@ export class AuthService {
   }
 
   // Define role constants
-  readonly ADMIN_ROLE = 'Admin';
-  readonly CTO_ROLE = 'CTO';
+  ADMIN_ROLE = 'admin';
+  CTO_ROLE = 'CTO';
   readonly EMPLOYEE_ROLE = 'Employee';
 
   constructor(private router: Router, private http: HttpClient) {
@@ -109,7 +109,7 @@ export class AuthService {
 
   public get isAdminOrCTO(): boolean {
     const user = this.currentUserValue;
-    return user ? ['Admin', 'CTO'].includes(user.roleName) : false;
+    return user ? ['admin', 'CTO'].includes(user.roleName) : false;
   }
 
   getEmployeeByEmpId(empId: string): Observable<any> {
