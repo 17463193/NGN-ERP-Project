@@ -150,7 +150,16 @@ export class CalendarDataService {
    * @returns Observable with the response from the server
    */
   insertLeaveCalendar(holidays: Holiday[]): Observable<any> {
-    return this.http.post(`${this.baseUrl}/insertLeaveCalendar`, holidays).pipe(
+    const url = `${this.baseUrl}/insertLeaveCalendar`;
+    return this.http.post(url, holidays).pipe(
+      tap(() => {
+        if (holidays && holidays.length > 0) {
+          // Clear the cache for the affected branch and year
+          const firstHoliday = holidays[0];
+          const cacheKey = `${firstHoliday.organizationName}_${firstHoliday.branchName}_${firstHoliday.year}`;
+          delete this.holidaysCache[cacheKey];
+        }
+      }),
       tap(() => {
         // Clear cache after successful save to ensure fresh data on next load
         this.holidaysCache = {};
@@ -165,6 +174,10 @@ export class CalendarDataService {
   deleteHoliday(calendarId: string): Observable<any> {
     const url = `${this.baseUrl}/deleteHoliday/${calendarId}`;
     return this.http.delete(url).pipe(
+      tap(() => {
+        // Clear all cached holidays since we don't know which branch/year this was for
+        this.holidaysCache = {};
+      }),
       tap(() => {
         this.clearHolidaysCache();
       }),
@@ -200,14 +213,26 @@ export class CalendarDataService {
     leaveDayType: 'Full Day' | 'Half Day' | 'full day' | 'half day';
     isOptional: boolean;
   }): Observable<Holiday> {
+    // Include calendarId in the URL path
     const url = `${this.baseUrl}/updateHoliday/${calendarId}`;
     
-    // Clear cache to ensure fresh data on next load
-    this.clearHolidaysCache();
+    // Create the updated holiday object
+    const updatedHoliday: Holiday = {
+      ...holidayData,
+      calendarId: calendarId,
+      branchId: holidayData['branchId'] || ''
+    };
     
     return this.http.put<Holiday>(url, holidayData).pipe(
-      tap(updatedHoliday => {
-        console.log('Successfully updated holiday:', updatedHoliday);
+      tap((response) => {
+        // Clear the cache for this specific branch and year
+        const cacheKey = `branch-${holidayData.branchName}-${holidayData.year}`;
+        delete this.holidaysCache[cacheKey];
+        
+        // Also clear any other cached data that might be affected
+        this.clearHolidaysCache();
+        
+        return response;
       }),
       catchError(error => {
         console.error('Error updating holiday:', error);
@@ -224,8 +249,9 @@ export class CalendarDataService {
  * @param holidays Array of Holiday objects
  * @returns { [monthIndex: number]: { [day: number]: { type: 'full' | 'half', name: string } } }
  */
-export function mapHolidaysToMarkedDays(holidays: Holiday[]): { [monthIndex: number]: { [day: number]: { type: 'full' | 'half', name: string } } } {
-  const markedDaysByMonth: { [monthIndex: number]: { [day: number]: { type: 'full' | 'half', name: string } } } = {};
+export function mapHolidaysToMarkedDays(holidays: Holiday[]): { [monthIndex: number]: { [day: number]: { type: 'full' | 'half', name: string, holidayType?: string, isOptional?: boolean } } } {
+  const markedDaysByMonth: { [monthIndex: number]: { [day: number]: { type: 'full' | 'half', name: string, holidayType?: string, isOptional?: boolean } } } = {};
+  
   holidays.forEach(holiday => {
     try {
       const date = new Date(holiday.holidayDate);
@@ -235,16 +261,20 @@ export function mapHolidaysToMarkedDays(holidays: Holiday[]): { [monthIndex: num
       const leaveType = (holiday.leaveDayType || '').toLowerCase();
       const isHalf = leaveType.includes('half') || leaveType.includes('1/2') || leaveType.includes('partial') || leaveType.replace(/\s/g, '').includes('halfday');
       const type = isHalf ? 'half' : 'full';
+      
       if (!markedDaysByMonth[monthIndex]) {
         markedDaysByMonth[monthIndex] = {};
       }
       markedDaysByMonth[monthIndex][day] = {
         type,
-        name: holiday.holidayName || 'Holiday'
+        name: holiday.holidayName || 'Holiday',
+        holidayType: holiday.holidayType,
+        isOptional: holiday.isOptional
       };
     } catch (e) {
-      // Ignore invalid dates
+      console.error('Error processing holiday:', e);
     }
   });
+  
   return markedDaysByMonth;
 }

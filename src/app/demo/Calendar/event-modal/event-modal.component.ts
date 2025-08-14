@@ -6,12 +6,19 @@ import Swal from 'sweetalert2';
 export interface CalendarEvent {
   date: Date;
   holidayName: string;
-  holidayType: 'Public' | 'Private';
-  leaveDayType: 'full day' | 'half day';
+  holidayType: string;
+  leaveDayType: string;
   isOptional: boolean;
+  // Additional fields from the required structure
+  organizationName?: string;
+  branchName?: string;
+  year?: number;
+  holidayDate?: string;
   // For backward compatibility
   text?: string;
   type?: 'full' | 'half';
+  // Mark if this is an existing holiday
+  isExisting?: boolean;
 }
 
 @Component({
@@ -28,7 +35,9 @@ export class EventModalComponent implements OnChanges {
   @Input() year: number = 2025;
   @Input() eventText: string = 'Event'; // Default event text
   @Input() eventType: 'full' | 'half' = 'full'; // Default to full day
-  @Input() set markedDays(value: { [day: number]: { type: 'full' | 'half', name: string } }) {
+  @Input() organizationName: string = '';
+  @Input() branchName: string = '';
+  @Input() set markedDays(value: { [day: number]: { type: 'full' | 'half', name: string, holidayType?: string, isOptional?: boolean } }) {
     const newValue = value || {};
     const currentKeys = Object.keys(this._markedDays).sort().join(',');
     const newKeys = Object.keys(newValue).sort().join(',');
@@ -42,8 +51,17 @@ export class EventModalComponent implements OnChanges {
     }
   }
   get markedDays() { return this._markedDays; }
-  private _markedDays: { [day: number]: { type: 'full' | 'half', name: string } } = {};
+  private _markedDays: { [day: number]: { type: 'full' | 'half', name: string, holidayType?: string, isOptional?: boolean } } = {};
   @Input() loading = false; // Add loading state
+  @Input() set initialDate(date: Date | null) {
+    if (date) {
+      this._initialDate = new Date(date);
+      if (this.visible) {
+        this.navigateToDate(this._initialDate);
+      }
+    }
+  }
+  private _initialDate: Date | null = null;
 
   @Output() save = new EventEmitter<{events: CalendarEvent[], monthIndex: number, year: number}>();
   @Output() cancel = new EventEmitter<void>();
@@ -109,6 +127,13 @@ export class EventModalComponent implements OnChanges {
     return !!this.selectedDays[key] || !!this.markedDays[day];
   }
 
+  isExistingHoliday(day: number): boolean {
+    const date = new Date(this.currentYear, this.currentMonthIndex, day);
+    const key = this.getDateKey(date);
+    const selectedDay = this.selectedDays[key];
+    return selectedDay ? selectedDay.isExisting : false;
+  }
+
   isOtherMonth(day: number): boolean {
     return day > 20 && day < 28 && this.calendarDays[this.calendarDays.length - 1] < day;
   }
@@ -138,6 +163,11 @@ export class EventModalComponent implements OnChanges {
       this.updateCalendar();
     }
     
+    // Handle initial date when modal becomes visible
+    if (changes['visible'] && this.visible && this._initialDate) {
+      this.navigateToDate(this._initialDate);
+    }
+    
     // Handle markedDays changes (initial load)
     if (changes['markedDays'] && this.markedDays && !this.loading) {
       this.initializeSelectedDays();
@@ -147,7 +177,7 @@ export class EventModalComponent implements OnChanges {
   private initializeSelectedDays() {
     const updatedSelectedDays = {};
     
-    // First, process all marked days from the input
+    // First, process all marked days from the input (existing holidays)
     Object.entries(this._markedDays).forEach(([day, obj]) => {
       const dayNum = parseInt(day, 10);
       if (!isNaN(dayNum)) {
@@ -159,11 +189,13 @@ export class EventModalComponent implements OnChanges {
         updatedSelectedDays[dateKey] = {
           date,
           holidayName: obj.name || '',
-          holidayType: 'Public',
+          holidayType: obj.holidayType || 'Public',
           leaveDayType: obj.type === 'half' ? 'half day' : 'full day',
-          isOptional: false,
+          isOptional: obj.isOptional || false,
           type: obj.type,
-          text: obj.name || ''
+          text: obj.name || '',
+          // Mark as existing holiday
+          isExisting: true
         };
       }
     });
@@ -442,42 +474,111 @@ export class EventModalComponent implements OnChanges {
       this.currentYear--;
     }
     
-    // Update the month name
-    this.month = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ][this.currentMonthIndex];
-    
-    this.year = this.currentYear;
-    
     // Update the calendar view
     this.updateCalendar();
     
-    // Notify parent about the month change
+    // Emit month changed event
     this.monthChanged.emit({
       monthIndex: this.currentMonthIndex,
       year: this.currentYear
     });
   }
 
+  // Navigate to a specific date and select it
+  private navigateToDate(date: Date) {
+    const day = date.getDate();
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    
+    // Only update month/year if needed
+    if (this.currentMonthIndex !== month || this.currentYear !== year) {
+      this.currentMonthIndex = month;
+      this.currentYear = year;
+      this.updateCalendar();
+      
+      // Emit month changed event
+      this.monthChanged.emit({
+        monthIndex: month,
+        year: year
+      });
+    }
+    
+    // Select the day after a small delay to ensure the calendar is rendered
+    setTimeout(() => {
+      this.selectDay(day);
+    }, 50);
+  }
+  
+  // Navigate to a specific month and year
+  private navigateToMonth(monthIndex: number, year: number) {
+    this.currentMonthIndex = monthIndex;
+    this.currentYear = year;
+    this.updateCalendar();
+    
+    // Emit month changed event
+    this.monthChanged.emit({
+      monthIndex,
+      year
+    });
+  }
+
   onSave() {
-    // Ensure all events have their type property in sync with leaveDayType
-    this.events.forEach(event => {
-      if (event.leaveDayType === 'half day') {
-        event.type = 'half';
-      } else {
-        event.type = 'full';
-      }
+    if (this.events.length === 0) {
+      Swal.fire({
+        title: 'No dates selected',
+        text: 'Please select at least one date',
+        icon: 'warning',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    // Validate all events have required fields
+    const invalidEvents = this.events.filter(event => !event.holidayName || !event.holidayType);
+    if (invalidEvents.length > 0) {
+      Swal.fire({
+        title: 'Validation Error',
+        text: 'Please fill in all required fields for all selected dates',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    // Process events to match the required structure
+    const processedEvents = this.events.map(event => {
+      const eventDate = new Date(event.date);
+      const holidayDate = eventDate.toISOString().split('T')[0];
+      
+      // Create the event in the required format
+      const newEvent: CalendarEvent = {
+        date: event.date,
+        organizationName: this.organizationName,
+        branchName: this.branchName,
+        year: this.year,
+        holidayDate,
+        holidayName: event.holidayName,
+        holidayType: event.holidayType,
+        leaveDayType: event.leaveDayType || (event.type === 'half' ? 'half day' : 'full day'),
+        isOptional: event.isOptional || false,
+        // For backward compatibility
+        text: event.text || event.holidayName,
+        type: event.type || 'full',
+        // Preserve the existing flag
+        isExisting: event.isExisting
+      };
+      
+      return newEvent;
     });
 
-    // Emit the events to the parent component along with current month and year
+    // Emit the processed events to the parent component
     this.save.emit({
-      events: this.events,
+      events: processedEvents,
       monthIndex: this.currentMonthIndex,
       year: this.currentYear
     });
     
-    // Show smaller success toast
+    // Show success message
     const Toast = Swal.mixin({
       toast: true,
       position: 'top-end',

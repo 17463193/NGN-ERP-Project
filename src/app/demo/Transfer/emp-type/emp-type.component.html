@@ -1,0 +1,331 @@
+<div class="transfer-container">
+    <!-- Header Section -->
+    <div class="header">
+      <div class="title">
+        <h2>Transfer Types</h2>
+        <p>Manage and track transfer types in the system.</p>
+      </div>
+      <div class="controls">
+        <button class="btn btn-primary" (click)="openTransferModal()">
+          <i class="bi bi-plus-lg me-1"></i> Add New Transfer Type
+        </button>
+      </div>
+    </div>
+  
+    <!-- Search and Filter Row -->
+    <div class="search-filter-row">
+      <div class="d-flex justify-content-end w-100">
+        <div class="search-filter-content">
+          <div class="search-input-wrapper">
+            <i class="bi bi-search"></i>
+            <input 
+              type="text" 
+              class="form-control"
+              placeholder="Search by name, code or category..."
+              [(ngModel)]="searchQuery"
+              (input)="applySearchTransferType()">
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="text-center p-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2">Loading transfer types...</p>
+    </div>
+    
+    <!-- Error State -->
+    <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+      {{ errorMessage }}
+    </div>
+    
+    <!-- Transfer Types Table -->
+    <div *ngIf="!isLoading" class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th class="text-start">Transfer Name</th>
+            <th class="text-center">Code</th>
+            <th class="text-center">Category</th>
+            <th class="text-center">Created Date</th>
+            <th class="text-center">Requires Consent</th>
+            <th class="text-center">Has Probation</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let type of paginatedTransferTypes" class="table-row">
+            <td class="text-start">{{ type.transferName || 'N/A' }}</td>
+            <td class="text-center">
+              <span class="badge bg-primary">{{ type.transferCode || 'N/A' }}</span>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-secondary">{{ type.category || 'N/A' }}</span>
+            </td>
+            <td class="text-center">{{ (type.createdDate | date:'mediumDate') || 'N/A' }}</td>
+            <td class="text-center">
+              <span class="badge" [ngClass]="type.requiresConsent ? 'bg-success' : 'bg-secondary'">
+                {{ type.requiresConsent ? 'Yes' : 'No' }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="badge" [ngClass]="type.hasProbation ? 'bg-info' : 'bg-secondary'">
+                {{ type.hasProbation ? 'Yes' : 'No' }}
+              </span>
+            </td>
+            <td class="text-center">
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline-primary me-1" (click)="editTransferType(type)" title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" (click)="deleteTransferType(type.transferTypeId)" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          
+          <tr *ngIf="filteredTransferTypes.length === 0">
+            <td colspan="8" class="text-center py-4">
+              <div class="text-muted">No transfer types found</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <!-- Pagination -->
+      <div *ngIf="filteredTransferTypes.length > 0" class="d-flex justify-content-between align-items-center mt-4">
+        <div class="text-muted">
+          Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to 
+          {{ currentPage * itemsPerPage > filteredTransferTypes.length ? filteredTransferTypes.length : currentPage * itemsPerPage }}
+          of {{ filteredTransferTypes.length }} entries
+        </div>
+        <nav>
+          <ul class="pagination mb-0">
+            <li class="page-item" [class.disabled]="currentPage === 1">
+              <a class="page-link" href="javascript:void(0)" (click)="onPageChangeTransferType(currentPage - 1)">
+                <i class="bi bi-chevron-left"></i>
+              </a>
+            </li>
+            <li class="page-item" *ngFor="let page of pages" [class.active]="page === currentPage">
+              <a class="page-link" href="javascript:void(0)" (click)="onPageChangeTransferType(page)">
+                {{ page }}
+              </a>
+            </li>
+            <li class="page-item" [class.disabled]="currentPage === totalPages">
+              <a class="page-link" href="javascript:void(0)" (click)="onPageChangeTransferType(currentPage + 1)">
+                <i class="bi bi-chevron-right"></i>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add/Edit Transfer Type Modal -->
+  <ng-template #transferModal let-modal>
+    <form [formGroup]="form" (ngSubmit)="saveTransferType()">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold">{{ isEditMode ? 'Edit' : 'Add New' }} Transfer Type</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="transferName" class="form-label">Transfer Name *</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="transferName"
+              formControlName="transferName"
+              [class.is-invalid]="form.get('transferName')?.invalid && form.get('transferName')?.touched">
+            <div 
+              *ngIf="form.get('transferName')?.errors?.['required'] && form.get('transferName')?.touched" 
+              class="invalid-feedback">
+              Transfer name is required
+            </div>
+            <div 
+              *ngIf="form.get('transferName')?.errors?.['maxlength']" 
+              class="invalid-feedback">
+              Maximum length is 100 characters
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="transferCode" class="form-label">Transfer Code *</label>
+            <input 
+              type="text" 
+              class="form-control text-uppercase" 
+              id="transferCode"
+              formControlName="transferCode"
+              [class.is-invalid]="form.get('transferCode')?.invalid && form.get('transferCode')?.touched">
+            <div 
+              *ngIf="form.get('transferCode')?.errors?.['required'] && form.get('transferCode')?.touched" 
+              class="invalid-feedback">
+              Transfer code is required
+            </div>
+            <div 
+              *ngIf="form.get('transferCode')?.errors?.['maxlength']" 
+              class="invalid-feedback">
+              Maximum length is 20 characters
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="orgId" class="form-label">Organization *</label>
+            <select 
+              class="form-select" 
+              id="orgId"
+              formControlName="orgId"
+              [class.is-invalid]="form.get('orgId')?.invalid && form.get('orgId')?.touched">
+              <option value="">Select Organization</option>
+              <option *ngFor="let org of organizations" [value]="org.orgId">
+                {{ org.orgName }}
+              </option>
+            </select>
+            <div 
+              *ngIf="form.get('orgId')?.invalid && form.get('orgId')?.touched" 
+              class="invalid-feedback">
+              Organization is required
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label for="category" class="form-label">Category *</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="category"
+              formControlName="category"
+              [class.is-invalid]="form.get('category')?.invalid && form.get('category')?.touched">
+            <div 
+              *ngIf="form.get('category')?.errors?.['required'] && form.get('category')?.touched" 
+              class="invalid-feedback">
+              Category is required
+            </div>
+            <div 
+              *ngIf="form.get('category')?.errors?.['maxlength']" 
+              class="invalid-feedback">
+              Maximum length is 50 characters
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="form-check form-switch mt-4 pt-2">
+              <input 
+                class="form-check-input" 
+                type="checkbox" 
+                id="requiresConsent"
+                formControlName="requiresConsent">
+              <label class="form-check-label" for="requiresConsent">
+                Requires Employee Consent
+              </label>
+            </div>
+            
+            <div class="form-check form-switch mt-3">
+              <input 
+                class="form-check-input" 
+                type="checkbox" 
+                id="hasProbation"
+                formControlName="hasProbation"
+                (change)="onProbationToggle()">
+              <label class="form-check-label" for="hasProbation">
+                Has Probation Period
+              </label>
+            </div>
+          </div>
+          
+          <div class="col-md-6" *ngIf="form.get('hasProbation')?.value">
+            <label for="probationDays" class="form-label">Probation Days</label>
+            <input 
+              type="number" 
+              class="form-control" 
+              id="probationDays"
+              formControlName="probationDays"
+              min="0"
+              max="365"
+              [class.is-invalid]="form.get('probationDays')?.invalid && form.get('probationDays')?.touched">
+            <div 
+              *ngIf="form.get('probationDays')?.errors?.['min'] || form.get('probationDays')?.errors?.['max']" 
+              class="invalid-feedback">
+              Must be between 0 and 365 days
+            </div>
+          </div>
+          
+
+          
+          <!-- Created Date Display (Readonly) -->
+          <div class="col-12" *ngIf="isEditMode">
+            <label for="createdDate" class="form-label">Created Date</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              id="createdDate"
+              [value]="form.get('createdDate')?.value | date:'medium'"
+              readonly>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
+          {{ isEditMode ? 'Update' : 'Save' }}
+        </button>
+      </div>
+    </form>
+  </ng-template>
+  
+  <!-- View Transfer Type Details Modal -->
+  <ng-template #viewTransferModal let-modal>
+    <div class="modal-header bg-primary text-white">
+      <h5 class="modal-title fw-bold">Transfer Type Details</h5>
+      <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+      <div class="row g-3" *ngIf="currentTransfer">
+        <div class="col-md-6">
+          <h6 class="text-muted mb-1">Transfer Name</h6>
+          <p class="mb-3 fw-medium">{{ currentTransfer.transferName || 'N/A' }}</p>
+        </div>
+        <div class="col-md-6">
+          <h6 class="text-muted mb-1">Transfer Code</h6>
+          <p class="mb-3">{{ currentTransfer.transferCode || 'N/A' }}</p>
+        </div>
+        <div class="col-md-6">
+          <h6 class="text-muted mb-1">Category</h6>
+          <p class="mb-3">{{ currentTransfer.category || 'N/A' }}</p>
+        </div>
+        <div class="col-md-6">
+          <h6 class="text-muted mb-1">Requires Consent</h6>
+          <p class="mb-3">
+            <span class="badge" [ngClass]="currentTransfer.requiresConsent ? 'bg-success' : 'bg-secondary'">
+              {{ currentTransfer.requiresConsent ? 'Yes' : 'No' }}
+            </span>
+          </p>
+        </div>
+        <div class="col-md-6">
+          <h6 class="text-muted mb-1">Has Probation</h6>
+          <p class="mb-3">
+            <span class="badge" [ngClass]="currentTransfer.hasProbation ? 'bg-info' : 'bg-secondary'">
+              {{ currentTransfer.hasProbation ? 'Yes' : 'No' }}
+            </span>
+          </p>
+        </div>
+        <div class="col-md-6" *ngIf="currentTransfer.hasProbation">
+          <h6 class="text-muted mb-1">Probation Days</h6>
+          <p class="mb-3">{{ currentTransfer.probationDays || '0' }} days</p>
+        </div>
+        <div class="col-md-6">
+          <h6 class="text-muted mb-1">Created Date</h6>
+          <p class="mb-3">{{ (currentTransfer.createdDate | date:'medium') || 'N/A' }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Close</button>
+    </div>
+  </ng-template>

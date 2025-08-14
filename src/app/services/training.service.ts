@@ -56,11 +56,48 @@ export class TrainingService {
   constructor(private http: HttpClient) { }
 
   /**
+   * Get all organizations
+   * @returns Observable of Organization array
+   */
+  getOrganizations(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/api/v1/organizations`).pipe(
+      catchError(error => {
+        console.error('Error fetching organizations:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
    * Get all training categories
    * @returns Observable of TrainingCategory array
    */
   getTrainingCategories(): Observable<TrainingCategory[]> {
-    return this.http.get<TrainingCategory[]>(`${this.apiUrl}/training/categories`);
+    const url = `${this.apiUrl}/api/v1/training/categories`;
+    return this.http.get<TrainingCategory[]>(url).pipe(
+      catchError(error => {
+        console.error('Error in getTrainingCategories:', error);
+        // Return empty array if there's an error
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get training categories by organization ID
+   * @param orgId The organization ID to filter categories by
+   * @returns Observable of TrainingCategory array
+   */
+  getTrainingCategoriesByOrganization(orgId: string): Observable<TrainingCategory[]> {
+    return this.http.get<TrainingCategory[]>(
+      `${this.apiUrl}/api/v1/training/categories/organization/${orgId}`
+    ).pipe(
+      catchError(error => {
+        console.error('Error fetching categories by organization:', error);
+        // Return empty array if there's an error
+        return of([]);
+      })
+    );
   }
 
   /**
@@ -68,7 +105,7 @@ export class TrainingService {
    * @returns Observable of TrainingProgram array
    */
   getTrainingPrograms(): Observable<TrainingProgram[]> {
-    return this.http.get<TrainingProgram[]>(`${this.apiUrl}/api/training/programs`).pipe(
+    return this.http.get<TrainingProgram[]>(`${this.apiUrl}/api/v1/training/programs`).pipe(
       catchError(error => {
         console.error('Error fetching training programs:', error);
         // Return empty array if there's an error
@@ -84,7 +121,7 @@ export class TrainingService {
    */
   getNominationsByProgram(programId: string): Observable<TrainingNomination[]> {
     return this.http.get<TrainingNomination[]>(
-      `${this.apiUrl}/training/nominations/program/${programId}`
+      `${this.apiUrl}/api/v1/training/nominations/program/${programId}`
     );
   }
 
@@ -95,7 +132,7 @@ export class TrainingService {
    */
   createProgram(program: Omit<TrainingProgram, 'programId' | 'createdDate' | 'modifiedDate' | 'seatsBooked'>): Observable<TrainingProgram> {
     return this.http.post<TrainingProgram>(
-      `${this.apiUrl}/training/programs`,
+      `${this.apiUrl}/api/v1/training/programs`,
       program
     );
   }
@@ -111,8 +148,25 @@ export class TrainingService {
     }
     
     return this.http.put<TrainingProgram>(
-      `${this.apiUrl}/training/programs/${program.programId}`,
+      `${this.apiUrl}/api/v1/training/programs/${program.programId}`,
       program
+    );
+  }
+
+  /**
+   * Update the status of a training nomination
+   * @param nominationId The ID of the nomination to update
+   * @param status The new status to set
+   * @returns Observable of the updated TrainingNomination
+   */
+  updateNominationStatus(nominationId: string, status: 'Pending' | 'Approved' | 'Rejected' | 'Completed'): Observable<TrainingNomination> {
+    if (!nominationId) {
+      throw new Error('Cannot update nomination status without nominationId');
+    }
+    
+    return this.http.patch<TrainingNomination>(
+      `${this.apiUrl}/api/v1/training/nominations/${nominationId}/status`,
+      { status }
     );
   }
 }
