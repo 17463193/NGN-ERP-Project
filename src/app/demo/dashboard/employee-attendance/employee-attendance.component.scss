@@ -1,15 +1,4 @@
 /* Attendance Management Component - Responsive SCSS */
-.late-checkin-cell {
-  .text-danger {
-    color: #dc3545 !important;
-    font-weight: 500;
-    
-    i {
-      color: #dc3545 !important;
-    }
-  }
-}
-
 $primary-color: #23a9d2;
 $primary-hover: #015b9d;
 $secondary-color: #6c757d;
@@ -544,4 +533,69 @@ $info-color: #0d6efd;
       font-size: 0.8125rem;
     }
   }
+}
+// filter scss
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.filter-item {
+  min-width: 150px;
+}
+
+.search-container {
+  min-width: 250px;
+}
+
+.date-picker-dropdown {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.att-det-table-row:hover {
+  background-color: #f8f9fa;
+}
+
+.badge .bi-x {
+  font-size: 0.8em;
+  cursor: pointer;
+}
+
+.badge .bi-x:hover {
+  opacity: 0.7;
+}
+
+.filter-summary .badge {
+  cursor: default;
+}
+
+.filter-summary .badge .bi-x {
+  cursor: pointer;
+}
+
+.pagination .page-link {
+  border-color: #dee2e6;
+  color: #6c757d;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.pagination .page-link:hover {
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+}
+
+.table-responsive {
+  border-radius: 0.375rem;
+}
+
+.att-det-empty {
+  color: #6c757d;
+}
+
+.spinner-border {
+  width: 2rem;
+  height: 2rem;
 }
