@@ -1,11 +1,12 @@
-import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Component, OnInit, TemplateRef, ViewChild, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { HttpClient } from '@angular/common/http';
-import { finalize } from 'rxjs/operators';
+import { finalize, debounceTime, distinctUntilChanged, takeUntil, catchError } from 'rxjs/operators';
+import { Subject, of } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import Swal from 'sweetalert2';
 
@@ -41,7 +42,7 @@ interface TrainingNomination {
   programId: string;
   employeeId?: string;  // Made optional with ?
   employeeName: string;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Completed' | 'Cancelled';
+  status: 'Pending' | 'Approved' | 'Rejected';
   createdDate: string;
   modifiedDate: string;
   programName?: string;
@@ -50,6 +51,27 @@ interface TrainingNomination {
   endDate?: string;
   location?: string;
   trainerName?: string;
+}
+
+interface EmployeeResponse {
+  empId: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  empCode: string;
+  contacts: any[];
+  addresses: any[];
+  qualifications: any[];
+  bankDetails: any[];
+  history: any[];
+}
+
+interface Employee {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  empCode: string;
+  fullName: string;
 }
 
 interface TrainingNominationWithProgram extends TrainingNomination {
@@ -73,28 +95,38 @@ export class EmpNominationsComponent implements OnInit {
   // Data
   nominations: TrainingNominationWithProgram[] = [];
   programs: TrainingProgram[] = [];
-  filteredNominations: TrainingNominationWithProgram[] = [];
-  currentNomination: TrainingNominationWithProgram | null = null;
-  private apiUrl = environment.apiUrl;
-  
-  // Search state
-  searchQuery = '';
-
-  // Date range for filtering
-  dateRange: [Date | null, Date | null] = [null, null];
+  employees: Employee[] = [];
+  filteredEmployees: Employee[] = [];
+  loadingEmployees = false;
   
   // Pagination
   currentPage = 1;
+  pageSize = 5;
   itemsPerPage = 10;
   totalPages = 1;
+  
+  // UI State
+  filteredNominations: TrainingNominationWithProgram[] = [];
+  currentNomination: TrainingNominationWithProgram | null = null;
+  searchQuery = '';
+  
+  // Date range for filtering
+  dateRange: [Date | null, Date | null] = [null, null];
+  
+  // Observables
+  private employeeSearchInput$ = new Subject<string>();
+  private destroy$ = new Subject<void>();
+  
+  // API Configuration
+  private apiUrl = environment.apiUrl;
   
   // UI State
   isEditMode = false;
   isLoading = false;
   errorMessage = '';
-
-  // Forms
   form: FormGroup;
+  showEmployeeDropdown = false;
+  employeeSearchControl = new FormControl('');
   
   // Template Refs
   @ViewChild('trainingModal') private trainingModalRef!: TemplateRef<any>;
@@ -106,25 +138,108 @@ export class EmpNominationsComponent implements OnInit {
     private modalService: NgbModal,
     private http: HttpClient
   ) {
+    this.initializeForm();
+  }
+
+  // Define status options as a constant for reusability
+  readonly NOMINATION_STATUS = {
+    PENDING: 'Pending',
+    APPROVED: 'Approved',
+    REJECTED: 'Rejected'
+  } as const;
+
+  initializeForm(): void {
     this.form = this.fb.group({
-      employeeName: ['', Validators.required],
-      programId: ['', Validators.required],
-      status: ['Pending', Validators.required],
-      startDate: ['', Validators.required],
-      endDate: ['', Validators.required],
-      location: ['', Validators.required],
-      trainerName: ['', Validators.required]
-    }, { validators: this.dateRangeValidator });
+      id: [''],
+      employeeId: ['', [
+        Validators.required,
+        Validators.pattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$')
+      ]],
+      programId: ['', [
+        Validators.required,
+        Validators.pattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$')
+      ]],
+      justification: ['', [
+        Validators.required,
+        Validators.minLength(10),
+        Validators.maxLength(1000)
+      ]],
+      status: [this.NOMINATION_STATUS.PENDING, [
+        Validators.required,
+        Validators.pattern(`^(${Object.values(this.NOMINATION_STATUS).join('|')})$`)
+      ]],
+      employeeSearch: ['']
+    });
   }
 
   ngOnInit(): void {
+    this.initializeForm();
+    this.loadNominations();
     this.loadPrograms();
+    this.setupEmployeeSearch();
+    this.loadEmployees();
+    
+    // Set up the employee search
+    this.employeeSearchControl.valueChanges.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(searchTerm => {
+      if (searchTerm) {
+        this.filterEmployees(searchTerm);
+        this.showEmployeeDropdown = true;
+      } else {
+        this.filteredEmployees = [...this.employees];
+        this.showEmployeeDropdown = true;
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private setupEmployeeSearch(): void {
+    // Initialize with all employees
+    this.filteredEmployees = [...this.employees];
+  }
+
+  private filterEmployees(searchTerm: string): void {
+    if (!searchTerm) {
+      this.filteredEmployees = [...this.employees];
+      return;
+    }
+    
+    const term = searchTerm.toLowerCase().trim();
+    this.filteredEmployees = this.employees.filter(emp => {
+      return (emp.fullName && emp.fullName.toLowerCase().includes(term)) ||
+             (emp.empCode && emp.empCode.toLowerCase().includes(term));
+    });
+  }
+
+  selectEmployee(employee: Employee): void {
+    if (!employee) return;
+    
+    this.form.patchValue({
+      employeeId: employee.employeeId,
+      employeeSearch: employee.fullName
+    });
+    this.employeeSearchControl.setValue(employee.fullName);
+    this.showEmployeeDropdown = false;
+  }
+
+  onEmployeeBlur(): void {
+    // Small delay to allow click events to fire before hiding the dropdown
+    setTimeout(() => {
+      this.showEmployeeDropdown = false;
+    }, 200);
   }
 
   loadPrograms(): void {
     this.isLoading = true;
-    const url = `${this.apiUrl}/api/training/programs`;
-    console.log('Fetching programs from:', url); // Debug log
+    const url = `${this.apiUrl}/api/v1/training/programs`;
+    // Fetching programs from API
     
     this.http.get<TrainingProgram[]>(url, {
       headers: {
@@ -135,7 +250,7 @@ export class EmpNominationsComponent implements OnInit {
     .pipe(finalize(() => this.isLoading = false))
     .subscribe({
       next: (programs) => {
-        console.log('Programs loaded successfully:', programs); // Debug log
+        // Programs loaded successfully
         this.programs = programs;
         this.loadNominations();
       },
@@ -152,9 +267,15 @@ export class EmpNominationsComponent implements OnInit {
 
   loadNominations(): void {
     this.isLoading = true;
-    // First, get all programs to fetch their nominations
+    
+    // If there are no programs, load them first
+    if (this.programs.length === 0) {
+      this.loadPrograms();
+      return;
+    }
+
+    // Get all program IDs
     const programIds = this.programs.map(p => p.programId);
-    console.log('Program IDs to fetch nominations for:', programIds); // Debug log
     
     // If there are no programs, set empty nominations and return
     if (programIds.length === 0) {
@@ -164,59 +285,215 @@ export class EmpNominationsComponent implements OnInit {
       return;
     }
 
+    // Create an array of promises to fetch nominations for each program
     const nominationPromises = programIds.map(programId => 
-      this.http.get<TrainingNomination[]>(`${this.apiUrl}/training/nominations/program/${programId}`, {
+      this.http.get<TrainingNomination[]>(`${this.apiUrl}/api/v1/training/nominations/program/${programId}`, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
-      }).toPromise()
+      }).pipe(
+        catchError(error => {
+          console.error(`Error loading nominations for program ${programId}:`, error);
+          return of([]); // Return empty array on error to continue with other requests
+        })
+      ).toPromise()
     );
 
+    // Process all nomination requests
     Promise.all(nominationPromises)
       .then(nominationArrays => {
-        console.log('Nominations response:', nominationArrays); // Debug log
-        // Flatten the array of arrays and add program info
+        // Reset nominations array
         this.nominations = [];
+        
+        // Process each program's nominations
         nominationArrays.forEach((nominations, index) => {
-          if (nominations && Array.isArray(nominations) && nominations.length > 0) {
-            const program = this.programs.find(p => p.programId === programIds[index]);
-            if (!program) return; // Skip if program not found
+          const programId = programIds[index];
+          const program = this.programs.find(p => p.programId === programId);
+          
+          if (!program || !Array.isArray(nominations)) return;
+          
+          // Map nominations with program details
+          const nominationsWithProgram = nominations.map(nomination => {
+            // If we already have the employee name, use it
+            const employeeName = nomination.employeeName || '';
             
-            const nominationsWithProgram = nominations.map(nom => ({
-              ...nom,
+            return {
+              ...nomination,
+              employeeId: nomination.employeeId || nomination.empId, // Handle different ID field names
+              employeeName: employeeName,
               programName: program.programName,
-              programCode: program?.programCode,
-              startDate: program?.startDate,
-              endDate: program?.endDate,
-              location: program?.location,
-              trainerName: program?.trainerName,
+              programCode: program.programCode,
+              startDate: program.startDate,
+              endDate: program.endDate,
+              location: program.venue || program.location,
+              trainerName: program.heldBy || program.trainerName,
               program: program
-            }));
-            this.nominations = [...this.nominations, ...nominationsWithProgram];
-          }
+            };
+          });
+          
+          this.nominations = [...this.nominations, ...nominationsWithProgram];
         });
         
+        // Update filtered nominations and pagination
         this.filteredNominations = [...this.nominations];
         this.updateTotalPages();
+        this.isLoading = false;
+        
+        // Fetch employee names for all nominations
+        this.fetchEmployeeNamesForNominations();
       })
       .catch(error => {
-        console.error('Error loading nominations:', error);
-        Swal.fire('Error', 'Failed to load training nominations', 'error');
+        console.error('Error processing nominations:', error);
+        this.isLoading = false;
+        Swal.fire('Error', 'Failed to process training nominations', 'error');
       })
       .finally(() => {
         this.isLoading = false;
       });
   }
 
-  dateRangeValidator(group: FormGroup): { [key: string]: boolean } | null {
-    const startDate = group.get('startDate')?.value;
-    const endDate = group.get('endDate')?.value;
+  // Fetch employee names for all nominations that don't have a name
+  private fetchEmployeeNamesForNominations(): void {
+    this.nominations.forEach(nomination => {
+      if (nomination.employeeId && !nomination.employeeName) {
+        this.fetchAndUpdateEmployeeName(nomination);
+      }
+    });
+  }
+
+
+  // Fetch employee by ID and update the nomination with the employee's name
+  private fetchAndUpdateEmployeeName(nomination: TrainingNominationWithProgram): void {
+    if (!nomination.employeeId) return;
     
-    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-      return { 'dateRangeInvalid': true };
-    }
-    return null;
+    this.http.get<any>(`${this.apiUrl}/api/v1/employees/${nomination.employeeId}`).pipe(
+      catchError(error => {
+        console.error(`Error fetching employee ${nomination.employeeId}:`, error);
+        return of(null);
+      })
+    ).subscribe(employeeData => {
+      if (employeeData) {
+        const emp = employeeData.employee || employeeData;
+        const firstName = emp.firstName || emp.first_name || emp.empFirstName || emp.name?.first || '';
+        const lastName = emp.lastName || emp.last_name || emp.empLastName || emp.name?.last || '';
+        const middleName = (emp.middleName || emp.middle_name || emp.empMiddleName || emp.name?.middle || '').trim();
+        
+        const nameParts = [firstName];
+        if (middleName) nameParts.push(middleName);
+        nameParts.push(lastName);
+        const fullName = nameParts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+        
+        // Update the nomination with the employee's name
+        const updatedNomination = this.nominations.find(n => n.id === nomination.id);
+        if (updatedNomination) {
+          updatedNomination.employeeName = fullName;
+        }
+      }
+    });
+  }
+
+  loadEmployees(): void {
+    this.loadingEmployees = true;
+    const url = `${this.apiUrl}/api/v1/employees`;
+    
+    this.http.get<any>(url, { observe: 'response' }).pipe(
+      finalize(() => this.loadingEmployees = false)
+    ).subscribe({
+      next: (httpResponse) => {
+        const response = httpResponse.body;
+        
+        if (response == null) {
+          console.error('Empty response received from server');
+          Swal.fire('Error', 'Received empty response from server', 'error');
+          return;
+        }
+        
+        let employeesData = [];
+        
+        if (Array.isArray(response)) {
+          employeesData = response;
+        } else if (Array.isArray(response.data)) {
+          employeesData = response.data;
+        } else if (Array.isArray(response.items)) {
+          employeesData = response.items;
+        } else if (typeof response === 'object' && response !== null) {
+          employeesData = Object.values(response).find(Array.isArray) || [];
+        }
+        
+        if (!Array.isArray(employeesData)) {
+          console.error('Unexpected response format. Expected an array but got:', typeof response);
+          console.error('Full response:', response);
+          Swal.fire('Error', 'Unexpected employee data format received', 'error');
+          return;
+        }
+        
+        this.employees = employeesData.map(item => {
+          const emp = item.employee || item;
+          
+          const firstName = emp.firstName || emp.first_name || emp.empFirstName || emp.name?.first || '';
+          const lastName = emp.lastName || emp.last_name || emp.empLastName || emp.name?.last || '';
+          const middleName = (emp.middleName || emp.middle_name || emp.empMiddleName || emp.name?.middle || '').trim();
+          
+          const nameParts = [firstName];
+          if (middleName) nameParts.push(middleName);
+          nameParts.push(lastName);
+          const fullName = nameParts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+          
+          const employeeData = {
+            employeeId: emp.empId || emp.id || emp.employeeId || emp._id || '',
+            firstName: firstName,
+            lastName: lastName,
+            empCode: emp.empCode || emp.employeeCode || emp.empNo || emp.employeeNo || emp.code || '',
+            fullName: fullName
+          };
+          
+          return employeeData;
+        }).filter(emp => {
+          // Only include employees with at least a first or last name and an ID
+          const isValid = (emp.firstName || emp.lastName) && emp.employeeId;
+          if (!isValid) {
+            console.warn('Filtering out invalid employee data (missing name or ID):', emp);
+          } else {
+            // Valid employee data processed
+          }
+          return isValid;
+        }) as Employee[];
+        
+        // Successfully processed employees
+        
+        if (this.employees.length === 0) {
+          console.warn('No valid employees found in the response');
+          // Removed the Swal.fire call that was showing on page load
+        }
+        
+        // Initialize filtered employees with all employees
+        this.filteredEmployees = [...this.employees];
+      },
+      error: (error) => {
+        console.error('Error loading employees:', error);
+        
+        // Log detailed error information
+        if (error.error instanceof ErrorEvent) {
+          // Client-side or network error
+          console.error('Client-side error:', error.error.message);
+        } else {
+          // Backend returned an unsuccessful response code
+          console.error(`Backend returned code ${error.status}, body was:`, error.error);
+        }
+        
+        // Try to extract a meaningful error message
+        let errorMessage = 'Failed to load employees';
+        if (error.error && typeof error.error === 'object') {
+          errorMessage = error.error.message || JSON.stringify(error.error);
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        console.error('Full error details:', error);
+        Swal.fire('Error', errorMessage, 'error');
+      }
+    });
   }
 
   applySearch(): void {
@@ -243,7 +520,10 @@ export class EmpNominationsComponent implements OnInit {
     this.currentNomination = null;
     this.form.reset({
       status: 'Pending',
-      programId: ''
+      programId: '',
+      employeeId: '',
+      employeeName: '',
+      justification: ''
     });
     this.modalRef = this.modalService.open(this.trainingModalRef, { size: 'lg' });
   }
@@ -252,13 +532,15 @@ export class EmpNominationsComponent implements OnInit {
     this.isEditMode = true;
     this.currentNomination = { ...nomination };
     this.form.patchValue({
-      employeeName: nomination.employeeName,
-      programId: nomination.programId,
-      status: nomination.status,
+      employeeId: nomination.employeeId || '',
+      employeeName: nomination.employeeName || '',
+      programId: nomination.programId || '',
+      justification: (nomination as any).justification || '',
+      status: nomination.status || 'Pending',
       startDate: nomination.startDate ? new Date(nomination.startDate).toISOString().substring(0, 10) : '',
       endDate: nomination.endDate ? new Date(nomination.endDate).toISOString().substring(0, 10) : '',
-      location: nomination.location,
-      trainerName: nomination.trainerName
+      location: nomination.location || '',
+      trainerName: nomination.trainerName || ''
     });
     this.modalRef = this.modalService.open(this.trainingModalRef, { size: 'lg' });
   }
@@ -276,24 +558,12 @@ export class EmpNominationsComponent implements OnInit {
     const formData = this.form.value;
     const apiUrl = environment.apiUrl;
     
-    // Find the selected program to get additional details
-    const selectedProgram = this.programs.find(p => p.programId === formData.programId);
-    
-    const nominationData: TrainingNomination = {
-      id: this.isEditMode && this.currentNomination?.id ? this.currentNomination.id : undefined,
-      employeeName: formData.employeeName,
+    // Prepare the request body according to the API specification
+    const nominationData = {
+      empId: formData.employeeId,
       programId: formData.programId,
-      programName: selectedProgram?.programName || '',
-      programCode: selectedProgram?.programCode || '',
-      status: formData.status,
-      startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
-      endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
-      location: formData.location,
-      trainerName: formData.trainerName,
-      createdDate: this.isEditMode && this.currentNomination?.createdDate 
-        ? this.currentNomination.createdDate 
-        : new Date().toISOString(),
-      modifiedDate: new Date().toISOString()
+      justification: formData.justification || '',
+      status: formData.status || 'Pending'
     };
 
     const request = this.isEditMode && this.currentNomination?.id
@@ -409,12 +679,12 @@ export class EmpNominationsComponent implements OnInit {
 
   getStatusBadgeClass(status: string): string {
     switch (status) {
-      case 'Pending': return 'bg-info';
-      case 'Approved': return 'bg-success';
-      case 'Rejected': return 'bg-danger';
-      case 'Completed': return 'bg-primary';
-      case 'Cancelled': return 'bg-secondary';
-      default: return 'bg-light text-dark';
+      case 'Approved':
+        return 'bg-success';
+      case 'Rejected':
+        return 'bg-danger';
+      default: // Pending
+        return 'bg-secondary';
     }
   }
 }

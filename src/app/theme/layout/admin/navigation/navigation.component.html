@@ -1,14 +1,23 @@
-<nav class="">
-  <div class="navbar-wrapper">
-    <div class="m-header">
-      <a [routerLink]="['/default/']" class="b-brand">
-        @if (themeMode === 'compact') {
-          <img src="assets/images/Logo-small.svg" alt="small-menu-logo" class="logo logo-sm" />
-        } @else {
-          <img src="assets/images/logo.svg" alt="logo" class="logo logo-lg" />
+<!-- navigation.component.html -->
+<ng-container >
+    <div class="navbar-content" style="padding-top: 90px;"> 
+      <ul class="nav coded-inner-navbar">
+        @for (item of navItems; track trackByFn($index, item)) {
+          <!-- Group Type -->
+          @if (item.type === 'group') {
+            <app-nav-group [item]="item" />
+          }
+          
+          <!-- Collapse Type -->
+          @else if (item.type === 'collapse') {
+            <app-nav-collapse [item]="item" />
+          }
+          
+          <!-- Item Type -->
+          @else if (item.type === 'item') {
+            <app-nav-item [item]="item" />
+          }
         }
-      </a>
+      </ul>
     </div>
-    <app-nav-content (NavCollapsedMob)="navCollapseMob()" (SubmenuCollapse)="navSubmenuCollapse()" class="scroll-div w-100 compact" />
-  </div>
-</nav>
+</ng-container>

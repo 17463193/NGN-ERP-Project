@@ -1,12 +1,37 @@
-@if (!item.hidden) {
-  <li class="nav-item coded-menu-caption" [ngClass]="item.classes">
-    <label for="{{ item.id }}">{{ item.title }}</label>
-  </li>
-  @for (items of item.children; track items) {
-    @if (items.type === 'collapse') {
-      <app-nav-collapse [item]="items" />
-    } @else if (items.type === 'item') {
-      <app-nav-item [item]="items" />
+<!-- nav-group.component.html -->
+@if (item.type === 'group') {
+  <li class="nav-group-container" [ngClass]="item.classes">
+    <!-- Group Header with improved accessibility -->
+    <div class="nav-group-header" (click)="toggleGroup()" [attr.aria-expanded]="isExpanded">
+      @if (item.icon) {
+        <i class="nav-group-icon {{ item.icon }}" aria-hidden="true"></i>
+      }
+      <span class="nav-group-title">{{ item.title }}</span>
+      @if (item.badge) {
+        <span class="nav-group-badge {{ item.badge.class }}">{{ item.badge.text }}</span>
+      }
+      <i class="nav-group-chevron" [class.rotated]="isExpanded">›</i>
+    </div>
+
+    <!-- Group Children with smooth animation -->
+    @if (isExpanded) {
+      <ul class="nav-group-items" [@slideInOut]>
+        @for (child of item.children; track child.id) {
+          <li class="nav-group-item" [ngClass]="{'active': isActive(child)}">
+            @switch (child.type) {
+              @case ('collapse') {
+                <app-nav-collapse [item]="child" />
+              }
+              @case ('item') {
+                <app-nav-item [item]="child" />
+              }
+              @case ('group') {
+                <app-nav-group [item]="child" />
+              }
+            }
+          </li>
+        }
+      </ul>
     }
-  }
+  </li>
 }

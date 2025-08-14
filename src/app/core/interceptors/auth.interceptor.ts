@@ -7,60 +7,52 @@ import {
   HttpErrorResponse,
   HttpStatusCode
 } from '@angular/common/http';
-import { Observable, throwError, BehaviorSubject, of } from 'rxjs';
+import { Observable, throwError, BehaviorSubject, of, never } from 'rxjs';
 import { catchError, filter, switchMap, take, finalize } from 'rxjs/operators';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   private isRefreshing = false;
   private refreshTokenSubject: BehaviorSubject<string | null> = new BehaviorSubject<string | null>(null);
-  private refreshInProgress = false;
 
   constructor(
     private authService: AuthService,
-    private router: Router,
-    private route: ActivatedRoute
+    private router: Router
   ) {}
 
-  intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    // Skip adding token for auth and public endpoints
-    if (this.isAuthRequest(request.url) || this.isPublicEndpoint(request.url)) {
+ intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+  console.log('Intercepting request to:', request.url);
+  console.log('Current token:', this.authService.getToken());
+
+    // Skip adding token for public API endpoints
+    if (this.isPublicApiEndpoint(request.url)) {
       return next.handle(request);
     }
 
-    // Get the access token
     const accessToken = this.authService.getToken();
     
-    // If no token, redirect to login
-    if (!accessToken) {
+    if (!accessToken || !this.isValidToken(accessToken)) {
       this.redirectToLogin();
-      return throwError(() => new Error('No access token available'));
+      return throwError(() => new Error('Invalid or missing access token'));
     }
 
-    // Add token to the request
     const authReq = this.addTokenHeader(request, accessToken);
+
+    if (!environment.production) {
+      console.log('Making authenticated request to:', authReq.url);
+    }
 
     return next.handle(authReq).pipe(
       catchError((error: HttpErrorResponse) => {
-        // Handle 401 Unauthorized errors
         if (error.status === HttpStatusCode.Unauthorized) {
-          // Don't try to refresh token for refresh-token endpoint
-          if (request.url.includes('auth/refresh-token')) {
-            this.authService.logout();
-            this.redirectToLogin();
-            return throwError(() => error);
-          }
-          
-          // Handle token refresh
-          return this.handle401Error(authReq, next);
+          return this.handleUnauthorizedError(authReq, next);
         }
         
-        // Handle other errors
         if (error.status === HttpStatusCode.Forbidden) {
-          // Handle 403 Forbidden
-          this.router.navigate(['/unauthorized']);
+          return this.handleForbiddenError(error);
         }
         
         return throwError(() => error);
@@ -68,17 +60,32 @@ export class AuthInterceptor implements HttpInterceptor {
     );
   }
 
-  private isAuthRequest(url: string): boolean {
-    return url.includes('/auth/');
+  private isAuthenticationEndpoint(url: string): boolean {
+    const authEndpoints = [
+      '/auth/login',
+      '/auth/refresh-token',
+      '/auth/logout',
+      '/auth/register'
+    ];
+    return authEndpoints.some(endpoint => url.includes(endpoint));
   }
 
-  private isPublicEndpoint(url: string): boolean {
-    // Add any public endpoints that don't require authentication
+  private isPublicApiEndpoint(url: string): boolean {
     const publicEndpoints = [
       '/api/public/',
-      '/api/training/programs' // Add training programs endpoint if it should be public
+      '/assets/',
+      '/config/'
     ];
     return publicEndpoints.some(endpoint => url.includes(endpoint));
+  }
+
+  private isValidToken(token: string): boolean {
+    try {
+      const parts = token.split('.');
+      return parts.length === 3; // Basic JWT structure check
+    } catch {
+      return false;
+    }
   }
 
   private addTokenHeader(request: HttpRequest<any>, token: string): HttpRequest<any> {
@@ -91,22 +98,27 @@ export class AuthInterceptor implements HttpInterceptor {
     });
   }
 
-  private handle401Error(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+  private handleUnauthorizedError(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    if (request.url.includes('auth/refresh-token')) {
+      this.authService.logout();
+      this.redirectToLogin();
+      return throwError(() => new Error('Refresh token failed'));
+    }
+
     if (!this.isRefreshing) {
       this.isRefreshing = true;
       this.refreshTokenSubject.next(null);
 
       return this.authService.refreshToken().pipe(
-        switchMap(() => {
+        switchMap((tokenResponse: any) => {
           this.isRefreshing = false;
-          const newToken = this.authService.getToken();
+          const newToken = tokenResponse?.accessToken;
           
           if (newToken) {
             this.refreshTokenSubject.next(newToken);
             return next.handle(this.addTokenHeader(request, newToken));
           }
           
-          // If no new token, force logout
           this.authService.logout();
           this.redirectToLogin();
           return throwError(() => new Error('Token refresh failed'));
@@ -123,31 +135,38 @@ export class AuthInterceptor implements HttpInterceptor {
       );
     }
 
-    // If token is being refreshed, wait for it to complete
     return this.refreshTokenSubject.pipe(
       filter(token => token !== null),
       take(1),
       switchMap((token) => {
-        if (token) {
-          return next.handle(this.addTokenHeader(request, token));
-        }
-        this.redirectToLogin();
-        return throwError(() => new Error('Token refresh failed'));
+        return next.handle(this.addTokenHeader(request, token!));
       })
     );
   }
 
+  private handleForbiddenError(error: HttpErrorResponse): Observable<never> {
+    if (!this.router.url.startsWith('/unauthorized')) {
+      this.router.navigate(['/unauthorized'], { 
+        replaceUrl: true,
+        state: { 
+          error: error,
+          previousUrl: this.router.url
+        }
+      });
+    }
+    return throwError(() => error);
+  }
+
   private redirectToLogin(): void {
-    // Get the current URL to redirect back after login
-    const currentUrl = this.router.url;
-    
-    // Only redirect to login if not already on login page
-    if (!currentUrl.includes('/guest/login') && !currentUrl.includes('/auth/login')) {
+    if (!this.router.url.includes('/login')) {
+      const currentUrl = this.router.url;
       this.router.navigate(['/guest/login'], { 
-        queryParams: { returnUrl: currentUrl } 
+        queryParams: { returnUrl: currentUrl },
+        replaceUrl: true
       }).then(() => {
-        // Force a page reload to reset the application state
-        window.location.reload();
+        if (!environment.production) {
+          console.log('Redirected to login from:', currentUrl);
+        }
       });
     }
   }

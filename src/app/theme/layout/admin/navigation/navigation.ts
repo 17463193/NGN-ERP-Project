@@ -12,12 +12,15 @@ export interface NavigationItem {
   target?: boolean;
   breadcrumbs?: boolean;
   children?: NavigationItem[];
-  role?: string[];
+  roles?: string[];
   isMainParent?: boolean;
   active?: boolean;
+  permission?: string;
+  displayOrder?: number;
 }
 
 export const NavigationItems: NavigationItem[] = [
+
  {
   id: 'dashboard',
   title: 'Dashboard',
@@ -82,43 +85,33 @@ export const NavigationItems: NavigationItem[] = [
       ]
     },
     {
-      id: 'elmr',
+      id: 'Leave-controller',
       title: 'Leave Management',
-      type: 'item',
-      url: '/elmr',
-      icon: 'ti ti-calendar-minus', // Changed to calendar with time for leave management
-      target: false,
-      breadcrumbs: false,
+      type: 'collapse',
+      icon: 'ti ti-certificate',
+      classes: 'nav-item',
       children: [
         {
-          id: 'balance-leave',
-          title: 'Leave Balance',
+          id: 'leave-management',
+          title: 'Leave Management',
           type: 'item',
-          url: '/balanceleave',
+          url: '/elmr',
           breadcrumbs: false,
-          hidden: true
+          icon: 'ti ti-category',
+          classes: 'nav-item'
         },
         {
-          id: 'leave-form',
-          title: 'Leave Form',
+          id: 'leave-allocation',
+          title: 'Leave Allocation',
           type: 'item',
-          url: '/leave-form',
-          icon: 'ti ti-file-text',
+          url: '/leave-allocation',
           breadcrumbs: false,
-          hidden: false
-        }
+          icon: 'ti ti-certificate',
+          classes: 'nav-item',
+          active: true
+        },
       ]
     },
-    {
-  id: 'leave-allocation',
-  title: 'Leave Allocation',
-  type: 'item',
-  url: '/leave-allocation',
-  icon: 'ti ti-calendar-plus', // Best match for "allocation"
-  classes: 'nav-item',
-  breadcrumbs: false,
-  hidden: false
-},
     {
       id: 'Calendar',
       title: 'Calendar',
@@ -241,12 +234,31 @@ export const NavigationItems: NavigationItem[] = [
       ]
     },
     {
-      id: 'emp-transfer',
-      title: 'Employee Transfer',
-      type: 'item',
+      id: 'transfer-management',
+      title: 'Transfer Management',
+      type: 'collapse',
       classes: 'nav-item',
-      url: '/emp-transfer',
-      icon: 'ti ti-arrows-exchange' 
+      icon: 'ti ti-arrows-exchange' ,
+      children: [
+        {
+          id: 'emp-transfer',
+          title: 'Transfer',
+          type: 'item',
+          url: '/emp-transfer',
+          breadcrumbs: false,
+          icon: 'ti ti-category',
+          classes: 'nav-item'
+        },
+        {
+          id: 'emp-type',
+          title: 'Transfer Type',
+          type: 'item',
+          url: '/emp-type',
+          breadcrumbs: false,
+          icon: 'ti ti-category',
+          classes: 'nav-item'
+        },
+      ]
     },
   ],
 },
@@ -303,64 +315,3 @@ export const NavigationItems: NavigationItem[] = [
       //     }
       //   ]
       // }
-  // {
-  //   id: 'elements',
-  //   title: 'Elements',
-  //   type: 'group',
-  //   icon: 'icon-navigation',
-  //   children: [
-  //     {
-  //       id: 'typography',
-  //       title: 'Typography',
-  //       type: 'item',
-  //       classes: 'nav-item',
-  //       url: '/typography',
-  //       icon: 'ti ti-typography'
-  //     },
-  //     {
-  //       id: 'color',
-  //       title: 'Colors',
-  //       type: 'item',
-  //       classes: 'nav-item',
-  //       url: '/color',
-  //       icon: 'ti ti-brush'
-  //     },
-  //     {
-  //       id: 'tabler',
-  //       title: 'Tabler',
-  //       type: 'item',
-  //       classes: 'nav-item',
-  //       url: 'https://tabler-icons.io/',
-  //       icon: 'ti ti-plant-2',
-  //       target: true,
-  //       external: true
-  //     }
-  //   ]
-  // },
-  // {
-  //   id: 'other',
-  //   title: 'Other',
-  //   type: 'group',
-  //   icon: 'icon-navigation',
-  //   children: [
-  //     {
-  //       id: 'sample-page',
-  //       title: 'Sample Page',
-  //       type: 'item',
-  //       url: '/sample-page',
-  //       classes: 'nav-item',
-  //       icon: 'ti ti-brand-chrome'
-  //     },
-  //     {
-  //       id: 'document',
-  //       title: 'Document',
-  //       type: 'item',
-  //       classes: 'nav-item',
-  //       url: 'https://codedthemes.gitbook.io/berry-angular/',
-  //       icon: 'ti ti-vocabulary',
-  //       target: true,
-  //       external: true
-  //     }
-  //   ]
-  // }
-];

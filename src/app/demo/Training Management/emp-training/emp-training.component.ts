@@ -47,6 +47,9 @@ export class EmpTrainingComponent implements OnInit {
   // Data
   trainingPrograms: TrainingProgramWithNominations[] = [];
   filteredPrograms: TrainingProgramWithNominations[] = [];
+  organizations: { orgId: string; orgName: string }[] = [];
+  allCategories: { categoryId: string; categoryName: string; orgId: string | null; isActive?: boolean }[] = [];
+  filteredCategories: { categoryId: string; categoryName: string }[] = [];
   currentProgram: TrainingProgramWithNominations | null = null;
   isLoading = false;
   currentTraining: TrainingProgramWithNominations | null = null;
@@ -79,20 +82,20 @@ export class EmpTrainingComponent implements OnInit {
     private modalService: NgbModal,
     private fb: FormBuilder
   ) {
-    // Initialize with default values to prevent null reference errors
+    // Initialize with empty values
     this.currentTraining = {
       programId: '',
       programName: '',
       programCode: '',
       startDate: new Date(),
-      endDate: new Date(),
+      endDate: new Date(new Date().setDate(new Date().getDate() + 7)), // Default to 1 week from now
       venue: '',
       location: '',
       trainerName: '',
-      status: 'Planned',
+      status: 'Draft',
       seatsBooked: 0,
-      maxSeats: 10,
-      maxParticipants: 10,
+      maxSeats: 0,
+      maxParticipants: 0,
       nominations: [],
       participants: [],
       // Required fields from TrainingProgram
@@ -104,20 +107,133 @@ export class EmpTrainingComponent implements OnInit {
       isActive: true
     } as unknown as TrainingProgramWithNominations;
     this.form = this.fb.group({
-      trainingName: ['', Validators.required],
-      trainingCode: ['', [Validators.required, Validators.pattern('^[A-Za-z0-9-]+$')]],
-      description: [''],
+      // Basic Information
+      orgId: ['', Validators.required],
+      categoryId: ['', Validators.required],
+      programName: ['', Validators.required],
+      programCode: ['', [
+        Validators.required, 
+        Validators.pattern('^[A-Za-z0-9-]+$')
+      ]],
+      programType: ['', Validators.required],
+      deliveryMethod: ['', Validators.required],
+      
+      // Dates
       startDate: ['', Validators.required],
       endDate: ['', Validators.required],
-      status: ['Planned', Validators.required],
-      trainerName: ['', Validators.required],
-      location: ['', Validators.required],
-      maxParticipants: ['', [Validators.required, Validators.min(1), Validators.max(100)]]
-    }, { validators: this.dateRangeValidator });
+      
+      // Details
+      durationHours: ['', [
+        Validators.required, 
+        Validators.min(1)
+      ]],
+      costPerParticipant: ['', [
+        Validators.required, 
+        Validators.min(0)
+      ]],
+      batchName: [''],
+      heldBy: ['', Validators.required],
+      venue: ['', Validators.required],
+      maxSeats: ['', [
+        Validators.required, 
+        Validators.min(1)
+      ]],
+      isActive: [false],
+      
+      // Optional Fields
+      description: ['']
+    }, { 
+      validators: [
+        this.dateRangeValidator,
+        // Add any other cross-field validators here
+      ] 
+    });
   }
 
   ngOnInit(): void {
+    this.loadOrganizations();
+    this.loadAllCategories();
     this.loadTrainingPrograms();
+    
+    // Filter categories when organization changes
+    this.form.get('orgId')?.valueChanges.subscribe(orgId => {
+      this.filterCategoriesByOrganization(orgId);
+    });
+  }
+  
+  // Load all categories
+  loadAllCategories(): void {
+    this.isLoading = true;
+    this.trainingService.getTrainingCategories()
+      .pipe(
+        finalize(() => this.isLoading = false)
+      )
+      .subscribe({
+        next: (categories) => {
+          if (!Array.isArray(categories)) {
+            console.error('Expected an array of categories but got:', typeof categories);
+            this.allCategories = [];
+            return;
+          }
+          
+          this.allCategories = categories.map(cat => ({
+            categoryId: cat.categoryId,
+            categoryName: cat.categoryName,
+            orgId: cat.orgId,
+            isActive: cat.isActive
+          }));
+          
+          // After loading all categories, filter them based on the currently selected organization
+          const currentOrgId = this.form.get('orgId')?.value;
+          this.filterCategoriesByOrganization(currentOrgId);
+        },
+        error: (error) => {
+          console.error('Error loading categories:', error);
+          this.allCategories = [];
+          this.filteredCategories = [];
+          this.form.get('categoryId')?.reset('');
+          Swal.fire('Error', 'Failed to load categories', 'error');
+        }
+      });
+  }
+  
+  // Filter categories by organization ID
+  filterCategoriesByOrganization(orgId: string | null): void {
+    if (!orgId) {
+      // If no org is selected, show all active categories
+      this.filteredCategories = this.allCategories
+        .filter(cat => cat.orgId !== null && cat.isActive !== false)
+        .map(({ categoryId, categoryName }) => ({ categoryId, categoryName }));
+    } else {
+      // If org is selected, show only categories for that org
+      this.filteredCategories = this.allCategories
+        .filter(cat => cat.orgId === orgId && cat.isActive !== false)
+        .map(({ categoryId, categoryName }) => ({ categoryId, categoryName }));
+    }
+    
+    // If there's only one category, select it by default
+    if (this.filteredCategories.length === 1) {
+      this.form.get('categoryId')?.setValue(this.filteredCategories[0].categoryId);
+    } else {
+      this.form.get('categoryId')?.reset('');
+    }
+  }
+
+  loadOrganizations(): void {
+    this.isLoading = true;
+    this.trainingService.getOrganizations()
+      .pipe(
+        finalize(() => this.isLoading = false)
+      )
+      .subscribe({
+        next: (organizations) => {
+          this.organizations = organizations || [];
+        },
+        error: (error) => {
+          console.error('Error loading organizations:', error);
+          Swal.fire('Error', 'Failed to load organizations', 'error');
+        }
+      });
   }
 
   loadTrainingPrograms(): void {
@@ -211,15 +327,67 @@ export class EmpTrainingComponent implements OnInit {
 
   // Modal methods
   openAddModal(): void {
-    // Implementation for opening add modal
-    // This is a placeholder - implement as needed
-    console.log('Open add modal');
+    this.isEditMode = false;
+    this.currentTraining = {
+      programId: '',
+      programName: '',
+      programCode: '',
+      startDate: new Date(),
+      endDate: new Date(),
+      venue: '',
+      location: '',
+      trainerName: '',
+      status: 'Planned',
+      seatsBooked: 0,
+      maxSeats: 10,
+      maxParticipants: 10,
+      nominations: [],
+      participants: [],
+      orgId: '',
+      categoryId: '',
+      programType: 'In-House',
+      deliveryMethod: 'In-Person',
+      description: '',
+      isActive: true
+    } as unknown as TrainingProgramWithNominations;
+    
+    // Reset the form
+    this.form.reset({
+      programType: 'In-House',
+      deliveryMethod: 'In-Person',
+      isActive: true,
+      maxSeats: 10
+    });
+    
+    // Open the modal
+    this.modalRef = this.modalService.open(this.trainingModalRef, { size: 'lg' });
   }
 
   openEditModal(program: TrainingProgramWithNominations): void {
+    this.isEditMode = true;
     this.currentTraining = { ...program };
-    // Implementation for opening edit modal
-    console.log('Open edit modal for:', program.programName);
+    
+    // Populate the form with the program data
+    this.form.patchValue({
+      orgId: program.orgId,
+      categoryId: program.categoryId,
+      programName: program.programName,
+      programCode: program.programCode,
+      programType: program.programType,
+      deliveryMethod: program.deliveryMethod,
+      durationHours: program.durationHours,
+      costPerParticipant: program.costPerParticipant,
+      batchName: program.batchName || '',
+      startDate: program.startDate,
+      endDate: program.endDate,
+      heldBy: program.heldBy,
+      venue: program.venue,
+      maxSeats: program.maxSeats,
+      isActive: program.isActive
+    });
+    
+    // Open the modal
+    this.modalRef = this.modalService.open(this.trainingModalRef, { size: 'lg' });
   }
 
   openViewModal(program: TrainingProgramWithNominations): void {
@@ -297,57 +465,94 @@ export class EmpTrainingComponent implements OnInit {
     return (program.seatsBooked || 0) >= program.maxSeats;
   }
 
-  // Save training program
-  saveTraining(program: TrainingProgramWithNominations): void {
-    if (!program) return;
+  saveTraining(): void {
+    if (this.form.invalid) {
+      // Mark all fields as touched to show validation messages
+      this.form.markAllAsTouched();
+      return;
+    }
 
-    const saveOperation = program.programId
-      ? this.trainingService.updateProgram(program as TrainingProgram)
-      : this.trainingService.createProgram(program as TrainingProgram);
+    // Get current date in ISO format
+    const currentDate = new Date().toISOString();
+    
+    // For create operation
+    if (!this.isEditMode || !this.currentTraining?.programId) {
+      const newProgram: Omit<TrainingProgram, 'programId' | 'seatsBooked' | 'createdDate' | 'modifiedDate'> = {
+        orgId: this.form.value.orgId,
+        categoryId: this.form.value.categoryId,
+        programName: this.form.value.programName,
+        programCode: this.form.value.programCode,
+        programType: this.form.value.programType,
+        deliveryMethod: this.form.value.deliveryMethod,
+        durationHours: Number(this.form.value.durationHours),
+        costPerParticipant: Number(this.form.value.costPerParticipant),
+        batchName: this.form.value.batchName || '',
+        startDate: this.form.value.startDate,
+        endDate: this.form.value.endDate,
+        heldBy: this.form.value.heldBy,
+        venue: this.form.value.venue,
+        maxSeats: Number(this.form.value.maxSeats),
+        isActive: this.form.value.isActive
+      };
 
-    saveOperation.subscribe({
-      next: () => {
-        Swal.fire('Success', 'Training program saved successfully', 'success');
-        this.loadTrainingPrograms();
-        this.modalService.dismissAll();
-      },
-      error: (error) => {
-        console.error('Error saving training program:', error);
-        Swal.fire('Error', 'Failed to save training program', 'error');
-      }
-    });
+      this.isLoading = true;
+      this.trainingService.createProgram(newProgram)
+        .pipe(finalize(() => this.isLoading = false))
+        .subscribe({
+          next: () => this.handleSaveSuccess('created'),
+          error: (error) => this.handleSaveError(error)
+        });
+    } 
+    // For update operation
+    else if (this.currentTraining?.programId) {
+      const updatedProgram: TrainingProgram = {
+        programId: this.currentTraining.programId,
+        orgId: this.form.value.orgId,
+        categoryId: this.form.value.categoryId,
+        programName: this.form.value.programName,
+        programCode: this.form.value.programCode,
+        programType: this.form.value.programType,
+        deliveryMethod: this.form.value.deliveryMethod,
+        durationHours: Number(this.form.value.durationHours),
+        costPerParticipant: Number(this.form.value.costPerParticipant),
+        batchName: this.form.value.batchName || '',
+        startDate: this.form.value.startDate,
+        endDate: this.form.value.endDate,
+        heldBy: this.form.value.heldBy,
+        venue: this.form.value.venue,
+        maxSeats: Number(this.form.value.maxSeats),
+        isActive: this.form.value.isActive,
+        // Preserve existing values
+        seatsBooked: this.currentTraining.seatsBooked || 0,
+        createdDate: this.currentTraining.createdDate || currentDate,
+        modifiedDate: currentDate
+      };
+
+      this.isLoading = true;
+      this.trainingService.updateProgram(updatedProgram)
+        .pipe(finalize(() => this.isLoading = false))
+        .subscribe({
+          next: () => this.handleSaveSuccess('updated'),
+          error: (error) => this.handleSaveError(error)
+        });
+    }
   }
 
-  // Handle form submission
+  // Handle successful save
+  private handleSaveSuccess(action: 'created' | 'updated'): void {
+    Swal.fire('Success', `Training program ${action} successfully`, 'success');
+    this.loadTrainingPrograms();
+    this.modalService.dismissAll();
+  }
+
+  // Handle save error
+  private handleSaveError(error: any): void {
+    console.error('Error saving training program:', error);
+    const errorMessage = error.error?.message || 'Failed to save training program';
+    Swal.fire('Error', errorMessage, 'error');
+  }
+
   onSubmit(): void {
-    if (this.form.valid && this.currentTraining) {
-      const formData = this.form.value;
-      
-      // Update currentTraining with form data
-      const updatedTraining: Partial<TrainingProgramWithNominations> = {
-        programName: formData.trainingName,
-        programCode: formData.trainingCode,
-        programDescription: formData.description,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        venue: formData.location, // Assuming venue and location are the same in the form
-        location: formData.location,
-        trainerName: formData.trainerName,
-        maxSeats: formData.maxParticipants,
-        status: formData.status || 'Planned',
-        maxParticipants: formData.maxParticipants
-      };
-
-      // Merge with existing training data
-      const trainingToSave: TrainingProgramWithNominations = {
-        ...this.currentTraining,
-        ...updatedTraining
-      };
-
-      this.saveTraining(trainingToSave);
-    } else {
-      // Mark all fields as touched to show validation errors
-      this.form.markAllAsTouched();
-    }
+    this.saveTraining();
   }
 }

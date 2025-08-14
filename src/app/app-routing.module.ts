@@ -3,6 +3,9 @@ import { RouterModule, Routes } from '@angular/router';
 import { AdminComponent } from './theme/layout/admin/admin.component';
 import { GuestComponent } from './theme/layout/guest/guest.component';
 import { AuthGuard } from './core/guards/auth.guard';
+import { SalaryViewDetailsComponent } from './demo/dashboard/pay-revision/salary-view-details/salary-view-details.component';
+import { PayRollComponent } from './demo/pay-roll/pay-roll.component';
+import { PayRollDetailComponent } from './demo/pay-roll/pay-roll-details/pay-roll-detail.component';
 
 export const routes: Routes = [
   
@@ -94,9 +97,22 @@ export const routes: Routes = [
         loadComponent: () => import('./demo/pay-roll/pay-roll.component').then((c) => c.PayRollComponent)
       },
       {
+  path: 'pay-roll-detail/:id',
+  component: PayRollDetailComponent
+},
+      {
         path: 'pay-slip/:empId',
         loadComponent: () => import('./demo/pay-roll/pay-slip/pay-slip.component').then((c) => c.PaySlipComponent)
       },
+      {
+        path: 'pay-revision',
+        loadComponent: () => import('./demo/dashboard/pay-revision/salary-details/pay-revision.component').then((c) => c.PayRevisionComponent)
+      },
+       {
+    path: 'salary-view-details/:empId',
+    component: SalaryViewDetailsComponent,
+    runGuardsAndResolvers: 'always' // This ensures the component reloads
+  },
       {
         path: 'document-archival',
         loadComponent: () => import('./demo/elements/document-archival/document-archival.component').then((m) => m.DocumentArchivalComponent)
@@ -126,18 +142,7 @@ export const routes: Routes = [
             title: 'Calendar Overview',
             loadComponent: () => import('./demo/Calendar/calendar-overview/calendar-overview.component').then((c) => c.CalendarOverviewComponent)
           },
-          // Add New Calendar
-          {
-            path: 'add',
-            title: 'Add New Calendar',
-            loadComponent: () => import('./demo/Calendar/add-calendar/add-calendar.component').then((c) => c.AddCalendarComponent)
-          },
-          // Edit Existing Calendar (with full parameters)
-          {
-            path: 'edit/:id/:org/:branch/:year',
-            title: 'Edit Calendar',
-            loadComponent: () => import('./demo/Calendar/edit-calendar/edit-calendar.component').then((c) => c.EditCalendarComponent)
-          },
+      
           // View Calendar Details (with full parameters)
           {
             path: 'details/:id/:branchId/:year',
@@ -196,7 +201,11 @@ export const routes: Routes = [
       },
       {
         path: 'emp-transfer',
-        loadComponent: () => import('./demo/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
+        loadComponent: () => import('./demo/Transfer/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
+      },
+      {
+        path: 'emp-type',
+        loadComponent: () => import('./demo/Transfer/emp-type/emp-type.component').then((c) => c.EmpTypeComponent)
       },
       {
         path: 'emp-separation',

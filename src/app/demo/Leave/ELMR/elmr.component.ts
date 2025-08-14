@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { LeaveService, LeaveRequest, LeaveType } from '../../../services/leave.service';
+import { AuthService } from '..//../../core/services/auth.service'; // Add this import
 import { finalize } from 'rxjs/operators';
 import { combineLatest } from 'rxjs';
 import jsPDF from 'jspdf';
@@ -156,7 +157,12 @@ export class ELMRComponent implements OnInit {
   private http = inject(HttpClient);
   private leaveService = inject(LeaveService);
   private router = inject(Router);
+  private authService = inject(AuthService); // Add this line
 
+  // Add this method to check if user can approve/reject leaves
+  canManageLeaves(): boolean {
+    return this.authService.isAdmin() || this.authService.isCTO();
+  }
 
   ngOnInit(): void {
     console.log('Component initialized');
@@ -289,63 +295,7 @@ export class ELMRComponent implements OnInit {
         console.error('Error mapping leave request:', error, item);
         return null;
       }
-    }).filter((item): item is LeaveRequestUI => item !== null);  
-
-// Apply filters to leaveRequests
-this.leaveRequests = this.allLeaveRequests.filter(leave => {
-// Filter by search term (name or employee code)
-const matchesSearch = !this.searchTerm || 
-leave.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-leave.empCode.toLowerCase().includes(this.searchTerm.toLowerCase());
-
-// Filter by department
-const matchesDepartment = this.selectedDepartment === 'All' || 
-leave.department === this.selectedDepartment;
-
-// Filter by date if selected
-const matchesDate = !this.selectedDate || 
-(leave.rawDate && leave.rawDate === this.selectedDate);
-
-return matchesSearch && matchesDepartment && matchesDate;
-});
-    console.log('Filtering leaves...');
-    if (!this.allLeaveRequests || this.allLeaveRequests.length === 0) {
-      console.log('No leave requests to filter');
-      return [];
-    }
-
-    const searchTerm = this.searchTerm.toLowerCase().trim();
-    const filterName = this.filterName.toLowerCase().trim();
-    const filterDate = this.filterDate;
-    const filterDepartment = this.filterDepartment;
-
-    const filtered = this.allLeaveRequests.filter(leave => {
-      try {
-        const leaveDate = new Date(leave.date).toISOString().split('T')[0];
-        const matchesDate = !this.selectedDate || 
-                          leaveDate === new Date(this.selectedDate).toISOString().split('T')[0];
-        const matchesSearch = searchTerm === '' || 
-                            (leave.name && leave.name.toLowerCase().includes(searchTerm)) || 
-                            (leave.department && leave.department.toLowerCase().includes(searchTerm)) ||
-                            (leave.empCode && leave.empCode.toLowerCase().includes(searchTerm));
-        const matchesDept = this.selectedDepartment === 'All' || 
-                           leave.department === this.selectedDepartment;
-        const matchesFilterName = filterName === '' || 
-                                (leave.name && leave.name.toLowerCase().includes(filterName));
-        const matchesFilterDept = filterDepartment === '' || 
-                                leave.department === filterDepartment;
-        const matchesFilterDate = filterDate === '' || 
-                                leave.rawDate === filterDate;
-
-        return matchesDate && matchesSearch && matchesDept && 
-               matchesFilterName && matchesFilterDept && matchesFilterDate;
-      } catch (error) {
-        console.error('Error filtering leave:', leave, error);
-        return false;
-      }
-    });
-    console.log('Filtered leaves:', filtered);
-    return filtered;
+    }).filter((item): item is LeaveRequestUI => item !== null);
   }
 
   get filteredTodaysLeaves(): LeaveRequestUI[] {

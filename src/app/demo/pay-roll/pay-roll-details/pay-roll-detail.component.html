@@ -1,0 +1,130 @@
+<div class="payroll-detail-container">
+  <!-- Header with breadcrumb navigation -->
+  <div class="header-section">
+    <div class="breadcrumb">
+      <a routerLink="/pay-roll" class="breadcrumb-link">Payroll</a>
+      <span class="breadcrumb-separator">/</span>
+      <span class="breadcrumb-current">Salary Details</span>
+    </div>
+    <button class="back-btn" routerLink="/pay-roll">
+      <i class="fas fa-arrow-left"></i> Back to List
+    </button>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading salary details...</p>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="errorMessage" class="error-state">
+    <i class="fas fa-exclamation-circle"></i>
+    <p>{{ errorMessage }}</p>
+    <button class="retry-btn" (click)="loadSalaryDetails()">Retry</button>
+  </div>
+
+  <!-- Main content -->
+  <div *ngIf="!isLoading && !errorMessage" class="detail-content">
+    <!-- Employee card -->
+    <div class="employee-card">
+      <div class="employee-avatar">
+        <i class="fas fa-user"></i>
+      </div>
+      <div class="employee-info">
+        <h3>{{ employeeInfo?.name }}</h3>
+        <div class="employee-meta">
+          <span class="badge employee-code">
+            <i class="fas fa-id-card"></i> {{ employeeInfo?.empCode }}
+          </span>
+          <span class="badge department">
+            <i class="fas fa-building"></i> {{ employeeInfo?.department || 'N/A' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="summary-section">
+      <div class="summary-card earnings">
+        <div class="card-icon">
+          <i class="fas fa-money-bill-wave"></i>
+        </div>
+        <div class="card-content">
+          <span class="label">Total Earnings</span>
+          <span class="value">Nu. {{ getTotalEarnings() | number }}</span>
+        </div>
+      </div>
+
+      <div class="summary-card deductions">
+        <div class="card-icon">
+          <i class="fas fa-hand-holding-usd"></i>
+        </div>
+        <div class="card-content">
+          <span class="label">Total Deductions</span>
+          <span class="value">Nu. {{ getTotalDeductions() | number }}</span>
+        </div>
+      </div>
+
+      <div class="summary-card net-salary">
+        <div class="card-icon">
+          <i class="fas fa-wallet"></i>
+        </div>
+        <div class="card-content">
+          <span class="label">Net Salary</span>
+          <span class="value">Nu. {{ getNetSalary() | number }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Salary breakdown -->
+    <div class="salary-breakdown">
+      <div class="section-header">
+        <h4><i class="fas fa-list-alt"></i> Salary Components</h4>
+        <div class="actions">
+          <button class="action-btn export-btn">
+            <i class="fas fa-file-export"></i> Export
+          </button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="salary-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Effective Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let detail of salaryDetails">
+              <td>
+                <div class="component-name">
+                  {{ detail.componentName }}
+                  <span class="component-code">{{ detail.componentCode }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge" [class.earning]="isEarning(detail.componentCode)" 
+                      [class.deduction]="isDeduction(detail.componentCode)">
+                  {{ isEarning(detail.componentCode) ? 'Earning' : 'Deduction' }}
+                </span>
+              </td>
+              <td class="amount">Nu. {{ detail.componentValue | number }}</td>
+              <td>{{ detail.effectiveFrom | date:'mediumDate' }}</td>
+              <td>
+                <span class="status-badge" [class.active]="detail.isCurrent" 
+                      [class.inactive]="!detail.isCurrent">
+                  {{ detail.isCurrent ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

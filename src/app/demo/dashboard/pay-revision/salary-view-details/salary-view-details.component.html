@@ -1,0 +1,375 @@
+<div class="salary-details-container container-fluid">
+  <!-- Loading State -->
+  <!-- <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div> -->
+
+  <!-- Main Content -->
+  <div *ngIf="employeeData">
+    <!-- Header -->
+    <div class="salary-header d-flex justify-content-between align-items-start mb-4">
+      <div>
+        <h2 class="salary-title">Salary Details</h2>
+        
+        <div class="employee-info">
+          <span class="fw-bold">{{ employeeData?.firstName || 'N/A' }} {{ employeeData?.lastName || 'N/A' }}</span>
+          <span class="text-muted ms-2">({{ employeeData?.empCode || 'N/A' }})</span>
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-primary me-2" (click)="toggleRevisionForm()" *ngIf="!showRevisionForm">
+          <i class="bi bi-plus-circle"></i> Create New Revision
+        </button>
+        <button class="btn btn-outline-secondary" (click)="goBack()">
+          <i class="bi bi-arrow-left"></i> Back to List
+        </button>
+      </div>
+    </div>
+
+    <div class="divider w-100 pb-3 mb-4" style="border-bottom: 1px solid #dee2e6;"></div>
+
+    <!-- Revision Form -->
+    <div class="revision-form-section mb-5 p-4 bg-light rounded" *ngIf="showRevisionForm">
+      <h4 class="mb-4">New Salary Revisions</h4>
+      <form [formGroup]="revisionForm" (ngSubmit)="submitRevisions()">
+        <div formArrayName="revisions" class="revisions-list">
+          <div *ngFor="let revision of revisions.controls; let i = index" [formGroupName]="i"
+               class="revision-item mb-4 p-3 bg-white rounded border">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0">Revision #{{i + 1}}</h5>
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeRevision(i)"
+                      *ngIf="revisions.length > 1">
+                <i class="bi bi-trash"></i> Remove
+              </button>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Salary Component</label>
+                <select class="form-select" formControlName="componentId"
+                        (change)="onComponentSelect(i)"
+                        [class.is-invalid]="isControlInvalid(revisions.at(i), 'componentId')">
+                  <option value="">Select component</option>
+                  <option *ngFor="let comp of salaryComponents" [value]="comp.id">
+                    {{ comp.name }} ({{ comp.code }})
+                  </option>
+                </select>
+                <div *ngIf="isControlInvalid(revisions.at(i), 'componentId')"
+                     class="invalid-feedback">
+                  Please select a component
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Component Name</label>
+                <input type="text" class="form-control" formControlName="componentName" readonly>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Current Amount</label>
+                <input type="text" class="form-control" 
+                       [value]="getCurrentAmount(i) | currency:'Nu.':'symbol':'1.2-2'"
+                       readonly>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">New Amount</label>
+                <input type="number" class="form-control" formControlName="newAmount" min="0"
+                       [readonly]="isPercentageCalculation(i)"
+                       [class.is-invalid]="isControlInvalid(revisions.at(i), 'newAmount')">
+                <div *ngIf="isControlInvalid(revisions.at(i), 'newAmount')"
+                     class="invalid-feedback">
+                  Valid amount is required (minimum 0)
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Revision Type</label>
+                <select class="form-select" formControlName="revisionType"
+                        [class.is-invalid]="isControlInvalid(revisions.at(i), 'revisionType')">
+                  <option value="">Select type</option>
+                  <option value="promotion">Promotion</option>
+                  <option value="annual">Annual Increase</option>
+                  <option value="adjustment">Adjustment</option>
+                  <option value="bonus">Bonus</option>
+                  <option value="other">Other</option>
+                </select>
+                <div *ngIf="isControlInvalid(revisions.at(i), 'revisionType')"
+                     class="invalid-feedback">
+                  Please select a revision type
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Effective Date</label>
+                <input type="date" class="form-control" formControlName="effectiveDate"
+                       [class.is-invalid]="isControlInvalid(revisions.at(i), 'effectiveDate')">
+                <div *ngIf="isControlInvalid(revisions.at(i), 'effectiveDate')"
+                     class="invalid-feedback">
+                  Effective date is required
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">Revision Reason</label>
+                <textarea class="form-control" formControlName="revisionReason" rows="3"
+                          [class.is-invalid]="isControlInvalid(revisions.at(i), 'revisionReason')"></textarea>
+                <div *ngIf="isControlInvalid(revisions.at(i), 'revisionReason')"
+                     class="invalid-feedback">
+                  Reason is required (minimum 10 characters)
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+          <button type="button" class="btn btn-secondary" (click)="addNewRevision()">
+            <i class="bi bi-plus-circle"></i> Add Another Revision
+          </button>
+
+          <div>
+            <button type="button" class="btn btn-outline-secondary me-2" (click)="toggleRevisionForm()">
+              Cancel
+            </button>
+           <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+  <span *ngIf="!isSubmitting">Submit Revisions</span>
+  <span *ngIf="isSubmitting">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    <span class="visually-hidden">Loading...</span>
+  </span>
+</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Salary Summary Cards -->
+   <div class="summary-section mb-5">
+  <h4 class="mb-3">Salary Summary</h4>
+  <div class="row">
+    <!-- Basic Salary Card -->
+    <div class="col-md-3 mb-3">
+      <div class="card summary-card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Basic Salary</h5>
+          <p class="card-text">{{ basicSalary | currency:'Nu.':'symbol':'1.2-2' }}</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Revised Basic Salary Card -->
+    <div class="col-md-3 mb-3">
+      <div class="card summary-card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Revised Basic</h5>
+          <p class="card-text">
+            {{ getRevisedSalary() | currency:'Nu.':'symbol':'1.2-2' }}
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Increased Percentage Card -->
+    <div class="col-md-3 mb-3">
+      <div class="card summary-card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Increase Percentage</h5>
+          <p class="card-text">{{ getIncreasePercentage() | number:'1.2-2' }}%</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Total Salary Card (sum of all components including revisions) -->
+    <div class="col-md-3 mb-3">
+      <div class="card summary-card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Net Salary</h5>
+          <p class="card-text">{{ calculateTotalSalary() | currency:'Nu.':'symbol':'1.2-2' }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <!-- Current Salary Components -->
+    <div class="current-components-section mb-5">
+      <h4 class="mb-3">Current Salary Components</h4>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Component</th>
+              <th>Code</th>
+              <th>Amount</th>
+              <th>Effective From</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let detail of salaryDetails">
+              <td>{{ detail.componentName }}</td>
+              <td>{{ detail.componentCode }}</td>
+              <td>{{ detail.componentValue | currency:'Nu.':'symbol':'1.2-2' }}</td>
+              <td>{{ detail.effectiveFrom | date:'mediumDate' }}</td>
+              <td>
+                <span class="badge bg-success" *ngIf="detail.isCurrent">Current</span>
+                <span class="badge bg-secondary" *ngIf="!detail.isCurrent">Historical</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Approved Revisions -->
+    <div class="revisions-section mb-5" *ngIf="approvedRevisions.length > 0">
+      <h4 class="mb-3">Approved Salary Revisions</h4>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Component</th>
+              <th>Previous Amount</th>
+              <th>Revised Amount</th>
+              <th>Increase</th>
+              <th>% Increase</th>
+              <th>Effective Date</th>
+              <th>Revision Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let revision of approvedRevisions">
+              <td>{{ revision.componentName }} ({{ revision.componentCode }})</td>
+              <td>{{ revision.oldAmount | currency:'Nu.':'symbol':'1.2-2' }}</td>
+              <td>{{ revision.newAmount | currency:'Nu.':'symbol':'1.2-2' }}</td>
+              <td>{{ (revision.newAmount - revision.oldAmount) | currency:'Nu.':'symbol':'1.2-2' }}</td>
+              <td>{{ ((revision.newAmount - revision.oldAmount) / revision.oldAmount * 100) | number:'1.2-2' }}%</td>
+              <td>{{ revision.effectiveDate | date:'mediumDate' }}</td>
+              <td>{{ revision.revisionReason }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Rejected Revisions -->
+    <div class="revisions-section mb-5" *ngIf="rejectedRevisions.length > 0">
+      <h4 class="mb-3">Rejected Revisions</h4>
+      <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        The following salary component revisions were rejected and not applied.
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Component</th>
+              <th>Requested Amount</th>
+              <th>Revision Reason</th>
+              <th>Rejection Reason</th>
+              <th>Effective Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let revision of rejectedRevisions">
+              <td>{{ revision.componentName }} ({{ revision.componentCode }})</td>
+              <td>{{ revision.newAmount | currency:'Nu.':'symbol':'1.2-2' }}</td>
+              <td>{{ revision.revisionReason }}</td>
+              <td>{{ revision.rejectionReason || 'Not specified' }}</td>
+              <td>{{ revision.effectiveDate | date:'mediumDate' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Revision History -->
+    <div class="revisions-section mt-5" *ngIf="salaryRevisions.length > 0">
+      <h4 class="mb-3">Revision History</h4>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Revision Type</th>
+              <th>Component</th>
+              <th>Effective Date</th>
+              <th>New Amount</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Date Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let revision of salaryRevisions">
+              <td>{{ revision.revisionType }}</td>
+              <td>{{ revision.componentName }} ({{ revision.componentCode }})</td>
+              <td>{{ revision.effectiveDate | date:'mediumDate' }}</td>
+              <td>{{ revision.newAmount | currency:'Nu.':'symbol':'1.2-2' }}</td>
+              <td>{{ revision.revisionReason }}</td>
+              <td>
+                <span [ngClass]="{
+                  'badge bg-success': revision.status === 'APPROVED',
+                  'badge bg-danger': revision.status === 'REJECTED',
+                  'badge bg-warning': revision.status === 'PENDING'
+                }">
+                  {{ revision.status }}
+                </span>
+              </td>
+              <td>{{ revision.createdDate | date:'medium' }}</td>
+              <td *ngIf="revision.status === 'PENDING'">
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-success" (click)="approveRevision(revision)">
+                    <i class="bi bi-check-circle"></i> Approve
+                  </button>
+                  <button class="btn btn-danger" (click)="openRejectModal(revision)">
+                    <i class="bi bi-x-circle"></i> Reject
+                  </button>
+                </div>
+              </td>
+              <td *ngIf="revision.status !== 'PENDING'">
+                <span class="text-muted">Action taken</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage" class="alert alert-danger mt-3">
+    <i class="bi bi-exclamation-octagon-fill me-2"></i>
+    {{ errorMessage }}
+  </div>
+
+  <!-- Reject Reason Modal -->
+  <div class="modal fade" id="rejectReasonModal" tabindex="-1" aria-labelledby="rejectReasonModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="rejectReasonModalLabel">Reject Salary Revision</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="rejectionReason" class="form-label">Reason for rejection</label>
+            <textarea class="form-control" id="rejectionReason" [(ngModel)]="rejectionReason" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" (click)="confirmReject()" [disabled]="!rejectionReason || isProcessing">
+  <span *ngIf="!isProcessing">Confirm Reject</span>
+  <span *ngIf="isProcessing">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    <span class="visually-hidden">Loading...</span>
+  </span>
+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

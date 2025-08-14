@@ -16,19 +16,22 @@ export interface Permission {
 }
 
 export interface User {
-  userId: string;          // Universal user ID (for authentication)
-  empId?: string;          // Employee ID (for employees)
-  ctoId?: string;          // CTO-specific ID (for CTOs)
+  userId: string;
+  empId: string;
+  ctoId?: string;
+  hrId?: string;
+
   username: string;
   email: string;
   accountStatus: string;
   roleId: string;
   roleName: string;
+  roleCode: string; // Add this
   mustChangePassword: boolean;
   accessToken: string;
   refreshToken: string;
   permissions?: Permission[];
-  getRoleBasedId: () => string;  // Method to get role-based ID
+  getRoleBasedId: () => string;
 }
 
 @Injectable({
@@ -75,6 +78,7 @@ export class AuthService {
     return user.roleName === 'CTO'
       ? (user.ctoId || user.userId)
       : (user.empId || user.userId);
+      
   }
 
   // Define role constants
@@ -108,61 +112,89 @@ export class AuthService {
     return user ? ['admin', 'CTO'].includes(user.roleName) : false;
   }
 
-   login(username: string, password: string): Observable<boolean> {
-    // Remove the leading /api from the endpoint since it's already in the base URL
-    const url = `${environment.apiUrl}/api/auth/login`;
-
-    return this.http.post<any>(url, { username, password }).pipe(
-      switchMap(loginResponse => {
-        if (!loginResponse.success) {
-          throw new Error('Login failed');
-        }
-
-        const userData = loginResponse.data.user;
-        // Create the base user object with role-based ID handling
-        const baseUser: User = {
-          userId: userData.userId,
-          empId: userData.roleName === 'Employee' ? userData.empId : undefined,
-          ctoId: userData.roleName === 'CTO' ? (userData.ctoId || userData.userId) : undefined,
-          username: userData.username,
-          email: userData.email,
-          accountStatus: userData.accountStatus,
-          roleId: userData.roleId,
-          roleName: userData.roleName,
-          mustChangePassword: userData.mustChangePassword,
-          accessToken: loginResponse.data.accessToken,
-          refreshToken: loginResponse.data.refreshToken,
-          // Implement the getRoleBasedId method
-          getRoleBasedId: function() {
-            return this.roleName === 'CTO' 
-              ? (this.ctoId || this.userId) 
-              : (this.empId || this.userId);
-          }
-        };
-
-        // Remove the leading /api from the endpoint since it's already in the base URL
-        return this.http.get<Permission[]>(
-          `${environment.apiUrl}/api/v1/role-permissions/role/${userData.roleId}/permissions`
-        ).pipe(
-          tap(permissions => {
-            const completeUser = {
-              ...baseUser,
-              permissions: permissions
-            };
-            localStorage.setItem('currentUser', JSON.stringify(completeUser));
-            this.currentUserSubject.next(completeUser);
-            this.permissionsSubject.next(permissions);
-          }),
-          map(() => true)
-        );
-      }),
-      catchError(error => {
-        console.error('Login error', error);
-        return of(false);
-      })
-    );
+  getEmployeeByEmpId(empId: string): Observable<any> {
+  return this.http.get(`${environment.apiUrl}/api/v1/employees/${empId}`).pipe(
+    catchError(error => {
+      console.error('Error fetching employee:', error);
+      return throwError(() => error);
+    })
+  );
+}
+// auth.service.ts
+updateCurrentUser(user: User): void {
+  localStorage.setItem('currentUser', JSON.stringify(user));
+  this.currentUserSubject.next(user);
+  if (user.permissions) {
+    this.permissionsSubject.next(user.permissions);
   }
+}
 
+  login(username: string, password: string): Observable<boolean> {
+  const url = `${environment.apiUrl}/api/auth/login`;
+
+  return this.http.post<any>(url, { username, password }).pipe(
+    switchMap(loginResponse => {
+      if (!loginResponse.success) {
+        throw new Error('Login failed');
+      }
+
+      const userData = loginResponse.data.user;
+      
+      // First, get the role details from the API
+      return this.http.get<any>(
+        `${environment.apiUrl}/api/v1/user-roles/${userData.roleId}`
+      ).pipe(
+        switchMap(roleResponse => {
+          // Now we have the role details
+          const roleName = roleResponse.roleName;
+          const roleCode = roleResponse.roleCode;
+
+          // Create the base user object with role-based ID handling
+          const baseUser: User = {
+            userId: userData.userId,
+            empId: roleName === 'Employee' ? userData.empId : undefined,
+            ctoId: roleName === 'CTO' ? (userData.ctoId || userData.userId) : undefined,
+            username: userData.username,
+            email: userData.email,
+            accountStatus: userData.accountStatus,
+            roleId: userData.roleId,
+            roleName: roleName,
+            roleCode: roleCode,
+            mustChangePassword: userData.mustChangePassword,
+            accessToken: loginResponse.data.accessToken,
+            refreshToken: loginResponse.data.refreshToken,
+            getRoleBasedId: function() {
+              return this.roleName === 'CTO' 
+                ? (this.ctoId || this.userId) 
+                : (this.empId || this.userId);
+            }
+          };
+
+          // Then get the permissions for this role
+          return this.http.get<Permission[]>(
+            `${environment.apiUrl}/api/v1/role-permissions/role/${userData.roleId}/permissions`
+          ).pipe(
+            tap(permissions => {
+              const completeUser = {
+                ...baseUser,
+                permissions: permissions
+              };
+              localStorage.setItem('currentUser', JSON.stringify(completeUser));
+              this.currentUserSubject.next(completeUser);
+              this.permissionsSubject.next(permissions);
+            }),
+            map(() => true)
+          );
+        })
+
+      );
+    }),
+    catchError(error => {
+      console.error('Login error', error);
+      return of(false);
+    })
+  );
+}
   refreshToken(): Observable<any> {
     const user = this.currentUserValue;
     if (!user?.refreshToken) {

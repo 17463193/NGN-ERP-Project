@@ -1,4 +1,80 @@
 /* Employee Training Component Styles */
+@import "~@ng-select/ng-select/themes/default.theme.css";
+
+/* Custom styles for ng-select */
+.ng-select {
+  .ng-select-container {
+    min-height: 38px;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    
+    &:hover, &.ng-select-focused {
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .ng-value-container {
+      padding: 0.375rem 0.75rem;
+    }
+  }
+  
+  &.ng-select-multiple {
+    .ng-select-container .ng-value-container .ng-value {
+      background-color: #e9ecef;
+      border-radius: 0.2rem;
+      color: #212529;
+      margin-right: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+  }
+  
+  &.ng-select-opened > .ng-select-container {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+  
+  &.ng-select-disabled > .ng-select-container {
+    background-color: #e9ecef;
+    opacity: 1;
+  }
+}
+
+/* Dropdown panel */
+.ng-dropdown-panel {
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  
+  .ng-dropdown-panel-items {
+    .ng-option {
+      padding: 0.5rem 0.75rem;
+      
+      &.ng-option-marked {
+        background-color: #f8f9fa;
+        color: #212529;
+      }
+      
+      &.ng-option-selected {
+        background-color: #0d6efd;
+        color: white;
+      }
+      
+      &.ng-option-disabled {
+        color: #6c757d;
+        cursor: not-allowed;
+      }
+    }
+  }
+  
+  .ng-dropdown-footer {
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid #e9ecef;
+    background-color: #f8f9fa;
+    text-align: center;
+    font-size: 0.875rem;
+    color: #6c757d;
+  }
+}
 :host {
   display: block;
   background-color: #f8f9fa;
@@ -763,4 +839,58 @@ table {
   background-color: transparent;
   border: solid transparent;
   border-width: 1px 0;
+}
+
+/* Custom Searchable Dropdown Styles */
+.searchable-dropdown {
+  position: relative;
+  width: 100%;
+  
+  .dropdown-menu {
+    width: 100%;
+    max-height: 250px;
+    overflow-y: auto;
+    margin-top: 2px;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    display: none;
+    
+    &.show {
+      display: block;
+    }
+    
+    .dropdown-item {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      white-space: normal;
+      
+      &:hover, &:focus {
+        background-color: #f8f9fa;
+        color: #16181b;
+      }
+      
+      &.active, &:active {
+        background-color: #007bff;
+        color: white;
+      }
+    }
+    
+    .text-muted {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      color: #6c757d;
+    }
+  }
+}
+
+/* Form validation styles */
+.was-validated .form-control:invalid ~ .dropdown-menu,
+.was-validated .form-control.is-invalid ~ .dropdown-menu {
+  border-color: #dc3545;
+}
+
+.was-validated .form-control:valid ~ .dropdown-menu,
+.was-validated .form-control.is-valid ~ .dropdown-menu {
+  border-color: #28a745;
 }
