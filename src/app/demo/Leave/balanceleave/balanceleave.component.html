@@ -16,39 +16,62 @@
       </button>
     </div>
 
-    <!-- <div class="boxed-section cards-container">
-      <div class="section-title">
-        <span *ngIf="isSingleView || employeeName !== 'No Employee Selected' && employeeName !== 'Employee Not Found'">
-          {{ isSingleView ? 'Employee' : 'Your' }} Leave Balances
-        </span>
-        <span *ngIf="!isSingleView && employeeName === 'No Employee Selected'">No Employee Selected</span>
-      </div>
-      
-      <div *ngIf="employeeName === 'No Employee Selected'" class="no-employee-selected">
-        <i class="bi bi-person-x" style="font-size: 2rem; color: #6c757d;"></i>
-        <p>Please select an employee to view their leave balance</p>
-      </div>
-      
-      <div *ngIf="employeeName === 'Employee Not Found'" class="no-employee-selected">
-        <i class="bi bi-exclamation-triangle" style="font-size: 2rem; color: #dc3545;"></i>
-        <p>Employee not found. Please check the employee ID and try again.</p>
-      </div>
-      
-      <div *ngIf="employeeName !== 'No Employee Selected' && employeeName !== 'Employee Not Found'" class="leave-cards-horizontal">
-        <div class="leave-card" *ngFor="let balance of leaveBalances">
-          <div class="card-icon">
-            <i class="bi text-warning" [class]="getTypeIconClass(balance.type)"></i>
+    <div class="boxed-section cards-container mb-4" *ngIf="employeeName !== 'No Employee Selected' && employeeName !== 'Employee Not Found'">
+      <div class="row g-4">
+        <!-- Status Legend Card -->
+        <div class="col-md-3">
+          <div class="card h-100">
+            <div class="card-body">
+              <h5 class="card-title">Status Legend</h5>
+              <div class="d-flex flex-column gap-2">
+                <div class="d-flex align-items-center">
+                  <span class="badge bg-success me-2">&nbsp;</span>
+                  <span>Approved</span>
+                </div>
+                <div class="d-flex align-items-center">
+                  <span class="badge bg-danger me-2">&nbsp;</span>
+                  <span>Rejected</span>
+                </div>
+                <div class="d-flex align-items-center">
+                  <span class="badge bg-warning me-2">&nbsp;</span>
+                  <span>Pending</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <h3>{{ balance.type }}</h3>
-          <hr class="divider">
-          <div class="leave-progress">
-            <span class="used">{{ balance.used }}</span>
-            <span class="separator">/</span>
-            <span class="total">{{ balance.total }} Days</span>
+        </div>
+
+        <!-- Handover Reason Card -->
+        <div class="col-md-3">
+          <div class="card h-100">
+            <div class="card-body">
+              <h5 class="card-title">Handover Reason</h5>
+              <p class="card-text text-muted">No handover reason provided</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Employee Name Card -->
+        <div class="col-md-3">
+          <div class="card h-100">
+            <div class="card-body">
+              <h5 class="card-title">Employee</h5>
+              <p class="card-text">{{ employeeName }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Additional Info Card -->
+        <div class="col-md-3">
+          <div class="card h-100">
+            <div class="card-body">
+              <h5 class="card-title">Report Date</h5>
+              <p class="card-text">{{ currentDate }}</p>
+            </div>
           </div>
         </div>
       </div>
-    </div> -->
+    </div>
 
     <div class="boxed-section history-container" *ngIf="employeeName !== 'No Employee Selected' && employeeName !== 'Employee Not Found'">
       <div class="section-header">

@@ -56,11 +56,17 @@
         </thead>
         <tbody>
           <tr *ngFor="let nomination of paginatedNominations">
-            <td class="fw-medium">
-              {{ nomination.program?.programName || 'N/A' }}
+            <td>
+              <div class="d-flex align-items-center">
+                <div>
+                  <div class="fw-semibold">{{ nomination.program?.programName || 'N/A' }}</div>
+                  <div class="text-muted small">{{ nomination.program?.programCode || '' }}</div>
+                </div>
+              </div>
             </td>
             <td>
-              {{ formatDate(nomination.program?.startDate) }}
+              <div>{{ formatDate(nomination.program?.startDate) || 'N/A' }}</div>
+              <div class="text-muted small">{{ formatDate(nomination.program?.endDate) || '' }}</div>
             </td>
             <td>
               <span class="badge" [ngClass]="getStatusBadgeClass(nomination.status)">
@@ -128,18 +134,43 @@
       <div class="modal-body">
         <div class="row g-3">
           <div class="col-md-6">
-            <label for="employeeName" class="form-label">Employee Name *</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              id="employeeName"
-              formControlName="employeeName"
-              [class.is-invalid]="form.get('employeeName')?.invalid && form.get('employeeName')?.touched">
-            <div 
-              *ngIf="form.get('employeeName')?.invalid && form.get('employeeName')?.touched" 
-              class="invalid-feedback">
-              Employee name is required
+            <label for="employeeSearch" class="form-label">Search Employee *</label>
+            <div class="searchable-dropdown">
+              <input 
+                type="text" 
+                class="form-control" 
+                id="employeeSearch"
+                placeholder="Type to search employees..."
+                [formControl]="employeeSearchControl"
+                (focus)="showEmployeeDropdown = true"
+                (blur)="onEmployeeBlur()"
+              >
+              <div class="dropdown-menu" [class.show]="showEmployeeDropdown">
+                <div *ngIf="loadingEmployees" class="dropdown-item text-muted">
+                  Loading employees...
+                </div>
+                <div *ngIf="!loadingEmployees && filteredEmployees.length === 0" class="dropdown-item text-muted">
+                  No employees found
+                </div>
+                <button 
+                  *ngFor="let emp of filteredEmployees | slice:0:5" 
+                  type="button" 
+                  class="dropdown-item"
+                  (mousedown)="selectEmployee(emp)"
+                >
+                  {{ emp.fullName }}
+                </button>
+                <div *ngIf="filteredEmployees.length > 5" class="dropdown-item text-muted small">
+                  Showing 5 of {{ filteredEmployees.length }} employees. Type to filter.
+                </div>
+              </div>
             </div>
+            <div 
+              *ngIf="form.get('employeeId')?.invalid && form.get('employeeId')?.touched" 
+              class="invalid-feedback d-block">
+              Please select an employee
+            </div>
+            <input type="hidden" formControlName="employeeId">
           </div>
           
           <div class="col-md-6">
@@ -162,6 +193,22 @@
           </div>
           
           <div class="col-12">
+            <label for="justification" class="form-label">Justification *</label>
+            <textarea
+              class="form-control"
+              id="justification"
+              formControlName="justification"
+              rows="3"
+              [class.is-invalid]="form.get('justification')?.invalid && form.get('justification')?.touched">
+            </textarea>
+            <div 
+              *ngIf="form.get('justification')?.invalid && form.get('justification')?.touched" 
+              class="invalid-feedback">
+              Justification is required
+            </div>
+          </div>
+          
+          <div class="col-12">
             <label for="status" class="form-label">Status *</label>
             <select 
               class="form-select"
@@ -171,73 +218,11 @@
               <option value="Pending">Pending</option>
               <option value="Approved">Approved</option>
               <option value="Rejected">Rejected</option>
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
             </select>
             <div 
               *ngIf="form.get('status')?.invalid && form.get('status')?.touched" 
               class="invalid-feedback">
               Status is required
-            </div>
-          </div>
-          
-          <div class="col-md-6">
-            <label for="startDate" class="form-label">Start Date *</label>
-            <input 
-              type="date" 
-              class="form-control" 
-              id="startDate"
-              formControlName="startDate"
-              [class.is-invalid]="form.get('startDate')?.invalid && form.get('startDate')?.touched">
-            <div 
-              *ngIf="form.get('startDate')?.invalid && form.get('startDate')?.touched" 
-              class="invalid-feedback">
-              Start date is required
-            </div>
-          </div>
-          
-          <div class="col-md-6">
-            <label for="endDate" class="form-label">End Date *</label>
-            <input 
-              type="date" 
-              class="form-control" 
-              id="endDate"
-              formControlName="endDate"
-              [class.is-invalid]="form.get('endDate')?.invalid && form.get('endDate')?.touched">
-            <div 
-              *ngIf="form.get('endDate')?.invalid && form.get('endDate')?.touched" 
-              class="invalid-feedback">
-              End date is required and must be after start date
-            </div>
-          </div>
-          
-          <div class="col-md-6">
-            <label for="location" class="form-label">Location *</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              id="location"
-              formControlName="location"
-              [class.is-invalid]="form.get('location')?.invalid && form.get('location')?.touched">
-            <div 
-              *ngIf="form.get('location')?.invalid && form.get('location')?.touched" 
-              class="invalid-feedback">
-              Location is required
-            </div>
-          </div>
-          
-          <div class="col-md-6">
-            <label for="trainerName" class="form-label">Trainer Name *</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              id="trainerName"
-              formControlName="trainerName"
-              [class.is-invalid]="form.get('trainerName')?.invalid && form.get('trainerName')?.touched">
-            <div 
-              *ngIf="form.get('trainerName')?.invalid && form.get('trainerName')?.touched" 
-              class="invalid-feedback">
-              Trainer name is required
             </div>
           </div>
         </div>
@@ -260,8 +245,14 @@
     <div class="modal-body">
       <div class="row">
         <div class="col-md-6 mb-3">
-          <h6>Employee Name</h6>
-          <p>{{ currentNomination?.employeeName || 'N/A' }}</p>
+          <h6>Employee</h6>
+          <div *ngIf="currentNomination?.employeeId">
+            {{ currentNomination.employeeName || '' }}
+            <div class="text-muted small">ID: {{ currentNomination.employeeId }}</div>
+          </div>
+          <div *ngIf="!currentNomination?.employeeId">
+            <span class="text-muted">No employee assigned</span>
+          </div>
         </div>
         <div class="col-md-6 mb-3">
           <h6>Training Program</h6>

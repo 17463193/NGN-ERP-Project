@@ -1,10 +1,12 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { finalize } from 'rxjs/operators';
 import { LeaveService } from '../../../services/leave.service';
+import { EmployeeTransferService } from '../../../services/employee-transfer.service';
 import Swal from 'sweetalert2';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-leave-form',
@@ -13,7 +15,7 @@ import Swal from 'sweetalert2';
   templateUrl: './leave-form.component.html',
   styleUrls: ['./leave-form.component.scss']
 })
-export class LeaveFormComponent {
+export class LeaveFormComponent implements OnInit {
   @Output() close = new EventEmitter<void>();
   @Output() submitted = new EventEmitter<boolean>();
   
@@ -27,10 +29,12 @@ export class LeaveFormComponent {
   constructor(
     private fb: FormBuilder, 
     private leaveService: LeaveService,
+    private employeeTransferService: EmployeeTransferService,
+    private authService: AuthService,
     private router: Router
   ) {
     this.leaveForm = this.fb.group({
-      cid: ['', [Validators.required]],
+      cid: [{value: '', disabled: true}, [Validators.required]],
       leaveTypeId: ['', [Validators.required]],
       leaveName: ['', [Validators.required]],
       fromDate: ['', [Validators.required]],
@@ -39,8 +43,32 @@ export class LeaveFormComponent {
       medicalCertificateAttached: [false],
       handoverDetails: ['', [Validators.required]]
     });
-    
+  }
+
+  ngOnInit(): void {
+    this.fetchEmployeeCid();
     this.fetchLeaveTypes();
+  }
+
+  private fetchEmployeeCid(): void {
+    const currentUser = this.authService.currentUserValue;
+    if (currentUser && currentUser.empId) {
+      this.employeeTransferService.getEmployeeProfile(currentUser.empId).subscribe({
+        next: (profile) => {
+          if (profile.cidNumber) {
+            this.leaveForm.patchValue({ cid: profile.cidNumber });
+          } else {
+            this.errorMessage = 'Could not retrieve your CID. Please contact HR.';
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching employee profile:', error);
+          this.errorMessage = 'Failed to load your profile. Please try again later.';
+        }
+      });
+    } else {
+      this.errorMessage = 'User not authenticated. Please log in again.';
+    }
   }
   
 
@@ -53,15 +81,23 @@ export class LeaveFormComponent {
     this.isLoading = true;
     this.errorMessage = null;
 
-        const formData = {
-      cid: this.leaveForm.value.cid,
-      leaveTypeId: this.leaveForm.value.leaveTypeId, // Added missing leaveTypeId
-      leaveName: this.leaveForm.value.leaveName,
-      fromDate: this.formatDate(this.leaveForm.value.fromDate),
-      toDate: this.formatDate(this.leaveForm.value.toDate),
-      reason: this.leaveForm.value.reason,
-      medicalCertificateAttached: this.leaveForm.value.medicalCertificateAttached,
-      handoverDetails: this.leaveForm.value.handoverDetails
+    // Get the raw form value including disabled fields
+    const formValue = {
+      ...this.leaveForm.getRawValue(), // This includes disabled fields
+      fromDate: this.formatDate(this.leaveForm.get('fromDate')?.value),
+      toDate: this.formatDate(this.leaveForm.get('toDate')?.value)
+    };
+
+    // Prepare the form data with all required fields
+    const formData = {
+      cid: formValue.cid,
+      leaveTypeId: formValue.leaveTypeId,
+      leaveName: formValue.leaveName,
+      fromDate: formValue.fromDate,
+      toDate: formValue.toDate,
+      reason: formValue.reason,
+      medicalCertificateAttached: formValue.medicalCertificateAttached,
+      handoverDetails: formValue.handoverDetails
     };
 
     try {

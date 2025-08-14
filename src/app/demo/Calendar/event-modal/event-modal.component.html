@@ -25,6 +25,7 @@
                     [class.selected]="!isDaySelected(day) && lastClickedDay === day"
                     [class.drag-range]="isDayInDragRange(day)"
                     [class.other-month]="isOtherMonth(day)"
+                    [class.existing-holiday]="isExistingHoliday(day)"
                     (mousedown)="onMouseDown(day, $event)"
                     (mouseenter)="onMouseEnter(day)"
                     (mouseup)="onMouseUp()">
@@ -35,13 +36,27 @@
           </div>
           <div class="calendar-instructions">
             <small>💡 Click to select single dates or drag to select multiple dates. Drag the same selection again to toggle between full/half day.</small>
+            <div class="calendar-legend">
+              <div class="legend-item">
+                <span class="legend-dot full-day"></span>
+                <small>Full Day</small>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot half-day"></span>
+                <small>Half Day</small>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot existing-holiday"></span>
+                <small>Existing Holiday</small>
+              </div>
+            </div>
           </div>
         </div>
       </div>
       <div class="modal-form">
         <label>Selected Dates ({{ events.length }})</label>
         <div class="selected-dates">
-          <div *ngFor="let event of events" class="event-input-group">
+          <div *ngFor="let event of events" class="event-input-group" [class.existing-holiday]="event.isExisting">
             <div class="event-header">
               <h4>{{ event.date | date:'mediumDate' }}</h4>
               <div class="event-type">
@@ -53,6 +68,9 @@
                   <input type="radio" [(ngModel)]="event.leaveDayType" value="half day" name="{{'dayType'+event.date.getTime()}}">
                   <span>Half Day</span>
                 </label>
+              </div>
+              <div *ngIf="event.isExisting" class="existing-badge">
+                <small class="badge bg-info">Existing Holiday</small>
               </div>
             </div>
             

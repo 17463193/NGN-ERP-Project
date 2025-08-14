@@ -193,53 +193,26 @@
           white-space: nowrap;
           position: relative;
           
-          &:first-child { width: 80px; text-align: center; }
-          &:nth-child(2) { width: 25%; }
+          &:first-child { 
+            width: 80px; 
+            text-align: center; 
+            padding-left: 1.5rem;
+          }
+          &:nth-child(2) { 
+            width: 25%; 
+            text-align: left;
+          }
           &:nth-child(3),
           &:nth-child(4),
           &:nth-child(5) { 
             width: 15%;
-            text-align: right;
-            padding-right: 2rem;
+            text-align: left;
+            padding-left: 1rem;
           }
           &:last-child { 
-            width: 25%;
-            text-align: right;
-            padding-right: 1.5rem;
-          }
-          
-          &:first-child {
-            padding-left: 1.5rem;
-            width: 80px;
-          }
-          
-          &:nth-child(2) {
-            min-width: 200px;
-          }
-          
-          &:nth-child(3),
-          &:nth-child(4),
-          &:nth-child(5) { 
-            text-align: right;
-            padding-right: 2rem;
-            min-width: 120px;
-          }
-          
-          &:last-child { 
-            text-align: right;
-            padding-right: 3.5rem; /* Increased padding to account for button spacing */
-            min-width: 200px; /* Slightly increased width */
-            position: relative;
-            
-            &::after {
-              content: '';
-              display: inline-block;
-              width: 1px;
-              height: 100%;
-              position: absolute;
-              right: 1rem; /* Align with button padding */
-              top: 0;
-            }
+            width: 15%;
+            text-align: center;
+            padding: 1rem;
           }
         }
       }
@@ -267,18 +240,20 @@
             padding-left: 1.5rem;
             color: #718096;
             font-weight: 500;
+            text-align: center;
           }
           
           &:nth-child(2) {
             font-weight: 500;
             color: #2d3748;
+            text-align: left;
           }
           
           &:nth-child(3), 
           &:nth-child(4),
           &:nth-child(5) {
-            text-align: right;
-            padding-right: 2rem;
+            text-align: left;
+            padding-left: 1rem;
             font-weight: 500;
             font-family: 'Roboto Mono', monospace, monospace;
             
@@ -289,6 +264,11 @@
               font-weight: normal;
               font-family: 'Inter', -apple-system, sans-serif;
             }
+          }
+          
+          &:last-child {
+            text-align: center;
+            padding: 1rem;
           }
               align-items: center;
               justify-content: center;
@@ -308,9 +288,10 @@
 
           .action-buttons {
             display: flex;
-            justify-content: flex-end;
+            justify-content: center;
+            align-items: center;
             gap: 0.5rem;
-            padding-right: 1.5rem;
+            padding: 0;
             white-space: nowrap;
 
             button {
