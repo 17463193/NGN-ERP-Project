@@ -84,11 +84,19 @@ export class EmpCategoriesComponent implements OnInit {
     private modalService: NgbModal
   ) {
     this.form = this.fb.group({
-      categoryName: ['', Validators.required],
-      categoryCode: ['', [Validators.required, Validators.pattern('^[A-Za-z0-9-]+$')]],
-      description: [''],
+      categoryName: ['', [
+        Validators.required,
+        Validators.minLength(2),
+        Validators.maxLength(100)
+      ]],
+      categoryCode: ['', [
+        Validators.required,
+        Validators.pattern('^[A-Za-z0-9-]+$'),
+        Validators.maxLength(20)
+      ]],
+      description: ['', Validators.maxLength(500)],
       organizationId: ['', Validators.required],
-      status: [true, Validators.required]
+      status: [false] // Default to inactive for new categories
     });
   }
 

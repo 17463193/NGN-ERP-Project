@@ -5,7 +5,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { HttpClient } from '@angular/common/http';
-import { finalize, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
+import { finalize, debounceTime, distinctUntilChanged, takeUntil, catchError } from 'rxjs/operators';
 import { Subject, of } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import Swal from 'sweetalert2';
@@ -141,13 +141,33 @@ export class EmpNominationsComponent implements OnInit {
     this.initializeForm();
   }
 
+  // Define status options as a constant for reusability
+  readonly NOMINATION_STATUS = {
+    PENDING: 'Pending',
+    APPROVED: 'Approved',
+    REJECTED: 'Rejected'
+  } as const;
+
   initializeForm(): void {
     this.form = this.fb.group({
       id: [''],
-      employeeId: ['', Validators.required],
-      programId: ['', Validators.required],
-      justification: ['', Validators.required],
-      status: ['Pending', Validators.required],
+      employeeId: ['', [
+        Validators.required,
+        Validators.pattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$')
+      ]],
+      programId: ['', [
+        Validators.required,
+        Validators.pattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$')
+      ]],
+      justification: ['', [
+        Validators.required,
+        Validators.minLength(10),
+        Validators.maxLength(1000)
+      ]],
+      status: [this.NOMINATION_STATUS.PENDING, [
+        Validators.required,
+        Validators.pattern(`^(${Object.values(this.NOMINATION_STATUS).join('|')})$`)
+      ]],
       employeeSearch: ['']
     });
   }
@@ -247,9 +267,15 @@ export class EmpNominationsComponent implements OnInit {
 
   loadNominations(): void {
     this.isLoading = true;
-    // First, get all programs to fetch their nominations
+    
+    // If there are no programs, load them first
+    if (this.programs.length === 0) {
+      this.loadPrograms();
+      return;
+    }
+
+    // Get all program IDs
     const programIds = this.programs.map(p => p.programId);
-    // Prepare to fetch nominations for programs
     
     // If there are no programs, set empty nominations and return
     if (programIds.length === 0) {
@@ -259,74 +285,130 @@ export class EmpNominationsComponent implements OnInit {
       return;
     }
 
+    // Create an array of promises to fetch nominations for each program
     const nominationPromises = programIds.map(programId => 
       this.http.get<TrainingNomination[]>(`${this.apiUrl}/api/v1/training/nominations/program/${programId}`, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
-      }).toPromise()
+      }).pipe(
+        catchError(error => {
+          console.error(`Error loading nominations for program ${programId}:`, error);
+          return of([]); // Return empty array on error to continue with other requests
+        })
+      ).toPromise()
     );
 
+    // Process all nomination requests
     Promise.all(nominationPromises)
       .then(nominationArrays => {
-        // Processed nominations response
-        // Flatten the array of arrays and add program info
+        // Reset nominations array
         this.nominations = [];
+        
+        // Process each program's nominations
         nominationArrays.forEach((nominations, index) => {
-          if (nominations && Array.isArray(nominations) && nominations.length > 0) {
-            const program = this.programs.find(p => p.programId === programIds[index]);
-            if (!program) return; // Skip if program not found
+          const programId = programIds[index];
+          const program = this.programs.find(p => p.programId === programId);
+          
+          if (!program || !Array.isArray(nominations)) return;
+          
+          // Map nominations with program details
+          const nominationsWithProgram = nominations.map(nomination => {
+            // If we already have the employee name, use it
+            const employeeName = nomination.employeeName || '';
             
-            const nominationsWithProgram = nominations.map(nom => ({
-              ...nom,
+            return {
+              ...nomination,
+              employeeId: nomination.employeeId || nomination.empId, // Handle different ID field names
+              employeeName: employeeName,
               programName: program.programName,
-              programCode: program?.programCode,
-              startDate: program?.startDate,
-              endDate: program?.endDate,
-              location: program?.location,
-              trainerName: program?.trainerName,
+              programCode: program.programCode,
+              startDate: program.startDate,
+              endDate: program.endDate,
+              location: program.venue || program.location,
+              trainerName: program.heldBy || program.trainerName,
               program: program
-            }));
-            this.nominations = [...this.nominations, ...nominationsWithProgram];
-          }
+            };
+          });
+          
+          this.nominations = [...this.nominations, ...nominationsWithProgram];
         });
         
+        // Update filtered nominations and pagination
         this.filteredNominations = [...this.nominations];
         this.updateTotalPages();
+        this.isLoading = false;
+        
+        // Fetch employee names for all nominations
+        this.fetchEmployeeNamesForNominations();
       })
       .catch(error => {
-        console.error('Error loading nominations:', error);
-        Swal.fire('Error', 'Failed to load training nominations', 'error');
+        console.error('Error processing nominations:', error);
+        this.isLoading = false;
+        Swal.fire('Error', 'Failed to process training nominations', 'error');
       })
       .finally(() => {
         this.isLoading = false;
       });
   }
 
+  // Fetch employee names for all nominations that don't have a name
+  private fetchEmployeeNamesForNominations(): void {
+    this.nominations.forEach(nomination => {
+      if (nomination.employeeId && !nomination.employeeName) {
+        this.fetchAndUpdateEmployeeName(nomination);
+      }
+    });
+  }
 
+
+  // Fetch employee by ID and update the nomination with the employee's name
+  private fetchAndUpdateEmployeeName(nomination: TrainingNominationWithProgram): void {
+    if (!nomination.employeeId) return;
+    
+    this.http.get<any>(`${this.apiUrl}/api/v1/employees/${nomination.employeeId}`).pipe(
+      catchError(error => {
+        console.error(`Error fetching employee ${nomination.employeeId}:`, error);
+        return of(null);
+      })
+    ).subscribe(employeeData => {
+      if (employeeData) {
+        const emp = employeeData.employee || employeeData;
+        const firstName = emp.firstName || emp.first_name || emp.empFirstName || emp.name?.first || '';
+        const lastName = emp.lastName || emp.last_name || emp.empLastName || emp.name?.last || '';
+        const middleName = (emp.middleName || emp.middle_name || emp.empMiddleName || emp.name?.middle || '').trim();
+        
+        const nameParts = [firstName];
+        if (middleName) nameParts.push(middleName);
+        nameParts.push(lastName);
+        const fullName = nameParts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+        
+        // Update the nomination with the employee's name
+        const updatedNomination = this.nominations.find(n => n.id === nomination.id);
+        if (updatedNomination) {
+          updatedNomination.employeeName = fullName;
+        }
+      }
+    });
+  }
 
   loadEmployees(): void {
     this.loadingEmployees = true;
     const url = `${this.apiUrl}/api/v1/employees`;
-    // Fetching employees from API
     
     this.http.get<any>(url, { observe: 'response' }).pipe(
       finalize(() => this.loadingEmployees = false)
     ).subscribe({
       next: (httpResponse) => {
-        // Processing HTTP response
-        
         const response = httpResponse.body;
         
-        // Handle case where response is null or undefined
         if (response == null) {
           console.error('Empty response received from server');
           Swal.fire('Error', 'Received empty response from server', 'error');
           return;
         }
         
-        // Check if response is an array or has a data property that's an array
         let employeesData = [];
         
         if (Array.isArray(response)) {
@@ -336,7 +418,6 @@ export class EmpNominationsComponent implements OnInit {
         } else if (Array.isArray(response.items)) {
           employeesData = response.items;
         } else if (typeof response === 'object' && response !== null) {
-          // If it's an object but not an array, try to extract employees
           employeesData = Object.values(response).find(Array.isArray) || [];
         }
         
@@ -347,21 +428,13 @@ export class EmpNominationsComponent implements OnInit {
           return;
         }
         
-        // Processing employees data
-        
         this.employees = employeesData.map(item => {
-          // Extract employee data from the nested employee object
-          const emp = item.employee || item; // Handle both nested and flat structures
+          const emp = item.employee || item;
           
-          // Log each employee's raw data for debugging
-          // Processing employee data
-          
-          // Extract name parts with fallbacks for different property names
           const firstName = emp.firstName || emp.first_name || emp.empFirstName || emp.name?.first || '';
           const lastName = emp.lastName || emp.last_name || emp.empLastName || emp.name?.last || '';
           const middleName = (emp.middleName || emp.middle_name || emp.empMiddleName || emp.name?.middle || '').trim();
           
-          // Create full name with proper spacing
           const nameParts = [firstName];
           if (middleName) nameParts.push(middleName);
           nameParts.push(lastName);
@@ -375,7 +448,6 @@ export class EmpNominationsComponent implements OnInit {
             fullName: fullName
           };
           
-          // Employee data processed
           return employeeData;
         }).filter(emp => {
           // Only include employees with at least a first or last name and an ID

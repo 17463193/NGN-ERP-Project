@@ -109,17 +109,14 @@ export class EmpTypeComponent implements OnInit {
   ) {
     this.form = this.fb.group({
       transferTypeId: [''],
-      orgId: [''],
+      orgId: ['', [Validators.required]],
       transferName: ['', [Validators.required, Validators.maxLength(100)]],
       transferCode: ['', [Validators.required, Validators.maxLength(20)]],
       category: ['', [Validators.required, Validators.maxLength(50)]],
-      transferType: ['', [Validators.required]],
-      status: ['Pending', [Validators.required]],
-      effectiveDate: [''],
-      reason: [''],
       requiresConsent: [false],
       hasProbation: [false],
-      probationDays: [0, [Validators.min(0), Validators.max(365)]]
+      probationDays: [0, [Validators.min(0), Validators.max(365)]],
+      createdDate: [new Date().toISOString()]
     });
   }
 
@@ -151,12 +148,10 @@ export class EmpTypeComponent implements OnInit {
       transferName: '',
       transferCode: '',
       category: '',
-      transferType: '',
-      status: 'Pending',
-      effectiveDate: '',
       requiresConsent: false,
       hasProbation: false,
-      probationDays: 0
+      probationDays: 0,
+      createdDate: new Date().toISOString()
     });
     this.modalService.open(this.transferModalRef, { size: 'lg', centered: true });
   }
@@ -185,7 +180,8 @@ export class EmpTypeComponent implements OnInit {
       category: transferType.category,
       requiresConsent: transferType.requiresConsent,
       hasProbation: transferType.hasProbation,
-      probationDays: transferType.probationDays || 0
+      probationDays: transferType.probationDays || 0,
+      createdDate: transferType.createdDate || new Date().toISOString()
     });
     
     // Update validators based on probation status
@@ -330,9 +326,6 @@ export class EmpTypeComponent implements OnInit {
       transferName: formData.transferName,
       transferCode: formData.transferCode,
       category: formData.category,
-      transferType: formData.transferType,
-      status: formData.status || 'Active',
-      effectiveDate: formData.effectiveDate || null,
       requiresConsent: Boolean(formData.requiresConsent),
       hasProbation: Boolean(formData.hasProbation),
       probationDays: formData.hasProbation ? Number(formData.probationDays) : 0,
@@ -351,11 +344,11 @@ export class EmpTypeComponent implements OnInit {
     console.log('Sending transfer type data:', JSON.stringify(transferTypeData, null, 2));
     
     const request$ = this.isEditMode
-      ? this.employeeTransferService.updateTransferType(transferTypeData)
-      : this.employeeTransferService.createTransferType(transferTypeData);
+      ? this.employeeTransferService.updateTransferType(transferTypeData as TransferType)
+      : this.employeeTransferService.createTransferType(transferTypeData as Omit<TransferType, 'transferTypeId' | 'createdDate'>);
     
     request$.subscribe({
-      next: (response) => {
+      next: (response: TransferType) => {
         console.log('Transfer type saved successfully:', response);
         this.isLoading = false;
         Swal.fire({

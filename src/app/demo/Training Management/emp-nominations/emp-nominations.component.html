@@ -56,11 +56,17 @@
         </thead>
         <tbody>
           <tr *ngFor="let nomination of paginatedNominations">
-            <td >
-              {{ nomination.program?.programName || 'N/A' }}
+            <td>
+              <div class="d-flex align-items-center">
+                <div>
+                  <div class="fw-semibold">{{ nomination.program?.programName || 'N/A' }}</div>
+                  <div class="text-muted small">{{ nomination.program?.programCode || '' }}</div>
+                </div>
+              </div>
             </td>
             <td>
-              {{ formatDate(nomination.program?.startDate) }}
+              <div>{{ formatDate(nomination.program?.startDate) || 'N/A' }}</div>
+              <div class="text-muted small">{{ formatDate(nomination.program?.endDate) || '' }}</div>
             </td>
             <td>
               <span class="badge" [ngClass]="getStatusBadgeClass(nomination.status)">
@@ -239,8 +245,14 @@
     <div class="modal-body">
       <div class="row">
         <div class="col-md-6 mb-3">
-          <h6>Employee Name</h6>
-          <p>{{ currentNomination?.employeeName || 'N/A' }}</p>
+          <h6>Employee</h6>
+          <div *ngIf="currentNomination?.employeeId">
+            {{ currentNomination.employeeName || '' }}
+            <div class="text-muted small">ID: {{ currentNomination.employeeId }}</div>
+          </div>
+          <div *ngIf="!currentNomination?.employeeId">
+            <span class="text-muted">No employee assigned</span>
+          </div>
         </div>
         <div class="col-md-6 mb-3">
           <h6>Training Program</h6>

@@ -82,20 +82,20 @@ export class EmpTrainingComponent implements OnInit {
     private modalService: NgbModal,
     private fb: FormBuilder
   ) {
-    // Initialize with default values to prevent null reference errors
+    // Initialize with empty values
     this.currentTraining = {
       programId: '',
       programName: '',
       programCode: '',
       startDate: new Date(),
-      endDate: new Date(),
+      endDate: new Date(new Date().setDate(new Date().getDate() + 7)), // Default to 1 week from now
       venue: '',
       location: '',
       trainerName: '',
-      status: 'Planned',
+      status: 'Draft',
       seatsBooked: 0,
-      maxSeats: 10,
-      maxParticipants: 10,
+      maxSeats: 0,
+      maxParticipants: 0,
       nominations: [],
       participants: [],
       // Required fields from TrainingProgram
@@ -111,26 +111,43 @@ export class EmpTrainingComponent implements OnInit {
       orgId: ['', Validators.required],
       categoryId: ['', Validators.required],
       programName: ['', Validators.required],
-      programCode: ['', [Validators.required, Validators.pattern('^[A-Za-z0-9-]+$')]],
-      programType: ['In-House', Validators.required],
-      deliveryMethod: ['In-Person', Validators.required],
+      programCode: ['', [
+        Validators.required, 
+        Validators.pattern('^[A-Za-z0-9-]+$')
+      ]],
+      programType: ['', Validators.required],
+      deliveryMethod: ['', Validators.required],
       
       // Dates
       startDate: ['', Validators.required],
       endDate: ['', Validators.required],
       
       // Details
-      durationHours: ['', [Validators.required, Validators.min(1)]],
-      costPerParticipant: ['', [Validators.required, Validators.min(0)]],
+      durationHours: ['', [
+        Validators.required, 
+        Validators.min(1)
+      ]],
+      costPerParticipant: ['', [
+        Validators.required, 
+        Validators.min(0)
+      ]],
       batchName: [''],
       heldBy: ['', Validators.required],
       venue: ['', Validators.required],
-      maxSeats: ['', [Validators.required, Validators.min(1)]],
-      isActive: [true, Validators.required],
+      maxSeats: ['', [
+        Validators.required, 
+        Validators.min(1)
+      ]],
+      isActive: [false],
       
       // Optional Fields
       description: ['']
-    }, { validators: this.dateRangeValidator });
+    }, { 
+      validators: [
+        this.dateRangeValidator,
+        // Add any other cross-field validators here
+      ] 
+    });
   }
 
   ngOnInit(): void {

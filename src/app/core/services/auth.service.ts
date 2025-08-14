@@ -19,6 +19,7 @@ export interface User {
   userId: string;
   empId: string;
   ctoId?: string;
+  hrId?: string;
   username: string;
   email: string;
   accountStatus: string;
@@ -76,6 +77,7 @@ export class AuthService {
     return user.roleName === 'CTO'
       ? (user.ctoId || user.userId)
       : (user.empId || user.userId);
+      
   }
 
   // Define role constants
