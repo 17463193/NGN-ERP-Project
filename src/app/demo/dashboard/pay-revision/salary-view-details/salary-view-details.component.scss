@@ -1,0 +1,51 @@
+.salary-details-container {
+  padding: 20px;
+  
+  .salary-header {
+    .salary-title {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+  }
+  
+  .revision-form-section {
+    border: 1px solid #dee2e6;
+    
+    .revision-item {
+      border-left: 4px solid #0d6efd;
+    }
+  }
+  
+  .summary-card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    
+    .card-title {
+      font-size: 1rem;
+      color: #6c757d;
+    }
+    
+    .card-text {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+  }
+  
+  .table {
+    th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+    }
+    
+    .badge {
+      font-size: 0.8em;
+      padding: 5px 8px;
+    }
+  }
+  
+  .alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+  }
+}

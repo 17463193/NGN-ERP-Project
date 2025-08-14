@@ -1,106 +1,119 @@
 <div class="payroll-dashboard">
   <!-- Header Section -->
-  <div class="header-section">
-    <div class="header-content">
-      <h1 class="title">Employee Payroll</h1>
-      <p class="subtitle">Keep track employee salary on daily basis.</p>
+  <div class="dashboard-header">
+    <div class="header-text">
+      <h1>Employee Payroll</h1>
+      <p>Keep track employee salary on daily basis.</p>
     </div>
-    <button class="export-btn">
+    <button class="export-button">
       <i class="bi bi-box-arrow-up"></i>
       Export
     </button>
   </div>
-  <hr>
 
-  <!-- Filters and Search Section -->
-  <div class="controls-section">
+  <hr class="header-divider">
 
-    <div class="filter-dropdown">
-      <select [(ngModel)]="selectedDepartment" (change)="applyFilters()">
-        <option *ngFor="let dept of departments" [value]="dept">
-          {{ dept === 'All' ? 'All Departments' : dept }}
-        </option>
-      </select>
-    </div>
+  <!-- Main Content Area -->
+  <div class="dashboard-content">
+    <!-- Filters Section -->
+    <div class="filters-section">
+      <!-- Branch, Department, Date Filters -->
+      <div class="filters-container">
+        <div class="filter-group">
+          <label>Branch</label>
+          <select [(ngModel)]="selectedBranch" (change)="onBranchChange()">
+            <option *ngFor="let branch of branches" [value]="branch.branchId">
+              {{ branch.branchName }}
+            </option>
+          </select>
+        </div>
 
-    <div class="date-filters enhanced-date-selectors">
-      <div class="selectors-wrapper">
-        <label class="selector-group">
-          <span class="selector-label">Year:</span>
-          <select class="selector-input" [(ngModel)]="selectedYear" (ngModelChange)="onYearChange($event)">
+        <div class="filter-group">
+          <label>Department</label>
+          <select [(ngModel)]="selectedDepartment" (change)="applyFilters()">
+            <option *ngFor="let dept of filteredDepartments" [value]="dept.dept_id">
+              {{ dept.dept_name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Year</label>
+          <select [(ngModel)]="selectedYear" (ngModelChange)="onYearChange($event)">
             <option *ngFor="let y of years" [value]="y">{{ y }}</option>
           </select>
-        </label>
-
-        <label class="selector-group">
-          <span class="selector-label">Month:</span>
-          <select class="selector-input" [(ngModel)]="selectedMonth" (ngModelChange)="onMonthChange($event)">
+        </div>
+        
+        <div class="filter-group">
+          <label>Month</label>
+          <select [(ngModel)]="selectedMonth" (ngModelChange)="onMonthChange($event)">
             <option *ngFor="let m of months" [value]="m.value">{{ m.name }}</option>
           </select>
-        </label>
+        </div>
+      </div>
+
+      <!-- Search and Filter Buttons -->
+      <div class="search-filter-container">
+        <div class="search-container">
+          <i class="search-icon bi bi-search"></i>
+          <input type="text" placeholder="Search employees..." [(ngModel)]="searchQuery" (keyup.enter)="searchEmployees()">
+        </div>
+        <button class="filter-button">
+          <i class="bi bi-funnel"></i>
+          Advanced Filter
+        </button>
       </div>
     </div>
 
-    <div class="search-section">
-      <div class="search-input-wrapper">
-        <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.35-4.35" (click)="searchEmployees()"></path>
-        </svg>
-        <input type="text" class="search-input" placeholder="Search" [(ngModel)]="searchQuery" (keyup.enter)="searchEmployees()">
-      </div>
-
-      <button class="filters-btn">
-        <i class="bi bi-filter"></i>
-        Filter
-      </button>
-    </div>
-  </div>
-
-  <!-- Data Table -->
-  <div class="table-container">
-    <table class="payroll-table">
-      <thead>
-        <tr>
-          <th>Employee ID</th>
-          <th>Employee</th>
-          <th>Department</th>
-          <th>Net Salary</th>
-          <th>Pay Month</th>
-          <th>Status</th>
-          <th>Over Time</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngIf="filteredEmployees.length === 0">
-          <td colspan="8" class="no-data-row">No data found for the selected criteria.</td>
-        </tr>
-        <tr *ngFor="let employee of filteredEmployees">
-          <td class="employee-id">{{ employee.empCode }}</td>
-          <td class="employee-info">
-            <div class="employee-details">
-              <div class="employee-text">
+    <!-- Data Table -->
+    <div class="table-section">
+      <div class="table-wrapper">
+        <table class="payroll-table">
+          <thead>
+            <tr>
+              <th>Employee ID</th>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Net Salary</th>
+              <th>Pay Month</th>
+              <th>Status</th>
+              <th>Over Time</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="filteredEmployees.length === 0">
+              <td colspan="8" class="no-data">No data found for the selected criteria.</td>
+            </tr>
+            <tr *ngFor="let employee of filteredEmployees">
+              <td class="employee-id">{{ employee.empCode }}</td>
+              <td class="employee-name-cell">
                 <div class="employee-name">{{ employee.name }}</div>
-              </div>
-            </div>
-          </td>
-          <td class="department">{{ employee.department }}</td>
-          <td class="salary">Nu. {{ employee.netSalary }}</td>
-          <td class="pay-day">{{ employee.salaryMonth }}</td>
-          <td class="status">
-            <span class="status-badge" [class.paid]="employee.status === 'active'" [class.unpaid]="employee.status !== 'active'">
-              {{ getStatusText(employee.status) }}
-            </span>
-          </td>
-          <td class="overtime">{{ employee.overtime }}</td>
-          <td class="action">
-            <button class="action-btn" [routerLink]="['/pay-slip', employee.id]" [queryParams]="{ year: selectedYear, month: selectedMonth }">
-              View Payslip
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+              </td>
+              <td class="department">{{ employee.department }}</td>
+              <td class="salary">Nu. {{ employee.netSalary }}</td>
+              <td class="pay-month">{{ employee.salaryMonth }}</td>
+              <td class="status-cell">
+                <span class="status-badge" [class.paid]="employee.status === 'active'" [class.unpaid]="employee.status !== 'active'">
+                  {{ getStatusText(employee.status) }}
+                </span>
+              </td>
+              <td class="overtime">{{ employee.overtime }}</td>
+              <td class="action-cell">
+                <div class="action-buttons">
+                  <button class="view-btn view-tds-btn" [routerLink]="['/pay-slip', employee.id]" [queryParams]="{ year: selectedYear, month: selectedMonth }">
+                    View Payslip
+                  </button>
+                  <button class="view-btn view-salary-btn" 
+        [routerLink]="['/pay-roll-detail', employee.id]">
+  View Salary
+</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>

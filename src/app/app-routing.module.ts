@@ -3,6 +3,9 @@ import { RouterModule, Routes } from '@angular/router';
 import { AdminComponent } from './theme/layout/admin/admin.component';
 import { GuestComponent } from './theme/layout/guest/guest.component';
 import { AuthGuard } from './core/guards/auth.guard';
+import { SalaryViewDetailsComponent } from './demo/dashboard/pay-revision/salary-view-details/salary-view-details.component';
+import { PayRollComponent } from './demo/pay-roll/pay-roll.component';
+import { PayRollDetailComponent } from './demo/pay-roll/pay-roll-details/pay-roll-detail.component';
 
 export const routes: Routes = [
   
@@ -86,9 +89,22 @@ export const routes: Routes = [
         loadComponent: () => import('./demo/pay-roll/pay-roll.component').then((c) => c.PayRollComponent)
       },
       {
+  path: 'pay-roll-detail/:id',
+  component: PayRollDetailComponent
+},
+      {
         path: 'pay-slip/:empId',
         loadComponent: () => import('./demo/pay-roll/pay-slip/pay-slip.component').then((c) => c.PaySlipComponent)
       },
+      {
+        path: 'pay-revision',
+        loadComponent: () => import('./demo/dashboard/pay-revision/salary-details/pay-revision.component').then((c) => c.PayRevisionComponent)
+      },
+       {
+    path: 'salary-view-details/:empId',
+    component: SalaryViewDetailsComponent,
+    runGuardsAndResolvers: 'always' // This ensures the component reloads
+  },
       {
         path: 'document-archival',
         loadComponent: () => import('./demo/elements/document-archival/document-archival.component').then((m) => m.DocumentArchivalComponent)
@@ -188,7 +204,7 @@ export const routes: Routes = [
       },
       {
         path: 'emp-transfer',
-        loadComponent: () => import('./demo/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
+        loadComponent: () => import('./demo/Transfer/emp-transfer/emp-transfer.component').then((c) => c.EmpTransferComponent)
       },
       {
         path: 'emp-separation',

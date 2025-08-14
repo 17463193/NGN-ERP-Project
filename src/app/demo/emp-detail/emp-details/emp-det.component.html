@@ -13,14 +13,19 @@
         <i class="bi bi-people-fill me-2"></i>
         {{ filteredEmployees.length }} Employees
       </button>
-      <button class="emp-det-add-btn btn btn-outline-dark d-flex align-items-center" (click)="openModal()">
-        <i class="bi bi-plus me-2"></i>
-        Add Employee
-      </button>
-      <button class="emp-det-export-btn btn btn-warning d-flex align-items-center" (click)="exportToCSV()">
-        <i class="bi bi-download me-2"></i>
-        Export
-      </button>
+     <button class="emp-det-add-btn btn btn-outline-dark d-flex align-items-center" 
+        (click)="openModal()"
+        *ngIf="canAddEmployee()">
+  <i class="bi bi-plus me-2"></i>
+  Add Employee
+</button>
+
+<button class="emp-det-export-btn btn btn-warning d-flex align-items-center" 
+        (click)="exportToCSV()"
+        *ngIf="canExport()">
+  <i class="bi bi-download me-2"></i>
+  Export
+</button>
     </div>
   </div>
 
@@ -126,15 +131,19 @@
               </td>
               <td class="py-3">
                 <div class="emp-det-actions-btns d-flex gap-2">
-                  <button class="emp-det-view-btn btn btn-sm " (click)="viewEmployee(emp.empCode)">
-                    <i class="bi bi-eye"></i>
-                  </button>
-                  <button class="emp-det-edit-btn btn btn-sm" (click)="editEmployee(i)">
-                    <i class="bi bi-pencil"></i>
-                  </button>
-                  <button class="emp-det-delete-btn btn btn-sm " (click)="deleteEmployee(i)">
-                    <i class="bi bi-trash"></i>
-                  </button>
+                  <button class="emp-det-view-btn btn btn-sm" (click)="viewEmployee(emp.empCode)">
+    <i class="bi bi-eye"></i>
+  </button>
+  <!-- <button class="emp-det-edit-btn btn btn-sm" 
+          (click)="editEmployee(i)"
+          *ngIf="canEditEmployee()">
+    <i class="bi bi-pencil"></i>
+  </button> -->
+  <button class="emp-det-delete-btn btn btn-sm" 
+          (click)="deleteEmployee(i)"
+          *ngIf="canDeleteEmployee()">
+    <i class="bi bi-trash"></i>
+  </button>
                 </div>
               </td>
             </tr>
@@ -519,32 +528,75 @@
 
               <!-- Education Tab -->
               <div *ngIf="isModalTabActive('education')" class="tab-pane">
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <label class="emp-det-form-label form-label fw-medium">Institution Name</label>
-                    <input type="text" class="emp-det-form-input form-control" formControlName="institutionName"
-                      placeholder="Enter institution name">
-                  </div>
+  <div class="education-container">
+    <!-- Main Education Form -->
+    <div class="education-form">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="emp-det-form-label form-label fw-medium">Institution Name</label>
+          <input type="text" class="emp-det-form-input form-control" formControlName="institutionName" placeholder="Enter institution name">
+        </div>
 
-                  <div class="col-md-6">
-                    <label class="emp-det-form-label form-label fw-medium">Degree Name</label>
-                    <input type="text" class="emp-det-form-input form-control" formControlName="degreeName"
-                      placeholder="Enter degree name">
-                  </div>
+        <div class="col-md-6">
+          <label class="emp-det-form-label form-label fw-medium">Degree Name</label>
+          <input type="text" class="emp-det-form-input form-control" formControlName="degreeName" placeholder="Enter degree name">
+        </div>
 
-                  <div class="col-md-6">
-                    <label class="emp-det-form-label form-label fw-medium">Specialization</label>
-                    <input type="text" class="emp-det-form-input form-control" formControlName="specialization"
-                      placeholder="Enter specialization">
-                  </div>
+        <div class="col-md-6">
+          <label class="emp-det-form-label form-label fw-medium">Specialization</label>
+          <input type="text" class="emp-det-form-input form-control" formControlName="specialization" placeholder="Enter specialization">
+        </div>
 
-                  <div class="col-md-6">
-                    <label class="emp-det-form-label form-label fw-medium">Year of Completion</label>
-                    <input type="number" class="emp-det-form-input form-control" formControlName="yearOfCompletion"
-                      placeholder="Enter year">
-                  </div>
-                </div>
-              </div>
+        <div class="col-md-6">
+          <label class="emp-det-form-label form-label fw-medium">Year of Completion</label>
+          <input type="number" class="emp-det-form-input form-control" formControlName="yearOfCompletion" placeholder="Enter year">
+        </div>
+      </div>
+    </div>
+
+    <!-- Add More Button -->
+    <div class="add-more-container text-end mt-3">
+      <button type="button" class="btn btn-sm btn-outline-primary" (click)="addEducation()">
+        <i class="bi bi-plus-circle"></i> Add More Education
+      </button>
+    </div>
+
+    <!-- Additional Education Entries -->
+    <div class="additional-educations mt-4" *ngIf="educations.controls.length > 0">
+      <div class="education-entry card mb-3" *ngFor="let education of educations.controls; let i = index" [formGroup]="education">
+        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+          <h6 class="mb-0">Additional Education #{{i + 1}}</h6>
+          <button type="button" class="btn btn-sm btn-danger" (click)="removeEducation(i)">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="emp-det-form-label form-label fw-medium">Institution Name</label>
+              <input type="text" class="emp-det-form-input form-control" formControlName="institutionName">
+            </div>
+
+            <div class="col-md-6">
+              <label class="emp-det-form-label form-label fw-medium">Degree Name</label>
+              <input type="text" class="emp-det-form-input form-control" formControlName="degreeName">
+            </div>
+
+            <div class="col-md-6">
+              <label class="emp-det-form-label form-label fw-medium">Specialization</label>
+              <input type="text" class="emp-det-form-input form-control" formControlName="specialization">
+            </div>
+
+            <div class="col-md-6">
+              <label class="emp-det-form-label form-label fw-medium">Year of Completion</label>
+              <input type="number" class="emp-det-form-input form-control" formControlName="yearOfCompletion">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
               <!-- Address Tab -->
               <div *ngIf="isModalTabActive('address')" class="tab-pane">
